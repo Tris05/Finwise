@@ -1,0 +1,26 @@
+[
+  {
+    "id": "c1",
+    "name": "SuperSaver Card",
+    "bank": "ABC Bank",
+    "annualFee": 499,
+    "rewards": ["5% on groceries", "2% on fuel", "Airport lounge x2"],
+    "whyText": "High grocery spend and good CIBIL score increase approval odds. SHAP: income (+), utilization (-), on-time payments (+)."
+  },
+  {
+    "id": "c2",
+    "name": "Travel Max",
+    "bank": "XYZ Bank",
+    "annualFee": 999,
+    "rewards": ["4% on travel", "Hotel vouchers", "Forex markup 0%"],
+    "whyText": "Frequent travel pattern; SHAP shows spend categories drive reward fit; approval medium due to thin file length."
+  },
+  {
+    "id": "c3",
+    "name": "Cashback Go",
+    "bank": "PQR Bank",
+    "annualFee": 0,
+    "rewards": ["1.5% flat cashback", "No joining fee"],
+    "whyText": "Entry-friendly card; SHAP indicates low risk and broad merchant fit; best for building history."
+  }
+]

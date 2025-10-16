@@ -1,0 +1,14 @@
+{
+  "proposedWeights": [
+    { "asset": "Stocks", "weight": 0.45 },
+    { "asset": "Mutual Funds", "weight": 0.25 },
+    { "asset": "PPF", "weight": 0.1 },
+    { "asset": "FD", "weight": 0.08 },
+    { "asset": "Gold", "weight": 0.07 },
+    { "asset": "Crypto", "weight": 0.05 }
+  ],
+  "riskCategory": "Medium",
+  "confidenceScore": 0.82,
+  "shapText": "Equity overweight due to rising income stability and longer horizon; PPF/FD allocation balances downside risk. Gold hedge increased due to recent volatility. Crypto limited by moderate risk profile.",
+  "llmSummary": "We recommend a moderately aggressive allocation balancing growth and stability, aligned with your time horizon and risk tolerance. Rebalance quarterly or on 10% drift."
+}

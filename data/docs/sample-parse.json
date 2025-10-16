@@ -1,0 +1,11 @@
+{
+  "fields": [
+    { "key": "Name", "value": "Fin User" },
+    { "key": "Employer", "value": "Tech Co" },
+    { "key": "Monthly Salary", "value": "₹120,000" },
+    { "key": "Late Payment Flags", "value": "2 in last 12 months", "risk": "medium" },
+    { "key": "Credit Utilization", "value": "65%", "risk": "high" }
+  ],
+  "riskScore": 0.63,
+  "summary": "Elevated utilization and recent late payments increase credit risk. Consider lowering utilization < 30% and setting autopay reminders."
+}

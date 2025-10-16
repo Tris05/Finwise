@@ -1,0 +1,26 @@
+[
+  {
+    "id": "l1",
+    "timestamp": "2025-10-01T10:02:00Z",
+    "location": "Bengaluru, IN",
+    "device": "Chrome on Mac",
+    "severity": "info",
+    "acknowledged": true
+  },
+  {
+    "id": "l2",
+    "timestamp": "2025-10-05T08:41:00Z",
+    "location": "New Delhi, IN",
+    "device": "Safari on iPhone",
+    "severity": "warning",
+    "acknowledged": false
+  },
+  {
+    "id": "l3",
+    "timestamp": "2025-10-06T22:15:00Z",
+    "location": "Unknown",
+    "device": "Edge on Windows",
+    "severity": "critical",
+    "acknowledged": false
+  }
+]

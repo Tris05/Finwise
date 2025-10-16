@@ -1,0 +1,18 @@
+{
+  "emi": 21235,
+  "affordability": "Medium",
+  "risk": "Medium",
+  "schedule": [
+    { "month": 1, "balance": 980000 },
+    { "month": 12, "balance": 850000 },
+    { "month": 24, "balance": 700000 },
+    { "month": 36, "balance": 530000 },
+    { "month": 48, "balance": 340000 },
+    { "month": 60, "balance": 0 }
+  ],
+  "mitigations": [
+    "Increase down payment to reduce EMI",
+    "Consider longer tenure with prepayment flexibility",
+    "Maintain DTI < 40%"
+  ]
+}
