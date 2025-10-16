@@ -1,6 +1,13 @@
 {
   "xp": 240,
   "level": 3,
-  "badges": ["Starter", "Planner", "First SIP"],
-  "streak": 4
+  "badges": ["Starter", "Planner", "First SIP", "Flashcard Master", "Quiz Champion"],
+  "streak": 4,
+  "learningStats": {
+    "flashcardsCompleted": 8,
+    "quizzesCompleted": 2,
+    "totalLearningXP": 120,
+    "currentStreak": 3,
+    "longestStreak": 7
+  }
 }

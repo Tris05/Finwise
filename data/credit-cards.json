@@ -1,26 +1,42 @@
 [
   {
     "id": "c1",
-    "name": "SuperSaver Card",
-    "bank": "ABC Bank",
-    "annualFee": 499,
-    "rewards": ["5% on groceries", "2% on fuel", "Airport lounge x2"],
-    "whyText": "High grocery spend and good CIBIL score increase approval odds. SHAP: income (+), utilization (-), on-time payments (+)."
+    "name": "HDFC Millennia Credit Card",
+    "bank": "HDFC Bank",
+    "annualFee": 1000,
+    "rewards": ["5% on online spends", "2% on fuel", "Airport lounge access x2"],
+    "whyText": "High online spend pattern and excellent CIBIL score increase approval odds. SHAP: income (+), utilization (-), on-time payments (+)."
   },
   {
     "id": "c2",
-    "name": "Travel Max",
-    "bank": "XYZ Bank",
-    "annualFee": 999,
-    "rewards": ["4% on travel", "Hotel vouchers", "Forex markup 0%"],
+    "name": "ICICI Bank Coral Credit Card",
+    "bank": "ICICI Bank",
+    "annualFee": 2000,
+    "rewards": ["4% on travel bookings", "Hotel vouchers", "Forex markup 0%"],
     "whyText": "Frequent travel pattern; SHAP shows spend categories drive reward fit; approval medium due to thin file length."
   },
   {
     "id": "c3",
-    "name": "Cashback Go",
-    "bank": "PQR Bank",
+    "name": "Kotak 811 Credit Card",
+    "bank": "Kotak Mahindra Bank",
     "annualFee": 0,
     "rewards": ["1.5% flat cashback", "No joining fee"],
-    "whyText": "Entry-friendly card; SHAP indicates low risk and broad merchant fit; best for building history."
+    "whyText": "Entry-friendly card; SHAP indicates low risk and broad merchant fit; best for building credit history."
+  },
+  {
+    "id": "c4",
+    "name": "Axis Bank My Zone Credit Card",
+    "bank": "Axis Bank",
+    "annualFee": 500,
+    "rewards": ["2% on dining", "1% on all spends", "Movie vouchers"],
+    "whyText": "Good dining spend pattern; SHAP shows lifestyle fit; approval high due to stable income history."
+  },
+  {
+    "id": "c5",
+    "name": "SBI SimplyCLICK Credit Card",
+    "bank": "State Bank of India",
+    "annualFee": 500,
+    "rewards": ["5x rewards on online spends", "Amazon gift vouchers", "Fuel surcharge waiver"],
+    "whyText": "High online shopping pattern; SHAP indicates strong digital adoption; approval medium due to government bank criteria."
   }
 ]

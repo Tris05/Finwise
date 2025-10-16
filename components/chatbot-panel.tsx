@@ -100,7 +100,7 @@ export function ChatbotPanel() {
           <Button onClick={send}>Send</Button>
         </div>
         <div className="text-xs text-muted-foreground">
-          Try: “Suggest an asset allocation for moderate risk” • “Explain EMI stress for ₹10L over 5 years”
+          Try: "Is crypto risky?" • "What is PPF?" • "Show me Nifty50 trend" • "Compare SBI FD vs Axis FD"
         </div>
       </CardContent>
     </Card>

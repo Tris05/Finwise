@@ -1,18 +1,19 @@
 {
-  "emi": 21235,
+  "emi": 26500,
   "affordability": "Medium",
   "risk": "Medium",
   "schedule": [
-    { "month": 1, "balance": 980000 },
-    { "month": 12, "balance": 850000 },
-    { "month": 24, "balance": 700000 },
-    { "month": 36, "balance": 530000 },
-    { "month": 48, "balance": 340000 },
+    { "month": 1, "balance": 1225000 },
+    { "month": 12, "balance": 1062500 },
+    { "month": 24, "balance": 875000 },
+    { "month": 36, "balance": 662500 },
+    { "month": 48, "balance": 425000 },
     { "month": 60, "balance": 0 }
   ],
   "mitigations": [
-    "Increase down payment to reduce EMI",
+    "Increase down payment to reduce EMI burden",
     "Consider longer tenure with prepayment flexibility",
-    "Maintain DTI < 40%"
+    "Maintain DTI < 40% as per RBI guidelines",
+    "Consider SBI/ICICI for better interest rates"
   ]
 }

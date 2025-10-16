@@ -14,20 +14,21 @@ import { formatINR } from "@/lib/utils"
 import { AlertCircle, Info, CheckCircle2 } from "lucide-react"
 
 const sample = [
-  { name: "Stocks", value: 40 },
+  { name: "Nifty 50 Stocks", value: 35 },
   { name: "Mutual Funds", value: 25 },
-  { name: "PPF", value: 10 },
+  { name: "PPF", value: 15 },
   { name: "FD", value: 10 },
-  { name: "Gold", value: 10 },
+  { name: "Gold", value: 8 },
   { name: "Crypto", value: 5 },
+  { name: "ELSS", value: 2 },
 ]
 
 export default function DashboardPage() {
   const [open, setOpen] = useState(false)
   const kpis = [
-    { label: "Portfolio Value", value: formatINR(1250000), delta: "+8.3%" },
-    { label: "Today’s Gain", value: formatINR(7600), delta: "+0.6%" },
-    { label: "Top Performing Asset", value: "Stocks", delta: "+2.1%" },
+    { label: "Portfolio Value", value: formatINR(1550000), delta: "+8.3%" },
+    { label: "Today's Gain", value: formatINR(9500), delta: "+0.6%" },
+    { label: "Top Performing Asset", value: "Nifty 50", delta: "+2.1%" },
     { label: "XP Gained This Week", value: "120 XP", delta: "" },
     { label: "Portfolio Growth %", value: "12.4%", delta: "" },
   ]
@@ -40,9 +41,9 @@ export default function DashboardPage() {
   ]
 
   const alerts = [
-    { type: "warning", icon: Info, text: "Upcoming SIP in 3 days" },
-    { type: "danger", icon: AlertCircle, text: "Credit card bill due in 2 days" },
-    { type: "success", icon: CheckCircle2, text: "Goal “Travel” is 65% funded" },
+    { type: "warning", icon: Info, text: "Upcoming SIP in 3 days - HDFC Mutual Fund" },
+    { type: "danger", icon: AlertCircle, text: "HDFC Credit Card bill due in 2 days" },
+    { type: "success", icon: CheckCircle2, text: "Goal 'Home Purchase' is 65% funded" },
   ]
 
   return (

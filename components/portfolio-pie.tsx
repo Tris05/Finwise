@@ -122,9 +122,9 @@ export function PortfolioPie({
   )
 
   return (
-    <div className="h-72 rounded-lg p-2">
+    <div className="h-80 rounded-lg p-4">
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+        <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
           <Pie
             isAnimationActive
             animationBegin={120}
@@ -133,11 +133,11 @@ export function PortfolioPie({
             dataKey="value"
             data={data}
             cx="50%"
-            cy="50%"
-            innerRadius={48}
-            outerRadius={92}
+            cy="45%"
+            innerRadius={35}
+            outerRadius={65}
             activeIndex={activeIndex ?? -1}
-            activeShape={(props) => <Sector {...props} outerRadius={(props.outerRadius as number) + 8} />}
+            activeShape={(props) => <Sector {...props} outerRadius={(props.outerRadius as number) + 5} />}
             onClick={(_, i) => onSliceClick?.(data[i])}
             onMouseEnter={(_, i) => setActiveIndex(i)}
             onMouseLeave={() => setActiveIndex(null)}
@@ -157,7 +157,7 @@ export function PortfolioPie({
 
           <text
             x="50%"
-            y="50%"
+            y="45%"
             textAnchor="middle"
             dominantBaseline="middle"
             className="pointer-events-none select-none"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useMutation } from "@tanstack/react-query"
@@ -15,16 +15,45 @@ type AssessResponse = {
   mitigations: string[]
 }
 
-export function LoanCalculator() {
-  const [amount, setAmount] = useState(1000000)
-  const [rate, setRate] = useState(10)
-  const [tenure, setTenure] = useState(60)
+type LoanType = "house" | "car" | "student"
+
+interface LoanCalculatorProps {
+  loanType: LoanType
+}
+
+export function LoanCalculator({ loanType }: LoanCalculatorProps) {
+  // Default values based on loan type
+  const getDefaultValues = (type: LoanType) => {
+    switch (type) {
+      case "house":
+        return { amount: 5000000, rate: 8.5, tenure: 240 } // 20 years
+      case "car":
+        return { amount: 800000, rate: 9.5, tenure: 60 } // 5 years
+      case "student":
+        return { amount: 2000000, rate: 8.0, tenure: 120 } // 10 years
+      default:
+        return { amount: 1000000, rate: 10, tenure: 60 }
+    }
+  }
+
+  const defaults = getDefaultValues(loanType)
+  const [amount, setAmount] = useState(defaults.amount)
+  const [rate, setRate] = useState(defaults.rate)
+  const [tenure, setTenure] = useState(defaults.tenure)
+
+  // Update values when loan type changes
+  useEffect(() => {
+    const newDefaults = getDefaultValues(loanType)
+    setAmount(newDefaults.amount)
+    setRate(newDefaults.rate)
+    setTenure(newDefaults.tenure)
+  }, [loanType])
 
   const assess = useMutation({
     mutationFn: async (): Promise<AssessResponse> => {
       const res = await fetch("/api/loan/assess", {
         method: "POST",
-        body: JSON.stringify({ amount, rate, tenure }),
+        body: JSON.stringify({ amount, rate, tenure, loanType }),
       })
       if (!res.ok) throw new Error("Failed")
       return res.json()
@@ -35,7 +64,7 @@ export function LoanCalculator() {
     <div className="grid md:grid-cols-2 gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>Loan & EMI</CardTitle>
+          <CardTitle>{loanType.charAt(0).toUpperCase() + loanType.slice(1)} Loan & EMI</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
