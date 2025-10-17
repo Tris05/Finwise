@@ -32,11 +32,35 @@ export function DocUpload() {
   return (
     <div className="space-y-4">
       <div className="rounded-md border p-3 bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-accent)]/10">
-        <div className="flex items-center gap-2">
-          <input type="file" aria-label="Upload document" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          <Button onClick={simulateUpload} disabled={!file || loading}>
-            Upload & Analyze
-          </Button>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <label className="flex-1 cursor-pointer">
+              <input 
+                type="file" 
+                className="hidden" 
+                aria-label="Upload document" 
+                onChange={(e) => setFile(e.target.files?.[0] || null)} 
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              />
+              <div className="flex items-center justify-center w-full h-12 px-4 py-2 border-2 border-dashed border-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/5 transition-colors">
+                <div className="flex items-center gap-2 text-[var(--color-primary)]">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <span className="font-medium">
+                    {file ? file.name : "Choose file to upload"}
+                  </span>
+                </div>
+              </div>
+            </label>
+            <Button 
+              onClick={simulateUpload} 
+              disabled={!file || loading}
+              className="h-12 px-6 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white font-medium"
+            >
+              {loading ? "Analyzing..." : "Analyze"}
+            </Button>
+          </div>
         </div>
         <div className="text-xs text-muted-foreground mt-1">
           Supported: salary slips, credit card bills, bank statements

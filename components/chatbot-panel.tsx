@@ -99,9 +99,6 @@ export function ChatbotPanel() {
           />
           <Button onClick={send}>Send</Button>
         </div>
-        <div className="text-xs text-muted-foreground">
-          Try: "Is crypto risky?" • "What is PPF?" • "Show me Nifty50 trend" • "Compare SBI FD vs Axis FD"
-        </div>
       </CardContent>
     </Card>
   )

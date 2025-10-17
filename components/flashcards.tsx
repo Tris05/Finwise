@@ -124,29 +124,39 @@ export function Flashcards({ flashcards, onComplete }: FlashcardsProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex items-center justify-center h-full">
-                <div className="text-center">
+                <div className="text-center w-full h-full relative">
                   <motion.div
                     animate={{ rotateY: isFlipped ? 180 : 0 }}
                     transition={{ duration: 0.6 }}
-                    className="transform-gpu"
+                    className="transform-gpu w-full h-full"
+                    style={{ transformStyle: "preserve-3d" }}
                   >
-                    {!isFlipped ? (
-                      <div>
-                        <h3 className="text-xl font-semibold mb-4">Question</h3>
-                        <p className="text-lg">{currentCard.question}</p>
-                        <p className="text-sm text-muted-foreground mt-4">
-                          Click to reveal answer
-                        </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <h3 className="text-xl font-semibold mb-4">Answer</h3>
-                        <p className="text-lg">{currentCard.answer}</p>
-                        <p className="text-sm text-muted-foreground mt-4">
-                          Click to flip back
-                        </p>
-                      </div>
-                    )}
+                    {/* Front face */}
+                    <div 
+                      className="absolute inset-0 w-full h-full flex flex-col items-center justify-center"
+                      style={{ backfaceVisibility: "hidden" }}
+                    >
+                      <h3 className="text-xl font-semibold mb-4">Question</h3>
+                      <p className="text-lg">{currentCard.question}</p>
+                      <p className="text-sm text-muted-foreground mt-4">
+                        Click to reveal answer
+                      </p>
+                    </div>
+                    
+                    {/* Back face */}
+                    <div 
+                      className="absolute inset-0 w-full h-full flex flex-col items-center justify-center"
+                      style={{ 
+                        backfaceVisibility: "hidden",
+                        transform: "rotateY(180deg)"
+                      }}
+                    >
+                      <h3 className="text-xl font-semibold mb-4">Answer</h3>
+                      <p className="text-lg">{currentCard.answer}</p>
+                      <p className="text-sm text-muted-foreground mt-4">
+                        Click to flip back
+                      </p>
+                    </div>
                   </motion.div>
                 </div>
               </CardContent>
