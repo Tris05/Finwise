@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion } from "framer-motion"
+import { useSearchParams } from "next/navigation"
 
 type Msg = { id: string; role: "user" | "assistant"; content: string }
 
@@ -20,6 +21,7 @@ export function ChatbotPanel() {
   const [input, setInput] = useState("")
   const endRef = useRef<HTMLDivElement | null>(null)
   const qc = useQueryClient()
+  const searchParams = useSearchParams()
 
   const chat = useMutation({
     mutationFn: async (prompt: string): Promise<{ reply: string }> => {
@@ -37,11 +39,22 @@ export function ChatbotPanel() {
     endRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, chat.isPending])
 
-  async function send() {
-    if (!input.trim()) return
-    const userMsg: Msg = { id: crypto.randomUUID(), role: "user", content: input.trim() }
+  // Handle search query from URL
+  useEffect(() => {
+    const query = searchParams.get('q')
+    if (query) {
+      setInput(query)
+      // Auto-send the search query
+      setTimeout(() => {
+        sendQuery(query)
+      }, 100)
+    }
+  }, [searchParams])
+
+  const sendQuery = async (query: string) => {
+    if (!query.trim()) return
+    const userMsg: Msg = { id: crypto.randomUUID(), role: "user", content: query.trim() }
     setMessages((m) => [...m, userMsg])
-    setInput("")
     const { reply } = await chat.mutateAsync(userMsg.content)
     let acc = ""
     for (const ch of reply) {
@@ -53,6 +66,12 @@ export function ChatbotPanel() {
       })
     }
     setMessages((m) => m.map((x) => (x.id === "typing" ? { ...x, id: crypto.randomUUID() } : x)))
+  }
+
+  async function send() {
+    if (!input.trim()) return
+    setInput("")
+    await sendQuery(input.trim())
   }
 
   return (

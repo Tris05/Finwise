@@ -81,7 +81,7 @@ export function RebalanceModal({ open, onOpenChange }: { open: boolean; onOpenCh
               <Button
                 variant="outline"
                 onClick={() => {
-                  toast({ title: "Rebalance rejected", description: "We will keep current allocation." })
+                  toast({ title: "Rebalance rejected", description: "Your current portfolio allocation will remain unchanged." })
                   onOpenChange(false)
                 }}
               >
@@ -89,7 +89,7 @@ export function RebalanceModal({ open, onOpenChange }: { open: boolean; onOpenCh
               </Button>
               <Button
                 onClick={() => {
-                  toast({ title: "Rebalance accepted", description: "Portfolio updated in mock state." })
+                  toast({ title: "Rebalance accepted", description: "Your portfolio has been updated with the new allocation." })
                   onOpenChange(false)
                 }}
               >
