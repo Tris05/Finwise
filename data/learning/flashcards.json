@@ -1,0 +1,98 @@
+[
+  {
+    "id": "fc1",
+    "category": "Basics",
+    "question": "What is PPF?",
+    "answer": "Public Provident Fund - A government-backed savings scheme with 7.1% annual interest, tax-free under Section 80C with 15-year lock-in period.",
+    "difficulty": "Easy",
+    "xp": 10
+  },
+  {
+    "id": "fc2",
+    "category": "Basics",
+    "question": "What is SIP?",
+    "answer": "Systematic Investment Plan - A method of investing in mutual funds regularly (monthly/quarterly) to benefit from rupee cost averaging and compound growth.",
+    "difficulty": "Easy",
+    "xp": 10
+  },
+  {
+    "id": "fc3",
+    "category": "Investment",
+    "question": "What is Nifty 50?",
+    "answer": "Nifty 50 is the benchmark index of NSE representing the top 50 companies by market capitalization. It's used to track Indian equity market performance.",
+    "difficulty": "Medium",
+    "xp": 15
+  },
+  {
+    "id": "fc4",
+    "category": "Investment",
+    "question": "What is ELSS?",
+    "answer": "Equity Linked Savings Scheme - Tax-saving mutual funds with 3-year lock-in period. Offers tax deduction under Section 80C up to ₹1.5 lakh annually.",
+    "difficulty": "Medium",
+    "xp": 15
+  },
+  {
+    "id": "fc5",
+    "category": "Credit",
+    "question": "What is CIBIL Score?",
+    "answer": "Credit Information Bureau (India) Limited score - A 3-digit number (300-900) that represents your creditworthiness. Higher score means better loan approval chances.",
+    "difficulty": "Easy",
+    "xp": 10
+  },
+  {
+    "id": "fc6",
+    "category": "Credit",
+    "question": "What is credit utilization ratio?",
+    "answer": "The percentage of your credit limit that you're using. Should be kept below 30% for a good credit score. Calculated as (Credit Used / Credit Limit) × 100.",
+    "difficulty": "Medium",
+    "xp": 15
+  },
+  {
+    "id": "fc7",
+    "category": "Tax",
+    "question": "What is Section 80C?",
+    "answer": "Income Tax Act section allowing deduction up to ₹1.5 lakh annually for investments in PPF, ELSS, EPF, NSC, tax-saving FDs, and life insurance premiums.",
+    "difficulty": "Medium",
+    "xp": 15
+  },
+  {
+    "id": "fc8",
+    "category": "Tax",
+    "question": "What is HRA exemption?",
+    "answer": "House Rent Allowance exemption - Tax benefit on rent paid. Exemption is minimum of: Actual HRA received, Rent paid minus 10% of basic salary, or 50% of basic salary (metro cities).",
+    "difficulty": "Hard",
+    "xp": 20
+  },
+  {
+    "id": "fc9",
+    "category": "Banking",
+    "question": "What is repo rate?",
+    "answer": "The rate at which RBI lends money to commercial banks. It influences interest rates on loans and deposits. Higher repo rate means higher loan interest rates.",
+    "difficulty": "Medium",
+    "xp": 15
+  },
+  {
+    "id": "fc10",
+    "category": "Banking",
+    "question": "What is DTI ratio?",
+    "answer": "Debt-to-Income ratio - The percentage of monthly income used to pay debts. Should be below 40% as per RBI guidelines for loan approval.",
+    "difficulty": "Medium",
+    "xp": 15
+  },
+  {
+    "id": "fc11",
+    "category": "Investment",
+    "question": "What is rupee cost averaging?",
+    "answer": "Investment strategy where you invest a fixed amount regularly regardless of market conditions. This reduces the impact of market volatility on your investments.",
+    "difficulty": "Medium",
+    "xp": 15
+  },
+  {
+    "id": "fc12",
+    "category": "Investment",
+    "question": "What is asset allocation?",
+    "answer": "Strategy of dividing investments across different asset classes (equity, debt, gold, real estate) based on risk tolerance, time horizon, and financial goals.",
+    "difficulty": "Hard",
+    "xp": 20
+  }
+]

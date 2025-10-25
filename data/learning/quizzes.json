@@ -1,0 +1,113 @@
+[
+  {
+    "id": "quiz1",
+    "title": "Investment Basics",
+    "description": "Test your knowledge of basic investment concepts",
+    "difficulty": "Easy",
+    "questions": [
+      {
+        "id": "q1",
+        "question": "What is the minimum lock-in period for PPF?",
+        "options": ["5 years", "10 years", "15 years", "20 years"],
+        "correct": 2,
+        "explanation": "PPF has a 15-year lock-in period, making it suitable for long-term wealth building."
+      },
+      {
+        "id": "q2",
+        "question": "Which investment option offers tax deduction under Section 80C?",
+        "options": ["Regular FD", "PPF", "Savings Account", "Gold"],
+        "correct": 1,
+        "explanation": "PPF offers tax deduction under Section 80C up to ₹1.5 lakh annually."
+      },
+      {
+        "id": "q3",
+        "question": "What does SIP stand for?",
+        "options": ["Systematic Investment Plan", "Simple Investment Process", "Smart Investment Portfolio", "Secure Investment Policy"],
+        "correct": 0,
+        "explanation": "SIP stands for Systematic Investment Plan - investing regularly in mutual funds."
+      }
+    ],
+    "xp": 30
+  },
+  {
+    "id": "quiz2",
+    "title": "Credit & Banking",
+    "description": "Understanding credit scores and banking concepts",
+    "difficulty": "Medium",
+    "questions": [
+      {
+        "id": "q1",
+        "question": "What is the ideal credit utilization ratio?",
+        "options": ["Below 30%", "30-50%", "50-70%", "Above 70%"],
+        "correct": 0,
+        "explanation": "Credit utilization should be below 30% for a good credit score."
+      },
+      {
+        "id": "q2",
+        "question": "What does CIBIL score range from?",
+        "options": ["200-800", "300-900", "400-1000", "500-1200"],
+        "correct": 1,
+        "explanation": "CIBIL score ranges from 300 to 900, with higher scores indicating better creditworthiness."
+      },
+      {
+        "id": "q3",
+        "question": "What is the maximum DTI ratio recommended by RBI?",
+        "options": ["30%", "40%", "50%", "60%"],
+        "correct": 1,
+        "explanation": "RBI recommends keeping DTI ratio below 40% for loan approval."
+      },
+      {
+        "id": "q4",
+        "question": "Which bank offers the lowest home loan rates?",
+        "options": ["HDFC", "ICICI", "SBI", "Axis"],
+        "correct": 2,
+        "explanation": "SBI typically offers the lowest home loan rates starting from 8.4%."
+      }
+    ],
+    "xp": 40
+  },
+  {
+    "id": "quiz3",
+    "title": "Tax Planning",
+    "description": "Master tax-saving strategies and exemptions",
+    "difficulty": "Hard",
+    "questions": [
+      {
+        "id": "q1",
+        "question": "What is the maximum deduction under Section 80C?",
+        "options": ["₹1 lakh", "₹1.5 lakh", "₹2 lakh", "₹2.5 lakh"],
+        "correct": 1,
+        "explanation": "Section 80C allows maximum deduction of ₹1.5 lakh annually."
+      },
+      {
+        "id": "q2",
+        "question": "Which investment has the shortest lock-in period for tax benefits?",
+        "options": ["PPF", "ELSS", "NSC", "Tax-saving FD"],
+        "correct": 1,
+        "explanation": "ELSS has only 3-year lock-in period, shortest among tax-saving options."
+      },
+      {
+        "id": "q3",
+        "question": "What is the HRA exemption limit for metro cities?",
+        "options": ["40% of basic salary", "50% of basic salary", "60% of basic salary", "70% of basic salary"],
+        "correct": 1,
+        "explanation": "HRA exemption is 50% of basic salary for metro cities (Delhi, Mumbai, Chennai, Kolkata)."
+      },
+      {
+        "id": "q4",
+        "question": "Which of these is NOT eligible for Section 80C deduction?",
+        "options": ["PPF", "ELSS", "Regular mutual funds", "EPF"],
+        "correct": 2,
+        "explanation": "Regular mutual funds are not eligible for Section 80C deduction, only ELSS funds are."
+      },
+      {
+        "id": "q5",
+        "question": "What is the additional deduction available under Section 80CCD(1B)?",
+        "options": ["₹25,000", "₹50,000", "₹75,000", "₹1,00,000"],
+        "correct": 1,
+        "explanation": "Section 80CCD(1B) provides additional deduction of ₹50,000 for NPS contributions."
+      }
+    ],
+    "xp": 50
+  }
+]

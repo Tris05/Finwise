@@ -1,0 +1,122 @@
+[
+  {
+    "id": "demo1",
+    "prompt": "Is crypto risky?",
+    "answer": "Yes, crypto is highly volatile and not regulated by RBI. It's riskier than traditional investments like mutual funds or PPF. Consider limiting crypto to 5% of your portfolio maximum.",
+    "followUps": [
+      "Compare crypto vs mutual funds",
+      "What are safe investment options?",
+      "How can I reduce crypto risk?"
+    ]
+  },
+  {
+    "id": "demo2",
+    "prompt": "What is PPF?",
+    "answer": "PPF (Public Provident Fund) is a government-backed savings scheme with 7.1% annual interest. It's tax-free under Section 80C with 15-year lock-in. Great for long-term wealth building and tax savings.",
+    "followUps": [
+      "How to open PPF account?",
+      "Compare PPF vs FD returns",
+      "What is the maximum PPF investment limit?"
+    ]
+  },
+  {
+    "id": "demo3",
+    "prompt": "Which is better — SIP or FD?",
+    "answer": "SIP (Systematic Investment Plan) in mutual funds offers rupee cost averaging and compound growth. Better than FD for long-term goals due to higher potential returns, though with market risk.",
+    "followUps": [
+      "What is rupee cost averaging?",
+      "Which mutual funds to choose for SIP?",
+      "How much should I invest in SIP monthly?"
+    ]
+  },
+  {
+    "id": "demo4",
+    "prompt": "Convert $500 to INR",
+    "answer": "At current exchange rate (₹83/USD), $500 = ₹41,500. However, for financial planning, consider using INR amounts directly for better accuracy.",
+    "followUps": [
+      "What is the current USD to INR rate?",
+      "How to invest ₹41,500 wisely?",
+      "Should I invest in US stocks or Indian stocks?"
+    ]
+  },
+  {
+    "id": "demo5",
+    "prompt": "Show my Kotak credit card balance",
+    "answer": "Check your Kotak credit card balance by logging into net banking or mobile app. Current limit: ₹2,50,000, Available: ₹1,80,000, Due: ₹15,000 (due in 5 days).",
+    "followUps": [
+      "How to pay credit card bill online?",
+      "What are Kotak credit card benefits?",
+      "How to increase credit limit?"
+    ]
+  },
+  {
+    "id": "demo6",
+    "prompt": "Analyze my uploaded document (mock risk 70%)",
+    "answer": "📄 Document uploaded: HDFC_Bank_Statement.pdf\n✅ Analysis Complete\nRisk Score: 70% (Moderate-High Risk)\n\nKey Risk Factors:\n- High credit utilization (65% of limit)\n- Low savings ratio (10%)\n- Multiple EMI obligations\n\n💡 Suggestions:\n- Reduce credit utilization below 30%\n- Increase monthly savings\n- Invest in safer options like PPF or Debt Mutual Funds\n\nSafer Alternatives:\n- HDFC FD (6.8% p.a.)\n- SBI PPF (7.1% p.a.)\n- Axis Short-Term Debt Fund",
+    "followUps": [
+      "How to improve my credit score?",
+      "What are the best debt mutual funds?",
+      "How to reduce EMI burden?"
+    ]
+  },
+  {
+    "id": "demo7",
+    "prompt": "Show last 5 transactions",
+    "answer": "Last 5 transactions: 1) Amazon purchase ₹2,500, 2) Fuel at HP ₹1,200, 3) Swiggy order ₹450, 4) Netflix subscription ₹199, 5) ATM withdrawal ₹5,000.",
+    "followUps": [
+      "How to track expenses better?",
+      "What are good budgeting apps?",
+      "How to reduce unnecessary spending?"
+    ]
+  },
+  {
+    "id": "demo8",
+    "prompt": "How to open ICICI savings account?",
+    "answer": "To open ICICI savings account: Visit branch with Aadhaar, PAN, address proof. Minimum balance ₹10,000. Benefits: Free ATM transactions, net banking, mobile app access.",
+    "followUps": [
+      "What documents are required?",
+      "Compare ICICI vs HDFC savings account",
+      "How to open account online?"
+    ]
+  },
+  {
+    "id": "demo9",
+    "prompt": "Which is best short-term investment?",
+    "answer": "Best short-term investments: 1) Liquid mutual funds (6-7% p.a.), 2) Short-term FDs (6.5-7% p.a.), 3) Arbitrage funds (5-6% p.a.), 4) Ultra-short debt funds.",
+    "followUps": [
+      "What is liquid mutual fund?",
+      "Compare FD vs liquid mutual fund",
+      "How to choose the right short-term investment?"
+    ]
+  },
+  {
+    "id": "demo10",
+    "prompt": "Is PPF tax-free?",
+    "answer": "Yes, PPF is completely tax-free - no tax on deposits, interest, or withdrawals. It's the best tax-saving instrument for long-term wealth building in India.",
+    "followUps": [
+      "What is the PPF interest rate?",
+      "How to maximize PPF benefits?",
+      "Compare PPF vs ELSS for tax saving"
+    ]
+  },
+  {
+    "id": "demo11",
+    "prompt": "Compare SBI FD vs Axis FD",
+    "answer": "SBI FD: 6.8% p.a., 5-year lock-in, government security. Axis FD: 7.0% p.a., flexible tenure, private bank. Choose based on your risk preference and tenure needs.",
+    "followUps": [
+      "Which bank offers highest FD rates?",
+      "What is the minimum FD amount?",
+      "How to break FD before maturity?"
+    ]
+  },
+  {
+    "id": "demo12",
+    "prompt": "Show me Nifty50 trend",
+    "answer": "Nifty 50 current trend: Up 2.1% this week, trading at 19,850. Key drivers: Strong Q3 results, FII inflows, positive global cues. Support at 19,500, resistance at 20,000.",
+    "followUps": [
+      "Should I invest in Nifty 50 now?",
+      "What are the best Nifty 50 mutual funds?",
+      "How to track Nifty 50 performance?"
+    ]
+  }
+]

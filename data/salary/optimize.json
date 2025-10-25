@@ -1,0 +1,23 @@
+{
+  "before": [
+    { "component": "Basic", "amount": 600000 },
+    { "component": "HRA", "amount": 240000 },
+    { "component": "LTA", "amount": 25000 },
+    { "component": "Special Allowance", "amount": 500000 },
+    { "component": "Medical Allowance", "amount": 15000 }
+  ],
+  "after": [
+    { "component": "Basic", "amount": 600000 },
+    { "component": "HRA", "amount": 300000 },
+    { "component": "LTA", "amount": 60000 },
+    { "component": "Special Allowance", "amount": 330000 },
+    { "component": "Medical Allowance", "amount": 15000 }
+  ],
+  "taxSavings": 45000,
+  "bullets": [
+    "Optimized HRA within exemption limits (₹25,000/month)",
+    "Increased LTA for planned travel (₹5,000/month)",
+    "Shift from taxable allowance to exempt components",
+    "Maximized Section 80C benefits through salary structure"
+  ]
+}

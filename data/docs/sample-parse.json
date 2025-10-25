@@ -1,0 +1,14 @@
+{
+  "fields": [
+    { "key": "Name", "value": "Rajesh Kumar" },
+    { "key": "Employer", "value": "Infosys Technologies" },
+    { "key": "Monthly Salary", "value": "₹150,000" },
+    { "key": "Bank", "value": "HDFC Bank" },
+    { "key": "Late Payment Flags", "value": "2 in last 12 months", "risk": "medium" },
+    { "key": "Credit Utilization", "value": "65%", "risk": "high" },
+    { "key": "CIBIL Score", "value": "720", "risk": "medium" },
+    { "key": "EMI Obligations", "value": "₹45,000/month", "risk": "medium" }
+  ],
+  "riskScore": 0.70,
+  "summary": "Elevated credit utilization (65%) and recent late payments increase credit risk. High EMI burden affects savings capacity. Consider lowering utilization < 30%, setting autopay reminders, and building emergency fund."
+}

@@ -1,0 +1,15 @@
+{
+  "proposedWeights": [
+    { "asset": "Nifty 50 Stocks", "weight": 0.35 },
+    { "asset": "Mutual Funds", "weight": 0.25 },
+    { "asset": "PPF", "weight": 0.15 },
+    { "asset": "FD", "weight": 0.10 },
+    { "asset": "Gold", "weight": 0.08 },
+    { "asset": "Crypto", "weight": 0.05 },
+    { "asset": "ELSS", "weight": 0.02 }
+  ],
+  "riskCategory": "Medium",
+  "confidenceScore": 0.82,
+  "shapText": "Nifty 50 overweight due to rising income stability and longer horizon; PPF/FD allocation balances downside risk. Gold hedge increased due to recent volatility. ELSS added for tax benefits. Crypto limited by moderate risk profile.",
+  "llmSummary": "We recommend a moderately aggressive allocation balancing growth and stability, aligned with your time horizon and risk tolerance. Includes tax-saving ELSS and Indian market exposure. Rebalance quarterly or on 10% drift."
+}
