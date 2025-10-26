@@ -18,8 +18,12 @@ import { AddTransactionModal } from "@/components/add-transaction-modal"
 import { AddGoalModal } from "@/components/add-goal-modal"
 import { EditGoalModal } from "@/components/edit-goal-modal"
 import { SellInvestmentModal } from "@/components/sell-investment-modal"
+import { InvestmentRecommendations } from "@/components/investment-recommendations"
+import { StockSearch } from "@/components/stock-search"
+import { useMarketData } from "@/hooks/use-market-data"
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Area, AreaChart } from "recharts"
 import { formatINR } from "@/lib/utils"
+import { RefreshCw, AlertCircle, Wifi, WifiOff } from "lucide-react"
 
 // Sample data - in a real app, this would come from your backend
 
@@ -203,11 +207,11 @@ const realInvestments = [
 ]
 
 // Calculate real portfolio data from investments
-const calculatePortfolioData = () => {
-  const totalValue = realInvestments.reduce((sum, inv) => sum + inv.currentValue, 0)
-  const totalGain = realInvestments.reduce((sum, inv) => sum + inv.totalGain, 0)
+const calculatePortfolioData = (investments: any[]) => {
+  const totalValue = investments.reduce((sum, inv) => sum + inv.currentValue, 0)
+  const totalGain = investments.reduce((sum, inv) => sum + inv.totalGain, 0)
   const totalGainPercent = (totalGain / (totalValue - totalGain)) * 100
-  const dayChange = realInvestments.reduce((sum, inv) => sum + (inv.dayChange * inv.quantity), 0)
+  const dayChange = investments.reduce((sum, inv) => sum + (inv.dayChange * inv.quantity), 0)
   const dayChangePercent = (dayChange / totalValue) * 100
   
   return {
@@ -219,11 +223,9 @@ const calculatePortfolioData = () => {
   }
 }
 
-const portfolioData = calculatePortfolioData()
-
 // Calculate portfolio allocation data for pie chart
-const calculatePortfolioAllocation = () => {
-  const allocation = realInvestments.reduce((acc, investment) => {
+const calculatePortfolioAllocation = (investments: any[]) => {
+  const allocation = investments.reduce((acc, investment) => {
     const category = investment.category
     if (!acc[category]) {
       acc[category] = { name: category, value: 0, color: investment.color }
@@ -234,8 +236,6 @@ const calculatePortfolioAllocation = () => {
   
   return Object.values(allocation)
 }
-
-const portfolioAllocation = calculatePortfolioAllocation()
 
 const sampleTransactions = [
   {
@@ -425,12 +425,28 @@ export default function InvestmentsPage() {
   const [selectedAsset, setSelectedAsset] = useState(null)
   const [isMarketDataLoading, setIsMarketDataLoading] = useState(false)
 
-  const handleRefresh = () => {
+  // Use real-time market data
+  const {
+    investments: realTimeInvestments,
+    isLoading: isMarketDataFetching,
+    error: marketDataError,
+    lastUpdated,
+    refreshData: refreshMarketData
+  } = useMarketData(realInvestments)
+
+  // Calculate portfolio data from real-time investments
+  const portfolioData = calculatePortfolioData(realTimeInvestments)
+  const portfolioAllocation = calculatePortfolioAllocation(realTimeInvestments)
+
+  const handleRefresh = async () => {
     setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await refreshMarketData()
+    } catch (error) {
+      console.error('Error refreshing data:', error)
+    } finally {
       setIsLoading(false)
-    }, 2000)
+    }
   }
 
   // Simulate real-time market data updates
@@ -610,14 +626,47 @@ export default function InvestmentsPage() {
     // In a real app, this would call an API to get new recommendations
   }
 
+  const handleAddToWatchlist = (stock: any) => {
+    console.log("Adding to watchlist:", stock)
+    // TODO: Implement watchlist functionality
+  }
+
+  const handleAddToPortfolio = (stock: any) => {
+    console.log("Adding to portfolio:", stock)
+    // TODO: Implement add to portfolio functionality
+  }
+
   return (
     <QueryProvider>
       <AppShell>
         <div className="space-y-8 p-6">
           {/* Page Header */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Investment Portfolio</h1>
-            <p className="text-muted-foreground">Track your investments, analyze performance, and manage your financial goals</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Investment Portfolio</h1>
+                <p className="text-muted-foreground">Track your investments, analyze performance, and manage your financial goals</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                {marketDataError && (
+                  <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+                    <WifiOff className="h-4 w-4" />
+                    <span className="text-sm">Data Error</span>
+                  </div>
+                )}
+                {!marketDataError && lastUpdated && (
+                  <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                    <Wifi className="h-4 w-4" />
+                    <span className="text-sm">Live Data</span>
+                  </div>
+                )}
+                {lastUpdated && (
+                  <div className="text-xs text-muted-foreground">
+                    Updated: {new Date(lastUpdated).toLocaleTimeString()}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Portfolio Overview */}
@@ -629,7 +678,7 @@ export default function InvestmentsPage() {
             dayChangePercent={portfolioData.dayChangePercent}
             onRefresh={handleRefresh}
             onRebalance={handleRebalance}
-            isLoading={isLoading}
+            isLoading={isLoading || isMarketDataFetching}
           />
 
           {/* Performance Chart */}
@@ -703,49 +752,76 @@ export default function InvestmentsPage() {
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="portfolio" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+            <TabsList className="grid w-full grid-cols-7 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
               <TabsTrigger 
                 value="portfolio" 
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Portfolio
               </TabsTrigger>
               <TabsTrigger 
+                value="search"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+              >
+                Search Stocks
+              </TabsTrigger>
+              <TabsTrigger 
+                value="recommendations"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+              >
+                AI Recommendations
+              </TabsTrigger>
+              <TabsTrigger 
                 value="transactions"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Transactions
               </TabsTrigger>
               <TabsTrigger 
                 value="market"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Market
               </TabsTrigger>
               <TabsTrigger 
                 value="goals"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Goals
               </TabsTrigger>
               <TabsTrigger 
                 value="analysis"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Analysis
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="portfolio" className="space-y-6">
+            <TabsContent value="portfolio" className="space-y-6 mt-6">
               <RealInvestmentTracker
-                investments={realInvestments}
+                investments={realTimeInvestments}
                 onInvestmentClick={handleAssetClick}
                 onAddInvestment={() => console.log("Add investment clicked")}
                 onSellInvestment={handleSellInvestment}
               />
             </TabsContent>
 
-            <TabsContent value="transactions" className="space-y-6">
+            <TabsContent value="search" className="space-y-6 mt-6">
+              <StockSearch
+                onAddToWatchlist={handleAddToWatchlist}
+                onAddToPortfolio={handleAddToPortfolio}
+              />
+            </TabsContent>
+
+            <TabsContent value="recommendations" className="space-y-6 mt-6">
+              <InvestmentRecommendations
+                investments={realTimeInvestments}
+                onRefreshRecommendations={handleRefreshRecommendations}
+                isLoading={isLoading || isMarketDataFetching}
+              />
+            </TabsContent>
+
+            <TabsContent value="transactions" className="space-y-6 mt-6">
               <InvestmentTransactions
                 transactions={transactions}
                 onAddTransaction={handleAddTransaction}
@@ -755,7 +831,7 @@ export default function InvestmentsPage() {
               />
             </TabsContent>
 
-            <TabsContent value="market" className="space-y-6">
+            <TabsContent value="market" className="space-y-6 mt-6">
               <MarketWatchlist
                 assets={marketAssetsState}
                 onToggleWatch={handleToggleWatch}
@@ -766,8 +842,7 @@ export default function InvestmentsPage() {
               />
             </TabsContent>
 
-
-            <TabsContent value="goals" className="space-y-6">
+            <TabsContent value="goals" className="space-y-6 mt-6">
               <InvestmentGoals
                 goals={goals}
                 onAddGoal={handleAddGoal}
@@ -776,7 +851,7 @@ export default function InvestmentsPage() {
               />
             </TabsContent>
 
-            <TabsContent value="analysis" className="space-y-8">
+            <TabsContent value="analysis" className="space-y-8 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
                   <CardHeader className="pb-4">

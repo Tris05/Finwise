@@ -122,67 +122,69 @@ export function PortfolioPie({
   // Fallback if no data
   if (!data || data.length === 0) {
     return (
-      <div className="h-96 w-full rounded-lg p-6 bg-white dark:bg-slate-900/50 flex items-center justify-center">
-        <div className="text-center text-muted-foreground">
-          <div className="text-lg font-medium">No data available</div>
-          <div className="text-sm">Add some investments to see your portfolio allocation</div>
+      <div className="w-full rounded-lg p-6 bg-white dark:bg-slate-900/50">
+        <div className="h-[400px] flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <div className="text-lg font-medium">No data available</div>
+            <div className="text-sm">Add some investments to see your portfolio allocation</div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-96 w-full rounded-lg p-6 bg-white dark:bg-slate-900/50">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-          <Pie
-            isAnimationActive={true}
-            animationBegin={120}
-            animationDuration={800}
-            animationEasing="ease-out"
-            dataKey="value"
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={30}
-            outerRadius={60}
-            activeIndex={activeIndex ?? -1}
-            activeShape={(props) => <Sector {...props} outerRadius={(props.outerRadius as number) + 5} />}
-            onClick={(_, i) => onSliceClick?.(data[i])}
-            onMouseEnter={(_, i) => setActiveIndex(i)}
-            onMouseLeave={() => setActiveIndex(null)}
-            label={renderLabel}
-            labelLine={false}
-            stroke="none"
-          >
-            {data.map((entry, index) => (
-              <Cell
-                key={entry.name}
-                fill={colors[index]}
-                stroke="#ffffff"
-                strokeWidth={2}
-                cursor="pointer"
-                className="hover:opacity-80 transition-opacity"
-              />
-            ))}
-          </Pie>
+    <div className="w-full rounded-lg p-6 bg-white dark:bg-slate-900/50">
+      <div className="h-[400px] mb-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart margin={{ top: 40, right: 40, bottom: 40, left: 40 }}>
+            <Pie
+              isAnimationActive={true}
+              animationBegin={120}
+              animationDuration={800}
+              animationEasing="ease-out"
+              dataKey="value"
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={120}
+              activeIndex={activeIndex ?? -1}
+              activeShape={(props) => <Sector {...props} outerRadius={(props.outerRadius as number) + 5} />}
+              onClick={(_, i) => onSliceClick?.(data[i])}
+              onMouseEnter={(_, i) => setActiveIndex(i)}
+              onMouseLeave={() => setActiveIndex(null)}
+              label={renderLabel}
+              labelLine={false}
+              stroke="none"
+            >
+              {data.map((entry, index) => (
+                <Cell
+                  key={entry.name}
+                  fill={colors[index]}
+                  stroke="#ffffff"
+                  strokeWidth={2}
+                  cursor="pointer"
+                  className="hover:opacity-80 transition-opacity"
+                />
+              ))}
+            </Pie>
 
-          <text
-            x="50%"
-            y="50%"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="pointer-events-none select-none"
-            fill="hsl(var(--foreground))"
-            style={{ fontWeight: 600, fontSize: '14px' }}
-          >
-            {formatINR(total)}
-          </text>
-
-          <Tooltip content={<CustomTooltip total={total} />} />
-          <Legend content={LegendContent} />
-        </PieChart>
-      </ResponsiveContainer>
+            <Tooltip content={<CustomTooltip total={total} />} />
+            <Legend content={LegendContent} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      
+      {/* Total amount displayed below the chart */}
+      <div className="text-center">
+        <div className="text-2xl font-bold text-foreground">
+          {formatINR(total)}
+        </div>
+        <div className="text-sm text-muted-foreground mt-1">
+          Total Portfolio Value
+        </div>
+      </div>
     </div>
   )
 }

@@ -29,14 +29,16 @@ import {
   BarChart3,
   CheckCircle,
   XCircle,
-  Info
+  Info,
+  Calculator,
+  PieChart
 } from "lucide-react"
 import { formatINR } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { CreditCardComparison } from "./credit-card-comparison"
 import creditCardsData from "@/data/credit-cards-detailed.json"
-import { useMutation } from "@tanstack/react-query"
+import { processCSVFiles, ParsedCreditCard } from "@/lib/csv-parser"
 
 interface CreditCard {
   id: string
@@ -52,6 +54,11 @@ interface CreditCard {
   rating: number
   popularity: string
   targetAudience: string
+  cibilScore: {
+    min: number
+    max?: number
+    description: string
+  }
   eligibility: {
     minIncome: number
     minAge: number
@@ -68,6 +75,7 @@ interface CreditCard {
     entertainment: string
   }
   benefits: string[]
+  keyBenefits: string[]
   fees: {
     annualFee: number
     joiningFee: number
@@ -82,31 +90,10 @@ interface CreditCard {
   notFor: string[]
 }
 
-interface AIRecommendation {
-  cardId: string
-  cardName: string
-  reasoning: string
-  expectedMonthlyRewards: string
-  roi: string
-  keyBenefits: string[]
-  matchScore: number
-}
-
-interface AIAnalysis {
-  totalMonthlySpend: string
-  potentialMonthlyRewards: string
-  annualSavings: string
-}
-
-interface AIRecommendationsResponse {
-  recommendations: AIRecommendation[]
-  analysis: AIAnalysis
-  warnings: string[]
-}
-
 interface UserProfile {
   monthlyIncome: number
   monthlySpending: number
+  cibilScore: number
   spendingCategories: {
     dining: number
     travel: number
@@ -127,6 +114,7 @@ export function CreditCardRecommendations() {
   const [userProfile, setUserProfile] = useState<UserProfile>({
     monthlyIncome: 50000,
     monthlySpending: 30000,
+    cibilScore: 750,
     spendingCategories: {
       dining: 20,
       travel: 15,
@@ -142,56 +130,49 @@ export function CreditCardRecommendations() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [sortBy, setSortBy] = useState("rating")
-  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendationsResponse | null>(null)
-  const [showAIRecommendations, setShowAIRecommendations] = useState(false)
-
-  // AI Recommendation mutation
-  const aiRecommendationMutation = useMutation({
-    mutationFn: async (data: { userProfile: any, spendingPatterns: any, preferences: any }): Promise<AIRecommendationsResponse> => {
-      const res = await fetch("/api/credit-cards/recommendations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        console.error("AI Recommendations API error:", errorData)
-        throw new Error(errorData.error || `HTTP ${res.status}: Failed to fetch AI recommendations`)
-      }
-
-      return res.json()
-    },
-    onSuccess: (data) => {
-      console.log("AI Recommendations received:", data)
-      console.log("Recommendations data:", data.recommendations)
-      console.log("Analysis data:", data.recommendations?.analysis)
-      setAiRecommendations(data.recommendations || data)
-      setShowAIRecommendations(true)
-    },
-    onError: (error) => {
-      console.error("AI Recommendation error:", error)
-      // Show error state
-      setAiRecommendations({
-        recommendations: [],
-        analysis: {
-          totalMonthlySpend: "₹0",
-          potentialMonthlyRewards: "₹0",
-          annualSavings: "₹0"
-        },
-        warnings: ["Failed to get AI recommendations. Please try again."]
-      })
-      setShowAIRecommendations(true)
-    }
-  })
 
   // Load credit card data
   useEffect(() => {
-    // Use imported data directly
+    const loadCreditCards = async () => {
+      try {
+        console.log('Loading credit cards...')
+        // Load CSV data first
+        const csvCards = await processCSVFiles()
+        console.log('CSV Cards loaded:', csvCards.length)
+        
+        // Convert CSV cards to match interface
+        const convertedCards: CreditCard[] = csvCards.map(card => ({
+          ...card,
+          // Ensure all required fields are present
+          features: card.features || [],
+          benefits: card.benefits || [],
+          keyBenefits: card.keyBenefits || [],
+          pros: card.pros || [],
+          cons: card.cons || [],
+          bestFor: card.bestFor || [],
+          notFor: card.notFor || [],
+          cibilScore: card.cibilScore || { min: 700, description: '700+' }
+        }))
+        
+        console.log('Converted cards:', convertedCards.length)
+        console.log('Sample converted card:', convertedCards[0])
+        
+        // Fallback to JSON data if CSV loading fails
+        const fallbackCards = csvCards.length === 0 ? creditCardsData.creditCards : []
+        
+        const allCards = [...convertedCards, ...fallbackCards]
+        console.log('Total cards to set:', allCards.length)
+        setCreditCards(allCards)
+        setFilteredCards(allCards)
+      } catch (error) {
+        console.error('Error loading credit cards:', error)
+        // Fallback to JSON data
     setCreditCards(creditCardsData.creditCards)
     setFilteredCards(creditCardsData.creditCards)
+      }
+    }
+    
+    loadCreditCards()
   }, [])
 
   // Filter and sort cards
@@ -199,9 +180,30 @@ export function CreditCardRecommendations() {
     let filtered = creditCards.filter(card => {
       const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            card.issuer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           card.category.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesCategory = filterCategory === "all" || card.category === filterCategory
-      return matchesSearch && matchesCategory
+                           card.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (card.keyBenefits || []).some(benefit => 
+                             benefit.toLowerCase().includes(searchTerm.toLowerCase())
+                           )
+      
+      const matchesCibilScore = !card.cibilScore || userProfile.cibilScore >= card.cibilScore.min
+      
+      // Handle advanced filters
+      let matchesFilter = true
+      if (filterCategory === "free") {
+        matchesFilter = card.annualFee === 0
+      } else if (filterCategory === "low-fee") {
+        matchesFilter = card.annualFee > 0 && card.annualFee < 1000
+      } else if (filterCategory === "no-cibil") {
+        matchesFilter = !card.cibilScore || card.cibilScore.min === 0
+      } else if (filterCategory === "low-cibil") {
+        matchesFilter = card.cibilScore && card.cibilScore.min >= 600 && card.cibilScore.min < 750
+      } else if (filterCategory === "high-cibil") {
+        matchesFilter = card.cibilScore && card.cibilScore.min >= 750
+      } else if (filterCategory !== "all") {
+        matchesFilter = card.category === filterCategory
+      }
+      
+      return matchesSearch && matchesCibilScore && matchesFilter
     })
 
     // Sort cards
@@ -217,13 +219,17 @@ export function CreditCardRecommendations() {
           const popularityOrder = { "Very High": 4, "High": 3, "Medium": 2, "Low": 1 }
           return popularityOrder[b.popularity as keyof typeof popularityOrder] - 
                  popularityOrder[a.popularity as keyof typeof popularityOrder]
+        case "cibilScore":
+          const aScore = a.cibilScore?.min || 999
+          const bScore = b.cibilScore?.min || 999
+          return aScore - bScore
         default:
           return 0
       }
     })
 
     setFilteredCards(filtered)
-  }, [creditCards, searchTerm, filterCategory, sortBy])
+  }, [creditCards, searchTerm, filterCategory, sortBy, userProfile.cibilScore])
 
   const handleCardSelect = (cardId: string) => {
     setSelectedCards(prev => 
@@ -271,43 +277,29 @@ export function CreditCardRecommendations() {
     return icons[category as keyof typeof icons] || Gift
   }
 
-  const getAIRecommendations = () => {
-    const spendingPatterns = {
-      dining: userProfile.spendingCategories.dining,
-      travel: userProfile.spendingCategories.travel,
-      shopping: userProfile.spendingCategories.shopping,
-      fuel: userProfile.spendingCategories.fuel,
-      groceries: userProfile.spendingCategories.groceries,
-      entertainment: userProfile.spendingCategories.entertainment,
-      onlineShopping: userProfile.spendingCategories.onlineShopping
-    }
-
-    const preferences = {
-      primaryGoal: userProfile.goals[0] || "General rewards",
-      preferredBenefits: userProfile.preferences.join(", "),
-      annualFeePreference: userProfile.annualFeePreference,
-      travelFrequency: userProfile.travelFrequency
-    }
-
-    aiRecommendationMutation.mutate({
-      userProfile,
-      spendingPatterns,
-      preferences
-    })
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Hero Section */}
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl font-bold tracking-tight">Find The Right Card</h1>
+        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          Explore a curated selection of credit cards tailored to your needs. Compare benefits, rewards, and offers to find the perfect card for your lifestyle.
+        </p>
+      </div>
+
       {/* User Profile Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            Personalize Your Recommendations
+            Personalize Your Experience
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Tell us about yourself to get personalized recommendations
+          </p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Monthly Income</label>
               <Input
@@ -327,34 +319,30 @@ export function CreditCardRecommendations() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Experience Level</label>
-              <Select
-                value={userProfile.experience}
-                onValueChange={(value) => setUserProfile(prev => ({ ...prev, experience: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium">CIBIL Score</label>
+              <Input
+                type="number"
+                value={userProfile.cibilScore}
+                onChange={(e) => setUserProfile(prev => ({ ...prev, cibilScore: Number(e.target.value) }))}
+                placeholder="750"
+                min="300"
+                max="900"
+              />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Goals</label>
+              <label className="text-sm font-medium">Primary Goal</label>
               <Select
                 value={userProfile.goals[0] || ""}
                 onValueChange={(value) => setUserProfile(prev => ({ ...prev, goals: [value] }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select goal" />
+                  <SelectValue placeholder="Select your goal" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="travel">Travel</SelectItem>
-                  <SelectItem value="shopping">Shopping</SelectItem>
-                  <SelectItem value="dining">Dining</SelectItem>
+                  <SelectItem value="cashback">Cashback</SelectItem>
+                  <SelectItem value="dining">Dining & Entertainment</SelectItem>
+                  <SelectItem value="shopping">Online Shopping</SelectItem>
                   <SelectItem value="fuel">Fuel</SelectItem>
                   <SelectItem value="general">General Rewards</SelectItem>
                 </SelectContent>
@@ -364,187 +352,170 @@ export function CreditCardRecommendations() {
         </CardContent>
       </Card>
 
-      {/* AI Recommendations Section */}
+      {/* Market Overview */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            AI-Powered Recommendations
+            <BarChart3 className="h-5 w-5" />
+            Market Overview
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Get personalized credit card recommendations based on your spending patterns and preferences using AI.
-            </p>
-            <Button 
-              onClick={getAIRecommendations}
-              disabled={aiRecommendationMutation.isPending}
-              className="w-full md:w-auto"
-            >
-              {aiRecommendationMutation.isPending ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Getting AI Recommendations...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Get AI Recommendations
-                </>
-              )}
-            </Button>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{creditCards.length}</div>
+              <div className="text-sm text-muted-foreground">Total Cards</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {creditCards.filter(card => !card.cibilScore || userProfile.cibilScore >= card.cibilScore.min).length}
+              </div>
+              <div className="text-sm text-muted-foreground">Eligible Cards</div>
+            </div>
+            <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">
+                {formatINR(Math.round(creditCards.reduce((sum, card) => sum + card.annualFee, 0) / creditCards.length))}
+              </div>
+              <div className="text-sm text-muted-foreground">Avg Annual Fee</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">
+                {creditCards.filter(card => card.annualFee === 0).length}
+              </div>
+              <div className="text-sm text-muted-foreground">Free Cards</div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* AI Recommendations Results */}
-      {showAIRecommendations && aiRecommendations && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              AI Recommendations
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Analysis Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {aiRecommendations.analysis?.totalMonthlySpend || "₹0"}
-                </div>
-                <div className="text-sm text-muted-foreground">Monthly Spending</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {aiRecommendations.analysis?.potentialMonthlyRewards || "₹0"}
-                </div>
-                <div className="text-sm text-muted-foreground">Monthly Rewards</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
-                  {aiRecommendations.analysis?.annualSavings || "₹0"}
-                </div>
-                <div className="text-sm text-muted-foreground">Annual Savings</div>
-              </div>
-            </div>
-
-            {/* Recommendations */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Top Recommendations</h3>
-              {aiRecommendations.recommendations?.length > 0 ? (
-                aiRecommendations.recommendations.map((rec, index) => {
-                const card = creditCards.find(c => c.id === rec.cardId)
-                if (!card) return null
-                
-                return (
-                  <Card key={rec.cardId} className="border-l-4 border-l-blue-500">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                              #{index + 1} Recommendation
-                            </Badge>
-                            <Badge variant="outline" className="bg-green-100 text-green-800">
-                              {rec.matchScore}% Match
-                            </Badge>
-                          </div>
-                          <h4 className="text-lg font-semibold">{rec.cardName}</h4>
-                          <p className="text-sm text-muted-foreground">{rec.reasoning}</p>
-                        </div>
-                        <div className="text-right space-y-1">
-                          <div className="text-sm font-medium text-green-600">{rec.expectedMonthlyRewards}</div>
-                          <div className="text-xs text-muted-foreground">Monthly Rewards</div>
-                          <div className="text-sm font-medium text-blue-600">{rec.roi} ROI</div>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <h5 className="text-sm font-medium mb-2">Key Benefits:</h5>
-                        <div className="flex flex-wrap gap-2">
-                          {rec.keyBenefits.map((benefit, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {benefit}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Info className="h-8 w-8 mx-auto mb-2" />
-                  <p>No AI recommendations available. Please try again.</p>
-                </div>
-              )}
-            </div>
-
-            {/* Warnings */}
-            {aiRecommendations.warnings?.length > 0 && (
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-                <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">Important Considerations</h4>
-                <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
-                  {aiRecommendations.warnings.map((warning, idx) => (
-                    <li key={idx}>• {warning}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Filters and Search */}
+      {/* Advanced Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search credit cards..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filters
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setFilterCategory("all")}>
+              Clear All
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Card Type Filters */}
+            <div>
+              <h4 className="font-medium mb-3">Card Type</h4>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant={filterCategory === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterCategory("all")}
+                >
+                  All Cards
+                </Button>
+                <Button 
+                  variant={filterCategory === "Travel" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterCategory("Travel")}
+                >
+                  Travel
+                </Button>
+                <Button 
+                  variant={filterCategory === "Cashback" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterCategory("Cashback")}
+                >
+                  Cashback
+                </Button>
+                <Button 
+                  variant={filterCategory === "Premium" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterCategory("Premium")}
+                >
+                  Premium
+                </Button>
+                <Button 
+                  variant={filterCategory === "Secured" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterCategory("Secured")}
+                >
+                  Secured
+                </Button>
+                <Button 
+                  variant={filterCategory === "free" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterCategory("free")}
+                >
+                  Lifetime Free
+                </Button>
               </div>
             </div>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Premium">Premium</SelectItem>
-                <SelectItem value="E-commerce">E-commerce</SelectItem>
-                <SelectItem value="Online Shopping">Online Shopping</SelectItem>
-                <SelectItem value="Rewards">Rewards</SelectItem>
-                <SelectItem value="Travel">Travel</SelectItem>
-                <SelectItem value="Fuel">Fuel</SelectItem>
-                <SelectItem value="Dining">Dining</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="rating">Rating</SelectItem>
-                <SelectItem value="annualFee">Annual Fee</SelectItem>
-                <SelectItem value="rewardsRate">Rewards Rate</SelectItem>
-                <SelectItem value="popularity">Popularity</SelectItem>
-              </SelectContent>
-            </Select>
+
+            {/* Bank Filters */}
+            <div>
+              <h4 className="font-medium mb-3">Banks</h4>
+              <div className="flex flex-wrap gap-2">
+                {Array.from(new Set(creditCards.map(card => card.issuer))).slice(0, 6).map(bank => (
+                  <Button 
+                    key={bank}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Filter by bank logic would go here
+                    }}
+                  >
+                    {bank}
+                  </Button>
+                ))}
+                <Button variant="outline" size="sm">
+                  View More
+                </Button>
+              </div>
+            </div>
+
+            {/* Search and Sort */}
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search for credit cards..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rating">RPC Rating</SelectItem>
+                  <SelectItem value="annualFee">Annual Fee</SelectItem>
+                  <SelectItem value="rewardsRate">Rewards Rate</SelectItem>
+                  <SelectItem value="popularity">Popularity</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Results Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">
+            {filteredCards.length} Cards
+            {filterCategory !== "all" && ` • ${filterCategory}`}
+          </h2>
+          <p className="text-muted-foreground">Curated For You</p>
+        </div>
+      </div>
 
       {/* Credit Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-6">
         <AnimatePresence>
           {filteredCards.map((card) => {
             const CategoryIcon = getCategoryIcon(card.category)
@@ -558,92 +529,107 @@ export function CreditCardRecommendations() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <Card className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                <Card className={`transition-all duration-200 hover:shadow-lg ${
                   isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
                 }`}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CategoryIcon className="h-5 w-5 text-blue-600" />
-                        <Badge variant="outline" className={getCategoryColor(card.category)}>
-                          {card.category}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                        <span className="text-sm font-medium">{card.rating}</span>
-                      </div>
-                    </div>
-                    <CardTitle className="text-lg">{card.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{card.issuer}</p>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    {/* Key Features */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Key Features</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="text-xs">
-                          <span className="text-muted-foreground">Annual Fee:</span>
-                          <div className="font-medium">{formatINR(card.annualFee)}</div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-muted-foreground">Rewards:</span>
-                          <div className="font-medium">{card.rewardsRate}</div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-muted-foreground">Credit Limit:</span>
-                          <div className="font-medium">{card.creditLimit}</div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-muted-foreground">Popularity:</span>
-                          <div className="font-medium">{card.popularity}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Rewards Breakdown */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Rewards</h4>
-                      <div className="grid grid-cols-2 gap-1">
-                        {Object.entries(card.rewards).map(([category, rate]) => {
-                          const RewardIcon = getRewardIcon(category)
-                          return (
-                            <div key={category} className="flex items-center gap-1 text-xs">
-                              <RewardIcon className="h-3 w-3" />
-                              <span className="capitalize">{category}:</span>
-                              <span className="font-medium">{rate}</span>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row gap-6">
+                      {/* Left Side - Card Info */}
+                      <div className="flex-1 space-y-4">
+                        {/* Card Header */}
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={getCategoryColor(card.category)}>
+                                {card.category}
+                              </Badge>
+                              {card.annualFee === 0 && (
+                                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                  LIFETIME FREE
+                                </Badge>
+                              )}
                             </div>
-                          )
-                        })}
-                      </div>
-                    </div>
+                            <h3 className="text-xl font-bold">{card.name}</h3>
+                            <p className="text-sm text-muted-foreground">{card.issuer}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-yellow-600">{card.rating}</div>
+                            <div className="text-sm text-muted-foreground">out of 5</div>
+                            <div className="text-xs text-muted-foreground">RPC Rating</div>
+                          </div>
+                        </div>
 
-                    {/* Best For */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Best For</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {card.bestFor.slice(0, 3).map((item, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {item}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
+                        {/* Best For */}
+                        <div>
+                          <h4 className="font-medium text-sm text-muted-foreground mb-1">Best for</h4>
+                          <p className="text-sm">
+                            {card.bestFor.length > 0 
+                              ? card.bestFor[0] 
+                              : `Frequent ${card.category.toLowerCase()} users seeking ${card.category.toLowerCase()} benefits`
+                            }
+                          </p>
+                        </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant={isSelected ? "default" : "outline"}
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => handleCardSelect(card.id)}
-                      >
-                        {isSelected ? "Selected" : "Select"}
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Info className="h-4 w-4" />
-                      </Button>
+                        {/* Key Details */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium text-sm text-muted-foreground mb-1">Annual Fee</h4>
+                            <p className="text-sm font-medium">
+                              {card.annualFee === 0 ? '₹0 (Lifetime Free)' : `${formatINR(card.annualFee)} + GST`}
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-sm text-muted-foreground mb-1">Joining Benefit</h4>
+                            <p className="text-sm font-medium">
+                              {card.joiningFee === 0 ? 'No joining fee' : `${formatINR(card.joiningFee)} joining fee`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Key Hack */}
+                        <div className="bg-muted p-3 rounded-lg">
+                          <h4 className="font-medium text-sm mb-1">1 Hack</h4>
+                          <p className="text-sm">
+                            {card.keyBenefits.length > 0 
+                              ? card.keyBenefits[0]
+                              : `${card.rewardsRate} rewards on all purchases`
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right Side - Actions */}
+                      <div className="lg:w-48 space-y-4">
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleCardSelect(card.id)}
+                          >
+                            {isSelected ? "Selected" : "Apply Now"}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="w-full">
+                            Know More
+                          </Button>
+                        </div>
+                        
+                        {/* Quick Stats */}
+                        <div className="space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">CIBIL Required:</span>
+                            <span className="font-medium">{card.cibilScore?.description || 'Not specified'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Rewards Rate:</span>
+                            <span className="font-medium">{card.rewardsRate}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Credit Limit:</span>
+                            <span className="font-medium">{card.creditLimit}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -653,6 +639,111 @@ export function CreditCardRecommendations() {
         </AnimatePresence>
       </div>
 
+      {/* Smart Recommendations Based on Profile */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Smart Recommendations for You
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Based on CIBIL Score */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-green-600">Perfect Match Cards</h4>
+              <div className="space-y-2">
+                {creditCards
+                  .filter(card => !card.cibilScore || userProfile.cibilScore >= card.cibilScore.min)
+                  .sort((a, b) => b.rating - a.rating)
+                  .slice(0, 3)
+                  .map((card, index) => (
+                    <div key={card.id} className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                         onClick={() => handleCardSelect(card.id)}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">{card.name}</div>
+                          <div className="text-xs text-muted-foreground">{card.issuer}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-green-600">
+                            {card.annualFee === 0 ? 'Free' : formatINR(card.annualFee)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Rating: {card.rating}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Based on Income */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-blue-600">Income Appropriate</h4>
+              <div className="space-y-2">
+                {creditCards
+                  .filter(card => {
+                    const incomeThreshold = userProfile.monthlyIncome * 12
+                    return card.eligibility.minIncome <= incomeThreshold && 
+                           (!card.cibilScore || userProfile.cibilScore >= card.cibilScore.min)
+                  })
+                  .sort((a, b) => b.rating - a.rating)
+                  .slice(0, 3)
+                  .map((card, index) => (
+                    <div key={card.id} className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                         onClick={() => handleCardSelect(card.id)}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">{card.name}</div>
+                          <div className="text-xs text-muted-foreground">{card.category}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-blue-600">
+                            {card.annualFee === 0 ? 'Free' : formatINR(card.annualFee)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Min: ₹{formatINR(card.eligibility.minIncome)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Best Value */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-purple-600">Best Value</h4>
+              <div className="space-y-2">
+                {creditCards
+                  .filter(card => !card.cibilScore || userProfile.cibilScore >= card.cibilScore.min)
+                  .sort((a, b) => {
+                    const aValue = a.annualFee === 0 ? 999 : (a.rating / a.annualFee) * 1000
+                    const bValue = b.annualFee === 0 ? 999 : (b.rating / b.annualFee) * 1000
+                    return bValue - aValue
+                  })
+                  .slice(0, 3)
+                  .map((card, index) => (
+                    <div key={card.id} className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                         onClick={() => handleCardSelect(card.id)}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">{card.name}</div>
+                          <div className="text-xs text-muted-foreground">{card.keyBenefits[0]?.slice(0, 30)}...</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-purple-600">
+                            {card.annualFee === 0 ? 'Free' : formatINR(card.annualFee)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Value: {card.rating}/5</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Comparison Section */}
       {selectedCards.length > 0 && (
         <CreditCardComparison 
@@ -660,23 +751,6 @@ export function CreditCardRecommendations() {
           userProfile={userProfile}
         />
       )}
-
-      {/* Recommendations */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            Personalized Recommendations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Complete your profile to get personalized credit card recommendations</p>
-            <Button className="mt-4">Get Recommendations</Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

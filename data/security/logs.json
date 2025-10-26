@@ -2,7 +2,7 @@
   {
     "id": "l1",
     "timestamp": "2025-10-01T10:02:00Z",
-    "location": "Bengaluru, IN",
+    "location": "Mumbai, IN",
     "device": "Chrome on Mac",
     "severity": "info",
     "acknowledged": true

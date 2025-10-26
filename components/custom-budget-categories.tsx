@@ -26,8 +26,13 @@ interface BudgetCategories {
 
 export function CustomBudgetCategories() {
   const [categories, setCategories] = useState<BudgetCategories>(() => {
-    const preferences = loadUserPreferences()
-    return preferences?.budgetCategories || getDefaultBudgetCategories()
+    try {
+      const preferences = loadUserPreferences()
+      return preferences?.budgetCategories || getDefaultBudgetCategories()
+    } catch (error) {
+      console.error('Error loading user preferences:', error)
+      return getDefaultBudgetCategories()
+    }
   })
 
   const [editingCategory, setEditingCategory] = useState<BudgetCategory | null>(null)
@@ -41,7 +46,7 @@ export function CustomBudgetCategories() {
     
     const updatedCategories = {
       ...categories,
-      [type]: [...categories[type], newCategory]
+      [type]: [...(categories[type] || []), newCategory]
     }
     
     setCategories(updatedCategories)
@@ -52,7 +57,7 @@ export function CustomBudgetCategories() {
   const updateCategory = (type: keyof BudgetCategories, updatedCategory: BudgetCategory) => {
     const updatedCategories = {
       ...categories,
-      [type]: categories[type].map(cat => 
+      [type]: (categories[type] || []).map(cat => 
         cat.id === updatedCategory.id ? updatedCategory : cat
       )
     }
@@ -65,7 +70,7 @@ export function CustomBudgetCategories() {
   const deleteCategory = (type: keyof BudgetCategories, categoryId: string) => {
     const updatedCategories = {
       ...categories,
-      [type]: categories[type].filter(cat => cat.id !== categoryId)
+      [type]: (categories[type] || []).filter(cat => cat.id !== categoryId)
     }
     
     setCategories(updatedCategories)
@@ -73,7 +78,7 @@ export function CustomBudgetCategories() {
   }
 
   const getTotalPercentage = (type: keyof BudgetCategories) => {
-    return categories[type].reduce((sum, cat) => sum + cat.percentage, 0)
+    return categories[type]?.reduce((sum, cat) => sum + cat.percentage, 0) || 0
   }
 
   const getCategoryTypeColor = (type: keyof BudgetCategories) => {
@@ -128,7 +133,7 @@ export function CustomBudgetCategories() {
           )}
         </CardHeader>
         <CardContent className="space-y-3">
-          {categories[type].map((category) => (
+          {(categories[type] || []).map((category) => (
             <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
@@ -193,7 +198,7 @@ export function CustomBudgetCategories() {
               initialData={editingCategory}
               onSubmit={(updatedCategory) => {
                 const type = Object.keys(categories).find(key => 
-                  categories[key as keyof BudgetCategories].some(cat => cat.id === editingCategory.id)
+                  (categories[key as keyof BudgetCategories] || []).some(cat => cat.id === editingCategory.id)
                 ) as keyof BudgetCategories
                 updateCategory(type, updatedCategory)
               }}

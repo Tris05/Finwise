@@ -45,6 +45,11 @@ interface CreditCard {
   rating: number
   popularity: string
   targetAudience: string
+  cibilScore: {
+    min: number
+    max?: number
+    description: string
+  }
   eligibility: {
     minIncome: number
     minAge: number
@@ -61,6 +66,7 @@ interface CreditCard {
     entertainment: string
   }
   benefits: string[]
+  keyBenefits: string[]
   fees: {
     annualFee: number
     joiningFee: number
@@ -252,6 +258,14 @@ export function CreditCardComparison({ selectedCards, userProfile }: CreditCardC
                       {selectedCards.map(card => (
                         <td key={card.id} className="text-center p-2">
                           <Badge variant="outline">{card.category}</Badge>
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-2 font-medium">CIBIL Score Required</td>
+                      {selectedCards.map(card => (
+                        <td key={card.id} className="text-center p-2">
+                          {card.cibilScore?.description || 'Not specified'}
                         </td>
                       ))}
                     </tr>
