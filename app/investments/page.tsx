@@ -23,7 +23,7 @@ import { StockSearch } from "@/components/stock-search"
 import { useMarketData } from "@/hooks/use-market-data"
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Area, AreaChart } from "recharts"
 import { formatINR } from "@/lib/utils"
-import { RefreshCw, AlertCircle, Wifi, WifiOff } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 // Sample data - in a real app, this would come from your backend
 
@@ -411,6 +411,7 @@ const performanceData = [
 ]
 
 export default function InvestmentsPage() {
+  const { toast } = useToast()
   const [rebalanceOpen, setRebalanceOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [addTransactionOpen, setAddTransactionOpen] = useState(false)
@@ -471,7 +472,26 @@ export default function InvestmentsPage() {
   }
 
   const handleAssetClick = (asset: any) => {
-    console.log("Asset clicked:", asset)
+    // Show detailed asset information in a modal or navigate to details
+    const details = `
+Asset Details:
+Symbol: ${asset.symbol}
+Name: ${asset.name}
+Current Price: ${formatINR(asset.currentPrice)}
+Day Change: ${asset.dayChangePercent.toFixed(2)}%
+Sector: ${asset.sector}
+Market Cap: ${asset.marketCap}
+P/E Ratio: ${asset.pe}
+Dividend Yield: ${asset.dividend}%
+Risk Level: ${asset.riskLevel}
+Recommendation: ${asset.recommendation}
+    `
+    
+    toast({
+      title: `${asset.symbol} Details`,
+      description: details,
+      duration: 5000,
+    })
   }
 
   const handleRebalance = () => {
@@ -622,18 +642,62 @@ export default function InvestmentsPage() {
   }
 
   const handleRefreshRecommendations = () => {
-    console.log("Refreshing AI recommendations...")
-    // In a real app, this would call an API to get new recommendations
+    setIsLoading(true)
+    
+    // Simulate API call
+    setTimeout(() => {
+      toast({
+        title: "Recommendations Updated",
+        description: "AI has refreshed your personalized investment recommendations",
+      })
+      setIsLoading(false)
+    }, 1500)
   }
 
   const handleAddToWatchlist = (stock: any) => {
-    console.log("Adding to watchlist:", stock)
-    // TODO: Implement watchlist functionality
+    // Add to watchlist state
+    setMarketAssets(prev => 
+      prev.map(asset => 
+        asset.symbol === stock.symbol 
+          ? { ...asset, isWatched: true }
+          : asset
+      )
+    )
+    
+    // Show success toast
+    toast({
+      title: "Added to Watchlist",
+      description: `${stock.symbol} has been added to your watchlist`,
+    })
   }
 
   const handleAddToPortfolio = (stock: any) => {
-    console.log("Adding to portfolio:", stock)
-    // TODO: Implement add to portfolio functionality
+    // Open add transaction modal with stock data
+    const newInvestment = {
+      id: Date.now().toString(),
+      symbol: stock.symbol,
+      name: stock.name,
+      type: 'Stock' as const,
+      category: 'Equity' as const,
+      currentPrice: stock.currentPrice,
+      quantity: 0,
+      investedAmount: 0,
+      currentValue: 0,
+      totalGain: 0,
+      gainPercent: 0,
+      dayChange: stock.dayChange,
+      dayChangePercent: stock.dayChangePercent,
+      color: "#3B82F6",
+      sector: stock.sector,
+      marketCap: stock.marketCap.toString(),
+      pe: stock.pe || 0,
+      dividend: stock.dividend || 0,
+      recommendation: "Buy" as const,
+      riskLevel: "Medium" as const
+    }
+    
+    setSelectedAsset(newInvestment)
+    setAddTransactionOpen(true)
   }
 
   return (
@@ -801,7 +865,7 @@ export default function InvestmentsPage() {
               <RealInvestmentTracker
                 investments={realTimeInvestments}
                 onInvestmentClick={handleAssetClick}
-                onAddInvestment={() => console.log("Add investment clicked")}
+                onAddInvestment={() => setAddTransactionOpen(true)}
                 onSellInvestment={handleSellInvestment}
               />
             </TabsContent>
@@ -914,7 +978,10 @@ export default function InvestmentsPage() {
                     <div className="space-y-4">
                       <div 
                         className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors"
-                        onClick={() => console.log("Recommendation clicked: Increase equity allocation")}
+                        onClick={() => {
+                          const query = "Help me increase my equity allocation. What stocks should I consider?"
+                          window.location.href = `/advisor?q=${encodeURIComponent(query)}`
+                        }}
                       >
                         <div className="flex items-start space-x-3">
                           <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
@@ -926,7 +993,10 @@ export default function InvestmentsPage() {
                       </div>
                       <div 
                         className="p-4 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
-                        onClick={() => console.log("Recommendation clicked: Add international diversification")}
+                        onClick={() => {
+                          const query = "Help me add international diversification to my portfolio. What international funds should I consider?"
+                          window.location.href = `/advisor?q=${encodeURIComponent(query)}`
+                        }}
                       >
                         <div className="flex items-start space-x-3">
                           <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
@@ -938,7 +1008,9 @@ export default function InvestmentsPage() {
                       </div>
                       <div 
                         className="p-4 border border-orange-200 dark:border-orange-800 rounded-lg bg-orange-50 dark:bg-orange-950/20 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/30 transition-colors"
-                        onClick={() => console.log("Recommendation clicked: Rebalance quarterly")}
+                        onClick={() => {
+                          setRebalanceOpen(true)
+                        }}
                       >
                         <div className="flex items-start space-x-3">
                           <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>

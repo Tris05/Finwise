@@ -463,6 +463,707 @@
         "Frequent international travelers",
         "Budget conscious users"
       ]
+    },
+    {
+      "id": "hdfc-millennia",
+      "name": "HDFC Millennia Credit Card",
+      "issuer": "HDFC Bank",
+      "category": "Cashback",
+      "annualFee": 1000,
+      "joiningFee": 1000,
+      "creditLimit": "₹1L - ₹5L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "5%",
+      "image": "/credit-cards/hdfc-millennia.png",
+      "rating": 4.5,
+      "popularity": "Very High",
+      "targetAudience": "Online Shoppers",
+      "eligibility": {
+        "minIncome": 300000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "5% cashback on online spends",
+        "2% cashback on fuel",
+        "Airport lounge access x2",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking"
+      ],
+      "rewards": {
+        "dining": "2% cashback",
+        "travel": "2% cashback",
+        "shopping": "5% cashback",
+        "fuel": "2% cashback",
+        "groceries": "2% cashback",
+        "entertainment": "2% cashback"
+      },
+      "benefits": [
+        "5% cashback on online spends",
+        "2% cashback on fuel",
+        "2 complimentary airport lounge visits per year",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts"
+      ],
+      "fees": {
+        "annualFee": 1000,
+        "joiningFee": 1000,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "High cashback on online spends",
+        "Good fuel benefits",
+        "Lounge access",
+        "Reasonable annual fee",
+        "Good for online shoppers"
+      ],
+      "cons": [
+        "Limited offline benefits",
+        "Moderate reward rate for offline spends",
+        "Not suitable for very high spenders"
+      ],
+      "bestFor": [
+        "Online shoppers",
+        "Fuel users",
+        "Moderate spenders",
+        "Digital payment users"
+      ],
+      "notFor": [
+        "High spenders seeking premium benefits",
+        "Frequent travelers",
+        "Luxury lifestyle seekers"
+      ]
+    },
+    {
+      "id": "icici-coral",
+      "name": "ICICI Bank Coral Credit Card",
+      "issuer": "ICICI Bank",
+      "category": "Travel",
+      "annualFee": 2000,
+      "joiningFee": 2000,
+      "creditLimit": "₹1L - ₹5L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "4%",
+      "image": "/credit-cards/icici-coral.png",
+      "rating": 4.3,
+      "popularity": "High",
+      "targetAudience": "Travelers",
+      "eligibility": {
+        "minIncome": 400000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "4% rewards on travel bookings",
+        "Hotel vouchers",
+        "Forex markup 0%",
+        "Airport lounge access",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments"
+      ],
+      "rewards": {
+        "dining": "2X points",
+        "travel": "4X points",
+        "shopping": "2X points",
+        "fuel": "2X points",
+        "groceries": "2X points",
+        "entertainment": "2X points"
+      },
+      "benefits": [
+        "4% rewards on travel bookings",
+        "Hotel vouchers worth ₹5,000 annually",
+        "Forex markup 0% on international spends",
+        "4 complimentary airport lounge visits per year",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000"
+      ],
+      "fees": {
+        "annualFee": 2000,
+        "joiningFee": 2000,
+        "latePaymentFee": 750,
+        "overlimitFee": 750,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "Good travel rewards",
+        "Hotel vouchers",
+        "Forex benefits",
+        "Lounge access",
+        "Good for travelers"
+      ],
+      "cons": [
+        "Moderate annual fee",
+        "Limited non-travel benefits",
+        "Not suitable for non-travelers"
+      ],
+      "bestFor": [
+        "Frequent travelers",
+        "International travelers",
+        "Hotel booking users",
+        "Travel enthusiasts"
+      ],
+      "notFor": [
+        "Non-travelers",
+        "Budget conscious users",
+        "Low spenders"
+      ]
+    },
+    {
+      "id": "kotak-811",
+      "name": "Kotak 811 Credit Card",
+      "issuer": "Kotak Mahindra Bank",
+      "category": "General",
+      "annualFee": 0,
+      "joiningFee": 0,
+      "creditLimit": "₹50K - ₹2L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "1.5%",
+      "image": "/credit-cards/kotak-811.png",
+      "rating": 4.2,
+      "popularity": "High",
+      "targetAudience": "Beginners",
+      "eligibility": {
+        "minIncome": 250000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "1.5% flat cashback",
+        "No joining fee",
+        "No annual fee",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking"
+      ],
+      "rewards": {
+        "dining": "1.5% cashback",
+        "travel": "1.5% cashback",
+        "shopping": "1.5% cashback",
+        "fuel": "1.5% cashback",
+        "groceries": "1.5% cashback",
+        "entertainment": "1.5% cashback"
+      },
+      "benefits": [
+        "1.5% flat cashback on all spends",
+        "No joining fee",
+        "No annual fee",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts"
+      ],
+      "fees": {
+        "annualFee": 0,
+        "joiningFee": 0,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "Lifetime free",
+        "Simple reward structure",
+        "Good for beginners",
+        "No hidden fees",
+        "Flat cashback rate"
+      ],
+      "cons": [
+        "Low reward rate",
+        "Limited premium benefits",
+        "Not suitable for high spenders"
+      ],
+      "bestFor": [
+        "First-time credit card users",
+        "Budget conscious users",
+        "Moderate spenders",
+        "Credit history builders"
+      ],
+      "notFor": [
+        "High spenders",
+        "Premium benefit seekers",
+        "Frequent travelers"
+      ]
+    },
+    {
+      "id": "axis-myzone",
+      "name": "Axis Bank My Zone Credit Card",
+      "issuer": "Axis Bank",
+      "category": "Dining",
+      "annualFee": 500,
+      "joiningFee": 500,
+      "creditLimit": "₹1L - ₹5L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "2%",
+      "image": "/credit-cards/axis-myzone.png",
+      "rating": 4.1,
+      "popularity": "High",
+      "targetAudience": "Dining Enthusiasts",
+      "eligibility": {
+        "minIncome": 300000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "2% rewards on dining",
+        "1% rewards on all spends",
+        "Movie vouchers",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking"
+      ],
+      "rewards": {
+        "dining": "2% rewards",
+        "travel": "1% rewards",
+        "shopping": "1% rewards",
+        "fuel": "1% rewards",
+        "groceries": "1% rewards",
+        "entertainment": "2% rewards"
+      },
+      "benefits": [
+        "2% rewards on dining",
+        "1% rewards on all other spends",
+        "Movie vouchers worth ₹500 annually",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts"
+      ],
+      "fees": {
+        "annualFee": 500,
+        "joiningFee": 500,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "Good dining rewards",
+        "Low annual fee",
+        "Movie benefits",
+        "Simple reward structure",
+        "Good for foodies"
+      ],
+      "cons": [
+        "Limited premium benefits",
+        "Moderate reward rate",
+        "Not suitable for high spenders"
+      ],
+      "bestFor": [
+        "Dining enthusiasts",
+        "Movie lovers",
+        "Moderate spenders",
+        "Food lovers"
+      ],
+      "notFor": [
+        "High spenders",
+        "Frequent travelers",
+        "Luxury lifestyle seekers"
+      ]
+    },
+    {
+      "id": "sbi-simplyclick",
+      "name": "SBI SimplyCLICK Credit Card",
+      "issuer": "State Bank of India",
+      "category": "Online Shopping",
+      "annualFee": 500,
+      "joiningFee": 500,
+      "creditLimit": "₹1L - ₹5L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "5%",
+      "image": "/credit-cards/sbi-simplyclick.png",
+      "rating": 4.4,
+      "popularity": "Very High",
+      "targetAudience": "Online Shoppers",
+      "eligibility": {
+        "minIncome": 300000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "5X Reward Points on online spends",
+        "Amazon Pay gift voucher worth ₹500",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking",
+        "SMS alerts"
+      ],
+      "rewards": {
+        "dining": "1X points",
+        "travel": "1X points",
+        "shopping": "5X points",
+        "fuel": "1X points",
+        "groceries": "1X points",
+        "entertainment": "1X points"
+      },
+      "benefits": [
+        "5X Reward Points on online spends",
+        "Amazon Pay gift voucher worth ₹500 on joining",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts"
+      ],
+      "fees": {
+        "annualFee": 500,
+        "joiningFee": 500,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "Excellent for online shopping",
+        "Low annual fee",
+        "High reward rate for online spends",
+        "Amazon benefits",
+        "Good for beginners"
+      ],
+      "cons": [
+        "Low reward rate for offline spends",
+        "Limited benefits",
+        "Not suitable for high spenders"
+      ],
+      "bestFor": [
+        "Online shoppers",
+        "Amazon users",
+        "Budget conscious users",
+        "First-time credit card users"
+      ],
+      "notFor": [
+        "High spenders",
+        "Frequent travelers",
+        "Luxury lifestyle seekers"
+      ]
+    },
+    {
+      "id": "yes-bank-paisabazaar",
+      "name": "YES BANK Paisabazaar PaisaSave",
+      "issuer": "YES BANK",
+      "category": "Cashback",
+      "annualFee": 499,
+      "joiningFee": 0,
+      "creditLimit": "₹1L - ₹5L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "3%",
+      "image": "/credit-cards/yes-bank-paisabazaar.png",
+      "rating": 4.3,
+      "popularity": "High",
+      "targetAudience": "E-commerce Users",
+      "eligibility": {
+        "minIncome": 300000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "3% e-commerce cashback",
+        "1.5% other spends cashback",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking",
+        "SMS alerts"
+      ],
+      "rewards": {
+        "dining": "1.5% cashback",
+        "travel": "1.5% cashback",
+        "shopping": "3% cashback",
+        "fuel": "1.5% cashback",
+        "groceries": "1.5% cashback",
+        "entertainment": "1.5% cashback"
+      },
+      "benefits": [
+        "3% cashback on e-commerce spends",
+        "1.5% cashback on all other spends",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts"
+      ],
+      "fees": {
+        "annualFee": 499,
+        "joiningFee": 0,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "High e-commerce cashback",
+        "No joining fee",
+        "Good for online shopping",
+        "Simple reward structure",
+        "Reasonable annual fee"
+      ],
+      "cons": [
+        "Limited offline benefits",
+        "Moderate reward rate for offline spends",
+        "Not suitable for high spenders"
+      ],
+      "bestFor": [
+        "E-commerce users",
+        "Online shoppers",
+        "Moderate spenders",
+        "Budget conscious users"
+      ],
+      "notFor": [
+        "High spenders",
+        "Frequent travelers",
+        "Luxury lifestyle seekers"
+      ]
+    },
+    {
+      "id": "hsbc-travelone",
+      "name": "HSBC TravelOne Credit Card",
+      "issuer": "HSBC Bank",
+      "category": "Travel",
+      "annualFee": 4999,
+      "joiningFee": 4999,
+      "creditLimit": "₹2L - ₹8L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "4%",
+      "image": "/credit-cards/hsbc-travelone.png",
+      "rating": 4.6,
+      "popularity": "High",
+      "targetAudience": "Frequent Travelers",
+      "eligibility": {
+        "minIncome": 600000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "Travel savings program",
+        "Lounge and golf access",
+        "Hotel vouchers",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Concierge services",
+        "Mobile banking"
+      ],
+      "rewards": {
+        "dining": "2X points",
+        "travel": "4X points",
+        "shopping": "2X points",
+        "fuel": "2X points",
+        "groceries": "2X points",
+        "entertainment": "2X points"
+      },
+      "benefits": [
+        "Travel savings program with partner airlines",
+        "Complimentary airport lounge access",
+        "Golf benefits at premium courses",
+        "Hotel vouchers worth ₹10,000 annually",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Concierge services"
+      ],
+      "fees": {
+        "annualFee": 4999,
+        "joiningFee": 4999,
+        "latePaymentFee": 1000,
+        "overlimitFee": 1000,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "Excellent travel benefits",
+        "Lounge and golf access",
+        "Hotel vouchers",
+        "Good for frequent travelers",
+        "Premium services"
+      ],
+      "cons": [
+        "High annual fee",
+        "High joining fee",
+        "Not suitable for non-travelers",
+        "Complex reward structure"
+      ],
+      "bestFor": [
+        "Frequent travelers",
+        "Business travelers",
+        "Golf enthusiasts",
+        "Premium users"
+      ],
+      "notFor": [
+        "Non-travelers",
+        "Budget conscious users",
+        "Low spenders",
+        "First-time credit card users"
+      ]
+    },
+    {
+      "id": "tata-neu-infinity",
+      "name": "Tata Neu Infinity HDFC Bank Card",
+      "issuer": "HDFC Bank",
+      "category": "E-commerce",
+      "annualFee": 1499,
+      "joiningFee": 1499,
+      "creditLimit": "₹1L - ₹5L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "10%",
+      "image": "/credit-cards/tata-neu-infinity.png",
+      "rating": 4.7,
+      "popularity": "Very High",
+      "targetAudience": "Tata Neu Users",
+      "eligibility": {
+        "minIncome": 300000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "10% Tata Neu value-back",
+        "Rewards on all spends",
+        "Airport lounge access",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking"
+      ],
+      "rewards": {
+        "dining": "2X points",
+        "travel": "2X points",
+        "shopping": "10% value-back",
+        "fuel": "2X points",
+        "groceries": "2X points",
+        "entertainment": "2X points"
+      },
+      "benefits": [
+        "10% Tata Neu value-back on Tata Neu spends",
+        "Rewards on all other spends",
+        "2 complimentary airport lounge visits per year",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts"
+      ],
+      "fees": {
+        "annualFee": 1499,
+        "joiningFee": 1499,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "Excellent value-back on Tata Neu",
+        "Good reward rate",
+        "Lounge access",
+        "Good for Tata ecosystem users",
+        "Reasonable annual fee"
+      ],
+      "cons": [
+        "Limited to Tata ecosystem for high rewards",
+        "Moderate reward rate for other spends",
+        "Not suitable for non-Tata users"
+      ],
+      "bestFor": [
+        "Tata Neu users",
+        "Tata ecosystem users",
+        "Online shoppers",
+        "Moderate spenders"
+      ],
+      "notFor": [
+        "Non-Tata ecosystem users",
+        "High spenders seeking premium benefits",
+        "Frequent travelers"
+      ]
+    },
+    {
+      "id": "amex-smartearn",
+      "name": "American Express SmartEarn Credit Card",
+      "issuer": "American Express",
+      "category": "Rewards",
+      "annualFee": 495,
+      "joiningFee": 495,
+      "creditLimit": "₹1L - ₹5L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "10%",
+      "image": "/credit-cards/amex-smartearn.png",
+      "rating": 4.5,
+      "popularity": "High",
+      "targetAudience": "Food Delivery Users",
+      "eligibility": {
+        "minIncome": 300000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "10X rewards on Zomato/Amazon",
+        "Milestone bonuses",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking",
+        "SMS alerts"
+      ],
+      "rewards": {
+        "dining": "10X points",
+        "travel": "1X points",
+        "shopping": "10X points",
+        "fuel": "1X points",
+        "groceries": "1X points",
+        "entertainment": "1X points"
+      },
+      "benefits": [
+        "10X Membership Rewards on Zomato and Amazon",
+        "Milestone bonuses on annual spends",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts"
+      ],
+      "fees": {
+        "annualFee": 495,
+        "joiningFee": 495,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "Excellent rewards on Zomato/Amazon",
+        "Low annual fee",
+        "Milestone bonuses",
+        "Good for food delivery users",
+        "Simple reward structure"
+      ],
+      "cons": [
+        "Limited to specific merchants for high rewards",
+        "Low reward rate for other spends",
+        "Not suitable for high spenders"
+      ],
+      "bestFor": [
+        "Zomato users",
+        "Amazon users",
+        "Food delivery enthusiasts",
+        "Moderate spenders"
+      ],
+      "notFor": [
+        "High spenders",
+        "Frequent travelers",
+        "Luxury lifestyle seekers"
+      ]
     }
   ]
 }

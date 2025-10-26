@@ -38,5 +38,84 @@
     "annualFee": 500,
     "rewards": ["5x rewards on online spends", "Amazon gift vouchers", "Fuel surcharge waiver"],
     "whyText": "High online shopping pattern; SHAP indicates strong digital adoption; approval medium due to government bank criteria."
+  },
+  {
+    "id": "c6",
+    "name": "YES BANK Paisabazaar PaisaSave",
+    "bank": "YES BANK",
+    "annualFee": 499,
+    "rewards": ["3% e-commerce cashback", "1.5% other spends", "Fuel surcharge waiver"],
+    "whyText": "High e-commerce spending pattern; SHAP shows online merchant fit drives approval; good for digital-first users."
+  },
+  {
+    "id": "c7",
+    "name": "HSBC TravelOne Credit Card",
+    "bank": "HSBC Bank",
+    "annualFee": 4999,
+    "rewards": ["Travel savings program", "Lounge & golf access", "Hotel vouchers"],
+    "whyText": "Frequent travel pattern; SHAP indicates travel category dominance; approval high due to premium income bracket."
+  },
+  {
+    "id": "c8",
+    "name": "Tata Neu Infinity HDFC Bank Card",
+    "bank": "HDFC Bank",
+    "annualFee": 1499,
+    "rewards": ["10% Tata Neu value-back", "Rewards on all spends", "Airport lounge access"],
+    "whyText": "Tata ecosystem usage pattern; SHAP shows brand loyalty factor; approval medium due to ecosystem engagement."
+  },
+  {
+    "id": "c9",
+    "name": "American Express SmartEarn Credit Card",
+    "bank": "American Express",
+    "annualFee": 495,
+    "rewards": ["10X rewards Zomato/Amazon", "Milestone bonuses", "Fuel surcharge waiver"],
+    "whyText": "Food delivery and e-commerce pattern; SHAP indicates merchant-specific rewards fit; approval good for digital natives."
+  },
+  {
+    "id": "c10",
+    "name": "IDFC FIRST Select Credit Card",
+    "bank": "IDFC FIRST Bank",
+    "annualFee": 0,
+    "rewards": ["Lifetime free", "Unlimited rewards", "Movie/golf/lounge perks"],
+    "whyText": "Entry-friendly with premium benefits; SHAP shows low risk profile; best for building credit with benefits."
+  },
+  {
+    "id": "c11",
+    "name": "ICICI Rubyx Credit Card",
+    "bank": "ICICI Bank",
+    "annualFee": 2000,
+    "rewards": ["Rewards on all spends", "Lounge & golf access", "Fuel waivers"],
+    "whyText": "Balanced spending pattern; SHAP shows lifestyle category fit; approval medium due to stable banking relationship."
+  },
+  {
+    "id": "c12",
+    "name": "BPCL SBI Card Octane",
+    "bank": "State Bank of India",
+    "annualFee": 1499,
+    "rewards": ["Fuel value-back", "High rewards", "Surcharge waiver"],
+    "whyText": "High fuel spending pattern; SHAP indicates fuel category dominance; approval good for regular commuters."
+  },
+  {
+    "id": "c13",
+    "name": "IndianOil RBL Bank XTRA",
+    "bank": "RBL Bank",
+    "annualFee": 1500,
+    "rewards": ["Fuel rewards", "Milestone bonuses", "Surcharge waiver"],
+    "whyText": "Fuel-focused spending; SHAP shows fuel merchant fit; approval medium due to specialized usage pattern."
+  },
+  {
+    "id": "c14",
+    "name": "Axis SELECT Credit Card",
+    "bank": "Axis Bank",
+    "annualFee": 3000,
+    "rewards": ["Movie B1G1", "BigBasket/Swiggy discounts", "Lounges & golf"],
+    "whyText": "Entertainment and food delivery pattern; SHAP shows lifestyle category fit; approval high for premium users."
+  },
+  {
+    "id": "c15",
+    "name": "Cashback SBI Card",
+    "bank": "State Bank of India",
+    "annualFee": 999,
+    "rewards": ["5% online cashback", "1% offline", "Fuel waiver"],
+    "whyText": "High online spending pattern; SHAP indicates digital adoption drives approval; good for online-first users."
   }
-]

@@ -295,7 +295,11 @@ export default function DashboardPage() {
                 className="flex gap-4"
               >
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg">
+                  <Button 
+                    size="lg" 
+                    className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg"
+                    onClick={() => window.location.href = '/investments'}
+                  >
                     <Activity className="h-5 w-5 mr-2" />
                     View Portfolio
                   </Button>
