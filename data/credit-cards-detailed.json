@@ -1,0 +1,468 @@
+{
+  "creditCards": [
+    {
+      "id": "hdfc-diners-black",
+      "name": "HDFC Diners Club Black",
+      "issuer": "HDFC Bank",
+      "category": "Premium",
+      "annualFee": 10000,
+      "joiningFee": 10000,
+      "creditLimit": "₹5L - ₹15L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "4-6%",
+      "image": "/credit-cards/hdfc-diners-black.png",
+      "rating": 4.8,
+      "popularity": "High",
+      "targetAudience": "High Spenders",
+      "eligibility": {
+        "minIncome": 1000000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "4 Reward Points per ₹150 spent",
+        "Complimentary Priority Pass membership",
+        "Airport lounge access (unlimited domestic, 6 international)",
+        "Golf benefits at premium courses",
+        "Concierge services",
+        "Fuel surcharge waiver",
+        "EMI conversion facility"
+      ],
+      "rewards": {
+        "dining": "4X points",
+        "travel": "4X points", 
+        "shopping": "2X points",
+        "fuel": "2X points",
+        "groceries": "2X points",
+        "entertainment": "2X points"
+      },
+      "benefits": [
+        "Complimentary Priority Pass membership worth ₹15,000",
+        "Airport lounge access",
+        "Golf benefits worth ₹25,000 annually",
+        "Concierge services",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee"
+      ],
+      "fees": {
+        "annualFee": 10000,
+        "joiningFee": 10000,
+        "latePaymentFee": 1000,
+        "overlimitFee": 1000,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "High reward rate",
+        "Premium benefits",
+        "Unlimited domestic lounge access",
+        "No fuel surcharge",
+        "Good for high spenders"
+      ],
+      "cons": [
+        "High annual fee",
+        "High joining fee",
+        "Not suitable for low spenders",
+        "Complex reward structure"
+      ],
+      "bestFor": [
+        "Frequent travelers",
+        "High spenders",
+        "Business professionals",
+        "Luxury lifestyle"
+      ],
+      "notFor": [
+        "Low spenders",
+        "Budget conscious users",
+        "First-time credit card users"
+      ]
+    },
+    {
+      "id": "icici-sapphiro",
+      "name": "ICICI Bank Sapphiro",
+      "issuer": "ICICI Bank", 
+      "category": "Premium",
+      "annualFee": 5000,
+      "joiningFee": 5000,
+      "creditLimit": "₹3L - ₹10L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "3-4%",
+      "image": "/credit-cards/icici-sapphiro.png",
+      "rating": 4.6,
+      "popularity": "High",
+      "targetAudience": "Premium Users",
+      "eligibility": {
+        "minIncome": 600000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "3 Reward Points per ₹100 spent",
+        "Complimentary airport lounge access",
+        "BookMyShow 1+1 movie tickets",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking"
+      ],
+      "rewards": {
+        "dining": "3X points",
+        "travel": "3X points",
+        "shopping": "2X points", 
+        "fuel": "2X points",
+        "groceries": "2X points",
+        "entertainment": "3X points"
+      },
+      "benefits": [
+        "4 complimentary airport lounge visits per year",
+        "BookMyShow 1+1 movie tickets (4 times per year)",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹5,000",
+        "Mobile banking and alerts"
+      ],
+      "fees": {
+        "annualFee": 5000,
+        "joiningFee": 5000,
+        "latePaymentFee": 750,
+        "overlimitFee": 750,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "Good reward rate",
+        "Reasonable annual fee",
+        "Movie ticket benefits",
+        "Fuel surcharge waiver",
+        "Good for entertainment"
+      ],
+      "cons": [
+        "Limited lounge access",
+        "Moderate reward rate",
+        "Not suitable for very high spenders"
+      ],
+      "bestFor": [
+        "Movie enthusiasts",
+        "Moderate spenders",
+        "Entertainment lovers",
+        "Regular travelers"
+      ],
+      "notFor": [
+        "Very high spenders",
+        "Frequent international travelers",
+        "Luxury lifestyle seekers"
+      ]
+    },
+    {
+      "id": "sbi-simplyclick",
+      "name": "SBI SimplyCLICK",
+      "issuer": "State Bank of India",
+      "category": "Online Shopping",
+      "annualFee": 500,
+      "joiningFee": 500,
+      "creditLimit": "₹1L - ₹5L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "5%",
+      "image": "/credit-cards/sbi-simplyclick.png",
+      "rating": 4.4,
+      "popularity": "Very High",
+      "targetAudience": "Online Shoppers",
+      "eligibility": {
+        "minIncome": 300000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "5X Reward Points on online spends",
+        "Amazon Pay gift voucher worth ₹500",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking",
+        "SMS alerts"
+      ],
+      "rewards": {
+        "dining": "1X points",
+        "travel": "1X points",
+        "shopping": "5X points",
+        "fuel": "1X points",
+        "groceries": "1X points",
+        "entertainment": "1X points"
+      },
+      "benefits": [
+        "5X Reward Points on online spends",
+        "Amazon Pay gift voucher worth ₹500 on joining",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts"
+      ],
+      "fees": {
+        "annualFee": 500,
+        "joiningFee": 500,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "Excellent for online shopping",
+        "Low annual fee",
+        "High reward rate for online spends",
+        "Amazon benefits",
+        "Good for beginners"
+      ],
+      "cons": [
+        "Low reward rate for offline spends",
+        "Limited benefits",
+        "Not suitable for high spenders"
+      ],
+      "bestFor": [
+        "Online shoppers",
+        "Amazon users",
+        "Budget conscious users",
+        "First-time credit card users"
+      ],
+      "notFor": [
+        "High spenders",
+        "Frequent travelers",
+        "Luxury lifestyle seekers"
+      ]
+    },
+    {
+      "id": "axis-flipkart",
+      "name": "Axis Bank Flipkart Credit Card",
+      "issuer": "Axis Bank",
+      "category": "E-commerce",
+      "annualFee": 500,
+      "joiningFee": 500,
+      "creditLimit": "₹1L - ₹5L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "4%",
+      "image": "/credit-cards/axis-flipkart.png",
+      "rating": 4.5,
+      "popularity": "Very High",
+      "targetAudience": "Flipkart Users",
+      "eligibility": {
+        "minIncome": 300000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "4% cashback on Flipkart",
+        "1.5% cashback on other spends",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking",
+        "SMS alerts"
+      ],
+      "rewards": {
+        "dining": "1.5% cashback",
+        "travel": "1.5% cashback",
+        "shopping": "4% cashback on Flipkart",
+        "fuel": "1.5% cashback",
+        "groceries": "1.5% cashback",
+        "entertainment": "1.5% cashback"
+      },
+      "benefits": [
+        "4% cashback on Flipkart purchases",
+        "1.5% cashback on all other spends",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts"
+      ],
+      "fees": {
+        "annualFee": 500,
+        "joiningFee": 500,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "High cashback on Flipkart",
+        "Low annual fee",
+        "Good for online shopping",
+        "Simple reward structure",
+        "Good for beginners"
+      ],
+      "cons": [
+        "Limited to Flipkart for high rewards",
+        "Low reward rate for other spends",
+        "Not suitable for high spenders"
+      ],
+      "bestFor": [
+        "Flipkart users",
+        "Online shoppers",
+        "Budget conscious users",
+        "First-time credit card users"
+      ],
+      "notFor": [
+        "High spenders",
+        "Frequent travelers",
+        "Luxury lifestyle seekers"
+      ]
+    },
+    {
+      "id": "citi-rewards",
+      "name": "Citi Rewards Credit Card",
+      "issuer": "Citibank",
+      "category": "Rewards",
+      "annualFee": 0,
+      "joiningFee": 0,
+      "creditLimit": "₹1L - ₹8L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "2-3%",
+      "image": "/credit-cards/citi-rewards.png",
+      "rating": 4.3,
+      "popularity": "High",
+      "targetAudience": "Reward Seekers",
+      "eligibility": {
+        "minIncome": 400000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "2X Reward Points on all spends",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Contactless payments",
+        "Mobile banking",
+        "SMS alerts",
+        "Online banking"
+      ],
+      "rewards": {
+        "dining": "2X points",
+        "travel": "2X points",
+        "shopping": "2X points",
+        "fuel": "2X points",
+        "groceries": "2X points",
+        "entertainment": "2X points"
+      },
+      "benefits": [
+        "2X Reward Points on all spends",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Contactless payments up to ₹2,000",
+        "Mobile banking and SMS alerts",
+        "Online banking access"
+      ],
+      "fees": {
+        "annualFee": 0,
+        "joiningFee": 0,
+        "latePaymentFee": 500,
+        "overlimitFee": 500,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "No annual fee",
+        "No joining fee",
+        "Consistent reward rate",
+        "Good for all categories",
+        "Simple reward structure"
+      ],
+      "cons": [
+        "Moderate reward rate",
+        "Limited premium benefits",
+        "Not suitable for very high spenders"
+      ],
+      "bestFor": [
+        "Budget conscious users",
+        "First-time credit card users",
+        "Moderate spenders",
+        "All category spenders"
+      ],
+      "notFor": [
+        "High spenders seeking premium benefits",
+        "Frequent travelers",
+        "Luxury lifestyle seekers"
+      ]
+    },
+    {
+      "id": "amex-gold",
+      "name": "American Express Gold Card",
+      "issuer": "American Express",
+      "category": "Premium",
+      "annualFee": 4500,
+      "joiningFee": 0,
+      "creditLimit": "₹2L - ₹10L",
+      "interestRate": "3.5% per month",
+      "rewardsRate": "3-4%",
+      "image": "/credit-cards/amex-gold.png",
+      "rating": 4.7,
+      "popularity": "High",
+      "targetAudience": "Premium Users",
+      "eligibility": {
+        "minIncome": 600000,
+        "minAge": 21,
+        "maxAge": 65,
+        "employmentType": ["Salaried", "Self-Employed"]
+      },
+      "features": [
+        "3X Membership Rewards on dining",
+        "2X Membership Rewards on travel",
+        "1X Membership Rewards on other spends",
+        "Complimentary airport lounge access",
+        "Fuel surcharge waiver",
+        "EMI conversion facility",
+        "Concierge services"
+      ],
+      "rewards": {
+        "dining": "3X points",
+        "travel": "2X points",
+        "shopping": "1X points",
+        "fuel": "1X points",
+        "groceries": "1X points",
+        "entertainment": "1X points"
+      },
+      "benefits": [
+        "3X Membership Rewards on dining",
+        "2X Membership Rewards on travel",
+        "Complimentary airport lounge access (4 visits per year)",
+        "Fuel surcharge waiver up to ₹200 per transaction",
+        "EMI conversion at 0% processing fee",
+        "Concierge services",
+        "No joining fee"
+      ],
+      "fees": {
+        "annualFee": 4500,
+        "joiningFee": 0,
+        "latePaymentFee": 750,
+        "overlimitFee": 750,
+        "cashAdvanceFee": "2.5% of amount",
+        "foreignTransactionFee": "3.5% of amount"
+      },
+      "pros": [
+        "No joining fee",
+        "Good reward rate for dining",
+        "Premium benefits",
+        "Lounge access",
+        "Good for foodies"
+      ],
+      "cons": [
+        "Moderate annual fee",
+        "Limited lounge access",
+        "Not suitable for very high spenders"
+      ],
+      "bestFor": [
+        "Food enthusiasts",
+        "Frequent diners",
+        "Moderate travelers",
+        "Premium users"
+      ],
+      "notFor": [
+        "Very high spenders",
+        "Frequent international travelers",
+        "Budget conscious users"
+      ]
+    }
+  ]
+}

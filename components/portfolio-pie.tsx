@@ -122,7 +122,7 @@ export function PortfolioPie({
   // Fallback if no data
   if (!data || data.length === 0) {
     return (
-      <div className="h-80 w-full rounded-lg p-4 bg-white dark:bg-slate-900/50 flex items-center justify-center">
+      <div className="h-96 w-full rounded-lg p-6 bg-white dark:bg-slate-900/50 flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           <div className="text-lg font-medium">No data available</div>
           <div className="text-sm">Add some investments to see your portfolio allocation</div>
@@ -132,9 +132,9 @@ export function PortfolioPie({
   }
 
   return (
-    <div className="h-80 w-full rounded-lg p-4 bg-white dark:bg-slate-900/50">
+    <div className="h-96 w-full rounded-lg p-6 bg-white dark:bg-slate-900/50">
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+        <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
           <Pie
             isAnimationActive={true}
             animationBegin={120}
@@ -144,8 +144,8 @@ export function PortfolioPie({
             data={data}
             cx="50%"
             cy="50%"
-            innerRadius={35}
-            outerRadius={65}
+            innerRadius={30}
+            outerRadius={60}
             activeIndex={activeIndex ?? -1}
             activeShape={(props) => <Sector {...props} outerRadius={(props.outerRadius as number) + 5} />}
             onClick={(_, i) => onSliceClick?.(data[i])}

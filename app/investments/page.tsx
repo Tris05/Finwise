@@ -9,13 +9,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useState } from "react"
 import { RebalanceModal } from "@/components/rebalance-modal"
 import { PortfolioOverview } from "@/components/portfolio-overview"
+import { PortfolioPie } from "@/components/portfolio-pie"
 import { RealInvestmentTracker } from "@/components/real-investment-tracker"
 import { InvestmentTransactions } from "@/components/investment-transactions"
 import { MarketWatchlist } from "@/components/market-watchlist"
 import { InvestmentGoals } from "@/components/investment-goals"
 import { AddTransactionModal } from "@/components/add-transaction-modal"
 import { AddGoalModal } from "@/components/add-goal-modal"
+import { EditGoalModal } from "@/components/edit-goal-modal"
+import { SellInvestmentModal } from "@/components/sell-investment-modal"
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Area, AreaChart } from "recharts"
+import { formatINR } from "@/lib/utils"
 
 // Sample data - in a real app, this would come from your backend
 
@@ -217,6 +221,22 @@ const calculatePortfolioData = () => {
 
 const portfolioData = calculatePortfolioData()
 
+// Calculate portfolio allocation data for pie chart
+const calculatePortfolioAllocation = () => {
+  const allocation = realInvestments.reduce((acc, investment) => {
+    const category = investment.category
+    if (!acc[category]) {
+      acc[category] = { name: category, value: 0, color: investment.color }
+    }
+    acc[category].value += investment.currentValue
+    return acc
+  }, {} as Record<string, { name: string; value: number; color: string }>)
+  
+  return Object.values(allocation)
+}
+
+const portfolioAllocation = calculatePortfolioAllocation()
+
 const sampleTransactions = [
   {
     id: "1",
@@ -395,8 +415,15 @@ export default function InvestmentsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [addTransactionOpen, setAddTransactionOpen] = useState(false)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
+  const [editGoalOpen, setEditGoalOpen] = useState(false)
+  const [selectedGoal, setSelectedGoal] = useState(null)
+  const [sellInvestmentOpen, setSellInvestmentOpen] = useState(false)
+  const [selectedInvestment, setSelectedInvestment] = useState(null)
   const [transactions, setTransactions] = useState(sampleTransactions)
   const [goals, setGoals] = useState(investmentGoals)
+  const [marketAssetsState, setMarketAssets] = useState(marketAssets)
+  const [selectedAsset, setSelectedAsset] = useState(null)
+  const [isMarketDataLoading, setIsMarketDataLoading] = useState(false)
 
   const handleRefresh = () => {
     setIsLoading(true)
@@ -404,6 +431,27 @@ export default function InvestmentsPage() {
     setTimeout(() => {
       setIsLoading(false)
     }, 2000)
+  }
+
+  // Simulate real-time market data updates
+  const simulateMarketUpdate = () => {
+    setIsMarketDataLoading(true)
+    setTimeout(() => {
+      setMarketAssets(prev => prev.map(asset => {
+        const randomChange = (Math.random() - 0.5) * 0.02 // ±1% change
+        const newPrice = asset.price * (1 + randomChange)
+        const change = newPrice - asset.price
+        const changePercent = (change / asset.price) * 100
+        
+        return {
+          ...asset,
+          price: newPrice,
+          change: change,
+          changePercent: changePercent
+        }
+      }))
+      setIsMarketDataLoading(false)
+    }, 1000)
   }
 
   const handleAssetClick = (asset: any) => {
@@ -421,6 +469,15 @@ export default function InvestmentsPage() {
   const handleAddTransactionSubmit = (newTransaction: any) => {
     setTransactions(prev => [newTransaction, ...prev])
     setAddTransactionOpen(false)
+  }
+
+  const handleEditTransaction = (transactionId: string) => {
+    console.log("Edit transaction:", transactionId)
+    // TODO: Implement edit transaction functionality
+  }
+
+  const handleDeleteTransaction = (transactionId: string) => {
+    setTransactions(prev => prev.filter(transaction => transaction.id !== transactionId))
   }
 
   const handleExport = () => {
@@ -445,14 +502,50 @@ export default function InvestmentsPage() {
   }
 
   const handleToggleWatch = (symbol: string) => {
+    setMarketAssets(prev => 
+      prev.map(asset => 
+        asset.symbol === symbol 
+          ? { ...asset, isWatched: !asset.isWatched }
+          : asset
+      )
+    )
     console.log("Toggle watch:", symbol)
   }
 
   const handleBuyAsset = (asset: any) => {
+    // Add the asset to investments
+    const newInvestment = {
+      id: Date.now().toString(),
+      symbol: asset.symbol,
+      name: asset.name,
+      type: asset.category === 'Crypto' ? 'Crypto' : 'Stock' as const,
+      category: asset.category as const,
+      currentPrice: asset.price,
+      quantity: 0, // Will be set in the modal
+      investedAmount: 0,
+      currentValue: 0,
+      totalGain: 0,
+      gainPercent: 0,
+      dayChange: asset.change,
+      dayChangePercent: asset.changePercent,
+      color: "#3B82F6",
+      sector: asset.category,
+      marketCap: asset.marketCap.toString(),
+      pe: 0,
+      dividend: 0,
+      recommendation: "Buy" as const,
+      riskLevel: "Medium" as const
+    }
+    
+    // Open add transaction modal with this asset
+    setSelectedAsset(newInvestment)
+    setAddTransactionOpen(true)
     console.log("Buy asset:", asset)
   }
 
   const handleViewDetails = (asset: any) => {
+    // Show asset details in a modal or navigate to details page
+    alert(`Asset Details:\n\nSymbol: ${asset.symbol}\nName: ${asset.name}\nPrice: ${formatINR(asset.price)}\nChange: ${asset.changePercent.toFixed(2)}%\nCategory: ${asset.category}\nMarket Cap: ${formatINR(asset.marketCap)}`)
     console.log("View details:", asset)
   }
 
@@ -466,12 +559,55 @@ export default function InvestmentsPage() {
   }
 
   const handleEditGoal = (goal: any) => {
-    console.log("Edit goal:", goal)
-    // TODO: Implement edit goal functionality
+    setSelectedGoal(goal)
+    setEditGoalOpen(true)
+  }
+
+  const handleUpdateGoal = (updatedGoal: any) => {
+    setGoals(prev => prev.map(goal => goal.id === updatedGoal.id ? updatedGoal : goal))
+    setEditGoalOpen(false)
+    setSelectedGoal(null)
   }
 
   const handleDeleteGoal = (goalId: string) => {
     setGoals(prev => prev.filter(goal => goal.id !== goalId))
+  }
+
+  const handlePieSliceClick = (slice: any) => {
+    console.log("Pie slice clicked:", slice)
+    // Filter investments by category
+    const filteredInvestments = realInvestments.filter(inv => inv.category === slice.name)
+    console.log("Filtered investments:", filteredInvestments)
+  }
+
+  const handleSellInvestment = (investment: any) => {
+    setSelectedInvestment(investment)
+    setSellInvestmentOpen(true)
+  }
+
+  const handleSellInvestmentSubmit = (sellData: any) => {
+    // Add sell transaction
+    const sellTransaction = {
+      id: Date.now().toString(),
+      date: sellData.date,
+      type: "Sell",
+      asset: sellData.symbol,
+      quantity: sellData.quantity,
+      price: sellData.price,
+      amount: sellData.amount,
+      status: "Completed",
+      category: "Equity", // This should be determined from the investment
+      notes: sellData.notes
+    }
+    
+    setTransactions(prev => [sellTransaction, ...prev])
+    setSellInvestmentOpen(false)
+    setSelectedInvestment(null)
+  }
+
+  const handleRefreshRecommendations = () => {
+    console.log("Refreshing AI recommendations...")
+    // In a real app, this would call an API to get new recommendations
   }
 
   return (
@@ -492,6 +628,7 @@ export default function InvestmentsPage() {
             dayChange={portfolioData.dayChange}
             dayChangePercent={portfolioData.dayChangePercent}
             onRefresh={handleRefresh}
+            onRebalance={handleRebalance}
             isLoading={isLoading}
           />
 
@@ -548,6 +685,22 @@ export default function InvestmentsPage() {
             </CardContent>
           </Card>
 
+          {/* Portfolio Allocation Chart */}
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
+            <CardHeader className="pb-4">
+              <div>
+                <CardTitle className="text-xl font-semibold">Portfolio Allocation</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">Click on any slice to view investments in that category</p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <PortfolioPie 
+                data={portfolioAllocation} 
+                onSliceClick={handlePieSliceClick}
+              />
+            </CardContent>
+          </Card>
+
           {/* Main Content Tabs */}
           <Tabs defaultValue="portfolio" className="w-full">
             <TabsList className="grid w-full grid-cols-5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
@@ -588,7 +741,7 @@ export default function InvestmentsPage() {
                 investments={realInvestments}
                 onInvestmentClick={handleAssetClick}
                 onAddInvestment={() => console.log("Add investment clicked")}
-                onSellInvestment={(investment) => console.log("Sell investment:", investment)}
+                onSellInvestment={handleSellInvestment}
               />
             </TabsContent>
 
@@ -596,18 +749,23 @@ export default function InvestmentsPage() {
               <InvestmentTransactions
                 transactions={transactions}
                 onAddTransaction={handleAddTransaction}
+                onEditTransaction={handleEditTransaction}
+                onDeleteTransaction={handleDeleteTransaction}
                 onExport={handleExport}
               />
             </TabsContent>
 
             <TabsContent value="market" className="space-y-6">
               <MarketWatchlist
-                assets={marketAssets}
+                assets={marketAssetsState}
                 onToggleWatch={handleToggleWatch}
                 onBuyAsset={handleBuyAsset}
                 onViewDetails={handleViewDetails}
+                onRefresh={simulateMarketUpdate}
+                isLoading={isMarketDataLoading}
               />
             </TabsContent>
+
 
             <TabsContent value="goals" className="space-y-6">
               <InvestmentGoals
@@ -662,14 +820,27 @@ export default function InvestmentsPage() {
 
                 <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
                   <CardHeader className="pb-4">
-                    <div>
-                      <CardTitle className="text-xl font-semibold">AI Recommendations</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">Personalized investment suggestions</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-xl font-semibold">AI Recommendations</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">Personalized investment suggestions</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefreshRecommendations}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refresh
+                      </Button>
                     </div>
             </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                      <div 
+                        className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors"
+                        onClick={() => console.log("Recommendation clicked: Increase equity allocation")}
+                      >
                         <div className="flex items-start space-x-3">
                           <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                           <div>
@@ -678,7 +849,10 @@ export default function InvestmentsPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="p-4 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/20">
+                      <div 
+                        className="p-4 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
+                        onClick={() => console.log("Recommendation clicked: Add international diversification")}
+                      >
                         <div className="flex items-start space-x-3">
                           <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                           <div>
@@ -687,7 +861,10 @@ export default function InvestmentsPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="p-4 border border-orange-200 dark:border-orange-800 rounded-lg bg-orange-50 dark:bg-orange-950/20">
+                      <div 
+                        className="p-4 border border-orange-200 dark:border-orange-800 rounded-lg bg-orange-50 dark:bg-orange-950/20 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/30 transition-colors"
+                        onClick={() => console.log("Recommendation clicked: Rebalance quarterly")}
+                      >
                         <div className="flex items-start space-x-3">
                           <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
                           <div>
@@ -714,6 +891,18 @@ export default function InvestmentsPage() {
           open={addGoalOpen} 
           onOpenChange={setAddGoalOpen}
           onAddGoal={handleAddGoalSubmit}
+        />
+        <EditGoalModal 
+          open={editGoalOpen} 
+          onOpenChange={setEditGoalOpen}
+          goal={selectedGoal}
+          onUpdateGoal={handleUpdateGoal}
+        />
+        <SellInvestmentModal 
+          open={sellInvestmentOpen} 
+          onOpenChange={setSellInvestmentOpen}
+          investment={selectedInvestment}
+          onSellInvestment={handleSellInvestmentSubmit}
         />
       </AppShell>
     </QueryProvider>

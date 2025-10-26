@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { TrendingUp, TrendingDown, Star, StarOff, Plus, Search, Eye } from "lucide-react"
+import { TrendingUp, TrendingDown, Star, StarOff, Plus, Search, Eye, RefreshCw } from "lucide-react"
 import { formatINR } from "@/lib/utils"
 import { useState } from "react"
 
@@ -27,13 +27,17 @@ interface MarketWatchlistProps {
   onToggleWatch?: (symbol: string) => void
   onBuyAsset?: (asset: MarketAsset) => void
   onViewDetails?: (asset: MarketAsset) => void
+  onRefresh?: () => void
+  isLoading?: boolean
 }
 
 export function MarketWatchlist({ 
   assets, 
   onToggleWatch, 
   onBuyAsset, 
-  onViewDetails 
+  onViewDetails,
+  onRefresh,
+  isLoading = false
 }: MarketWatchlistProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -124,6 +128,17 @@ export function MarketWatchlist({
                 <Star className="h-4 w-4 mr-2" />
                 Watched Only
               </Button>
+              {onRefresh && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRefresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TrendingUp, TrendingDown, Plus, Filter, Download, Search } from "lucide-react"
+import { TrendingUp, TrendingDown, Plus, Filter, Download, Search, Edit, Trash2 } from "lucide-react"
 import { formatINR } from "@/lib/utils"
 import { useState } from "react"
 
@@ -26,12 +26,16 @@ interface Transaction {
 interface InvestmentTransactionsProps {
   transactions: Transaction[]
   onAddTransaction?: () => void
+  onEditTransaction?: (transactionId: string) => void
+  onDeleteTransaction?: (transactionId: string) => void
   onExport?: () => void
 }
 
 export function InvestmentTransactions({ 
   transactions, 
   onAddTransaction, 
+  onEditTransaction,
+  onDeleteTransaction,
   onExport 
 }: InvestmentTransactionsProps) {
   const [searchTerm, setSearchTerm] = useState("")
@@ -170,6 +174,7 @@ export function InvestmentTransactions({
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -199,6 +204,26 @@ export function InvestmentTransactions({
                         <Badge variant="outline" className={getCategoryColor(transaction.category)}>
                           {transaction.category}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onEditTransaction?.(transaction.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDeleteTransaction?.(transaction.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

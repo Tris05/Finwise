@@ -11,6 +11,7 @@ import {
   GraduationCap,
   ShieldCheck,
   Settings,
+  CreditCard,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils"
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/investments", label: "Investments", icon: Wallet },
+  { href: "/credit-cards", label: "Credit Cards", icon: CreditCard },
   { href: "/advisor", label: "Advisor", icon: Bot },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/salary", label: "Salary", icon: BadgeDollarSign },
