@@ -1,18 +1,19 @@
+// pages/documents.jsx (or app route equivalent)
 "use client"
-
-import { AppShell } from "@/components/app-shell"
-import { DocUpload } from "@/components/doc-upload"
-import { QueryProvider } from "@/components/providers/query-provider"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AppShell } from "@/components/app-shell";
+import { DocUpload } from "@/components/doc-upload";
+import { QueryProvider } from "@/components/providers/query-provider";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function DocumentsPage() {
   const last = [
     { id: "d1", name: "Salary Slip - Aug.pdf", when: "2 days ago" },
     { id: "d2", name: "Credit Card Bill - Sep.pdf", when: "5 days ago" },
     { id: "d3", name: "Bank Statement - Q3.pdf", when: "1 week ago" },
-  ]
-  const risks = ["High utilization on Credit Card", "Salary variance detected", "Missing PAN on statement"]
-  const deductions = ["HRA eligible", "80C: EPF detected", "80D: Health premium"]
+  ];
+  const risks = ["High utilization on Credit Card", "Salary variance detected", "Missing PAN on statement"];
+  const deductions = ["HRA eligible", "80C: EPF detected", "80D: Health premium"];
+
   return (
     <QueryProvider>
       <AppShell>
@@ -34,6 +35,7 @@ export default function DocumentsPage() {
                 ))}
               </CardContent>
             </Card>
+
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Summary</CardTitle>
@@ -57,9 +59,10 @@ export default function DocumentsPage() {
                 </div>
               </CardContent>
             </Card>
+
           </div>
         </div>
       </AppShell>
     </QueryProvider>
-  )
+  );
 }
