@@ -1,0 +1,7 @@
+Flask>=2.0
+flask-cors
+pillow
+pdf2image
+pytesseract
+transformers>=4.0
+torch     # For CPU you can use cpu-only wheel; on many systems `pip install torch` will pick right wheel
