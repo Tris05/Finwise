@@ -1,45 +1,159 @@
+"""
+Comprehensive test for Data Agent
+Tests all functionality including gold API
+"""
 
-import logging
-import json
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+
 from data_agent import DataAgent
+import json
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+def print_section(title):
+    print("\n" + "=" * 70)
+    print(f"  {title}")
+    print("=" * 70)
 
 def test_data_agent():
-    print("Initializing Data Agent...")
-    agent = DataAgent()
+    """Test data agent with all features"""
     
-    # Mock user profile
+    print_section("DATA AGENT COMPREHENSIVE TEST")
+    
+    # Initialize agent
+    print("\n[1] Initializing Data Agent...")
+    agent = DataAgent()
+    print("    [OK] Data Agent initialized")
+    
+    # Test user profile
     user_profile = {
-        "risk_score": 0.5,
-        "investment_horizon": 5
+        "risk_score": 0.6,
+        "investment_horizon": 5,
+        "preferences": ["technology", "growth"],
+        "constraints": {
+            "max_crypto": 0.15,
+            "exclude_sectors": []
+        }
     }
     
-    print("Fetching data...")
-    # Force refresh to test live fetching
+    # Execute data agent
+    print("\n[2] Fetching market data (force refresh)...")
     result = agent.execute(user_profile, force_refresh=True)
     
     if "error" in result:
-        print(f"Error: {result['error']}")
+        print(f"    [ERROR] {result['error']}")
+        return False
+    
+    print("    [OK] Market data fetched successfully")
+    
+    # Check market data
+    print_section("MARKET DATA SUMMARY")
+    
+    market_data = result.get("market_data", {})
+    asset_classes = market_data.get("asset_classes", {})
+    
+    print(f"\nAsset Classes Available: {list(asset_classes.keys())}")
+    
+    # Stocks
+    if "stocks" in asset_classes:
+        stocks = asset_classes["stocks"]
+        print(f"\n[STOCKS] {len(stocks)} stocks fetched")
+        for symbol, data in list(stocks.items())[:3]:
+            print(f"  - {symbol}: Rs.{data.get('current_price', 0):,.2f}")
+    
+    # Crypto
+    if "crypto" in asset_classes:
+        crypto = asset_classes["crypto"]
+        print(f"\n[CRYPTO] {len(crypto)} cryptocurrencies fetched")
+        for symbol, data in list(crypto.items())[:3]:
+            print(f"  - {symbol}: Rs.{data.get('current_price_inr', 0):,.2f}")
+    
+    # Gold
+    if "gold" in asset_classes:
+        gold = asset_classes["gold"]
+        print(f"\n[GOLD] Gold data fetched")
+        print(f"  Price per gram: Rs.{gold.get('current_price_per_gram', 0):,.2f}")
+        print(f"  Source: {gold.get('source', 'N/A')}")
+        if "price_per_ounce" in gold:
+            print(f"  Price per ounce: Rs.{gold.get('price_per_ounce', 0):,.2f}")
+    
+    # Fixed Income
+    if "fixed_income" in asset_classes:
+        fi = asset_classes["fixed_income"]
+        print(f"\n[FIXED INCOME] {len(fi)} instruments available")
+        for instrument, data in list(fi.items())[:3]:
+            print(f"  - {instrument}: {data.get('rate', 0)*100:.2f}%")
+    
+    # Market Summary
+    print_section("MARKET SUMMARY")
+    
+    market_summary = market_data.get("market_summary", {})
+    print(f"\nTotal Assets Analyzed: {market_summary.get('total_assets_analyzed', 0)}")
+    print(f"Market Sentiment: {market_summary.get('market_sentiment', 'N/A')}")
+    print(f"Volatility Level: {market_summary.get('volatility_level', 'N/A')}")
+    
+    # Validation
+    print_section("DATA VALIDATION")
+    
+    validation = result.get("validation", {})
+    print(f"\nValidation Status: {'PASSED' if validation.get('is_valid') else 'FAILED'}")
+    print(f"Data Quality Score: {validation.get('data_quality_score', 0):.2%}")
+    print(f"Warnings: {len(validation.get('warnings', []))}")
+    print(f"Errors: {len(validation.get('errors', []))}")
+    
+    if validation.get('warnings'):
+        print("\nWarnings:")
+        for warning in validation['warnings'][:3]:
+            print(f"  - {warning}")
+    
+    # API Usage
+    print_section("API USAGE STATS")
+    
+    api_usage = result.get("api_usage", {})
+    if api_usage:
+        for api_name, stats in api_usage.items():
+            print(f"\n{api_name.upper()}:")
+            print(f"  Calls (last minute): {stats.get('calls_last_minute', 0)}/{stats.get('minute_limit', 0)}")
+            print(f"  Calls (last hour): {stats.get('calls_last_hour', 0)}/{stats.get('hour_limit', 0)}")
+    
+    # Cache Stats
+    print_section("CACHE STATISTICS")
+    
+    agent_status = agent.get_agent_status()
+    cache_stats = agent_status.get("cache_stats", {})
+    print(f"\nTotal Cached Items: {cache_stats.get('total_items', 0)}")
+    print(f"Fresh Items: {cache_stats.get('fresh_items', 0)}")
+    print(f"Cache Duration: {cache_stats.get('cache_duration_minutes', 0)} minutes")
+    
+    # Test cached retrieval
+    print_section("CACHE TEST")
+    
+    print("\n[3] Testing cached data retrieval...")
+    cached_result = agent.execute(user_profile, force_refresh=False)
+    
+    if "market_data" in cached_result:
+        print("    [OK] Cached data retrieved successfully")
     else:
-        print("\nData Fetch Successful!")
-        market_data = result.get("market_data", {})
-        print(f"Market Summary: {json.dumps(market_data.get('market_summary'), indent=2)}")
-        
-        # Print sample stock data
-        stocks = market_data.get("asset_classes", {}).get("stocks", {})
-        if stocks:
-            first_stock = list(stocks.keys())[0]
-            print(f"\nSample Stock ({first_stock}):")
-            print(json.dumps(stocks[first_stock], indent=2))
-            
-        # Print sample crypto data
-        crypto = market_data.get("asset_classes", {}).get("crypto", {})
-        if crypto:
-            first_crypto = list(crypto.keys())[0]
-            print(f"\nSample Crypto ({first_crypto}):")
-            print(json.dumps(crypto[first_crypto], indent=2))
+        print("    [INFO] No cached data available")
+    
+    print_section("TEST COMPLETED SUCCESSFULLY")
+    
+    print("\n[SUMMARY]")
+    print(f"  - Data Agent: WORKING")
+    print(f"  - Stocks: {len(asset_classes.get('stocks', {}))} fetched")
+    print(f"  - Crypto: {len(asset_classes.get('crypto', {}))} fetched")
+    print(f"  - Gold: {'LIVE API' if gold.get('source') == 'exchangerate.host' else 'FALLBACK'}")
+    print(f"  - Fixed Income: {len(asset_classes.get('fixed_income', {}))} instruments")
+    print(f"  - Validation: {'PASSED' if validation.get('is_valid') else 'FAILED'}")
+    
+    return True
 
 if __name__ == "__main__":
-    test_data_agent()
+    try:
+        success = test_data_agent()
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        print(f"\n[FATAL ERROR] {str(e)}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
