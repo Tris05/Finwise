@@ -949,14 +949,14 @@ class RiskAgent:
             
             logger.info(f"Risk assessment completed. Status: {risk_assessment['overall_assessment']}")
             
-            return risk_assessment
+            return {"risk_assessment": risk_assessment}
             
         except Exception as e:
             logger.error(f"Error in Risk Agent execution: {str(e)}")
             return {
+                "risk_assessment": self._get_fallback_assessment(user_profile),
                 "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-                "fallback_assessment": self._get_fallback_assessment(user_profile)
+                "timestamp": datetime.now().isoformat()
             }
     
     def _get_fallback_assessment(self, user_profile: Dict[str, Any]) -> Dict[str, Any]:

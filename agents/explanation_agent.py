@@ -15,6 +15,13 @@ from pathlib import Path
 import time
 import re
 
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load from .env file in current directory or parent directories
+except ImportError:
+    pass  # dotenv not installed
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -52,7 +59,7 @@ class GeminiLLMInterface(BaseTool):
         else:
             try:
                 genai.configure(api_key=self.api_key)
-                self.model = genai.GenerativeModel('gemini-1.5-flash')
+                self.model = genai.GenerativeModel('gemini-2.0-flash')
                 self.use_fallback = False
                 logger.info("Gemini API initialized successfully")
             except Exception as e:
@@ -85,7 +92,7 @@ class GeminiLLMInterface(BaseTool):
                 return {
                     "content": response.text,
                     "success": True,
-                    "model": "gemini-1.5-flash",
+                    "model": "gemini-2.0-flash",
                     "attempt": attempt + 1
                 }
                 
@@ -805,35 +812,65 @@ class ExplanationAgent:
             # Generate visualizations
             visualizations = self.visualization_generator.execute(consolidated_data)
             
-            # Compile final explanation package
-            final_explanation = {
-                "explanations": explanations,
-                "recommendations": recommendations,
-                "visualizations": visualizations,
-                "summary": self._create_executive_summary(explanations, recommendations),
+            # Compile final explanation package - extract text from complex objects
+            def extract_text(obj, fallback=""):
+                if isinstance(obj, str):
+                    return obj
+                elif isinstance(obj, dict):
+                    # Try to extract text from various possible structures
+                    if "content" in obj and isinstance(obj["content"], dict):
+                        return obj["content"].get("raw_content", fallback)
+                    elif "summary" in obj:
+                        return obj["summary"]
+                    elif "raw_content" in obj:
+                        return obj["raw_content"]
+                    else:
+                        return fallback
+                else:
+                    return fallback
+            
+            portfolio_summary = explanations.get("portfolio_summary", {})
+            risk_explanation = explanations.get("risk_explanation", {})
+            educational_content = explanations.get("educational_content", {})
+            action_items = explanations.get("action_items", [])
+            
+            final_advice = {
+                "allocation_summary": extract_text(portfolio_summary, "Portfolio allocation generated based on your risk profile and investment goals."),
+                "specific_recommendations": action_items if isinstance(action_items, list) else [],
+                "risk_assessment": extract_text(risk_explanation, "Risk assessment completed with your portfolio allocation."),
+                "action_items": action_items if isinstance(action_items, list) else [],
+                "important_considerations": extract_text(educational_content, "Please consult with a financial advisor before making investment decisions."),
+                "immediate_actions": recommendations.get("immediate_actions", []),
                 "metadata": {
                     "generation_timestamp": datetime.now().isoformat(),
                     "total_investment": total_assets,
                     "user_risk_profile": user_profile.get("risk_score", 0.5),
-                    "model_used": "gemini-1.5-flash" if not self.llm_interface.use_fallback else "fallback"
+                    "model_used": "gemini-2.0-flash" if not self.llm_interface.use_fallback else "fallback"
                 }
             }
             
             logger.info("Portfolio explanation generation completed successfully")
-            return final_explanation
+            return {"final_advice": final_advice}
             
         except Exception as e:
             logger.error(f"Error in Explanation Agent execution: {str(e)}")
+            fallback_advice = self._generate_fallback_explanation(user_profile, total_assets)
             return {
+                "final_advice": fallback_advice,
                 "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-                "fallback_explanation": self._generate_fallback_explanation(user_profile, total_assets)
+                "timestamp": datetime.now().isoformat()
             }
     
     def _consolidate_agent_outputs(self, data_output: Dict[str, Any], macro_output: Dict[str, Any],
                                  micro_output: Dict[str, Any], risk_output: Dict[str, Any],
                                  user_profile: Dict[str, Any], total_assets: float) -> Dict[str, Any]:
         """Consolidate outputs from all agents into unified data structure"""
+        # Safely handle potentially None inputs
+        data_output = data_output or {}
+        macro_output = macro_output or {}
+        micro_output = micro_output or {}
+        risk_output = risk_output or {}
+        
         return {
             "total_investment": total_assets,
             "user_profile": user_profile,
@@ -841,8 +878,8 @@ class ExplanationAgent:
             "risk_level": self._get_risk_level_text(user_profile.get("risk_score", 0.5)),
             "investment_horizon": user_profile.get("investment_horizon", 5),
             "age": user_profile.get("age", 30),
-            "macro_allocation": macro_output,
-            "asset_recommendations": micro_output,
+            "macro_allocation": macro_output.get("allocation", macro_output),
+            "asset_recommendations": micro_output.get("recommendations", micro_output),
             "risk_metrics": risk_output.get("risk_metrics", {}),
             "risk_violations": risk_output.get("risk_violations", []),
             "market_data": data_output.get("market_data", {}),
@@ -882,7 +919,13 @@ class ExplanationAgent:
             
         except Exception as e:
             logger.error(f"Error generating portfolio summary: {str(e)}")
-            return {"error": str(e), "success": False}
+            # Return a meaningful fallback instead of just error
+            return {
+                "summary": f"Portfolio allocated across {len(data.get('macro_allocation', {}))} asset classes based on your risk profile ({data.get('risk_level', 'moderate')} risk). Total investment: ₹{data.get('total_investment', 0):,.0f}",
+                "content": "Portfolio explanation generated in fallback mode. Please ensure all agent integrations are working for detailed analysis.",
+                "success": False,
+                "error": str(e)
+            }
     
     def _generate_risk_explanation(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate risk assessment explanation"""
@@ -914,7 +957,12 @@ class ExplanationAgent:
             
         except Exception as e:
             logger.error(f"Error generating risk explanation: {str(e)}")
-            return {"error": str(e), "success": False}
+            risk_metrics = data.get("risk_metrics", {})
+            return {
+                "content": f"Risk Assessment: Your portfolio has an expected return of {risk_metrics.get('expected_annual_return', 0.12):.1%} with {risk_metrics.get('overall_risk_level', 'moderate')} risk level. Volatility is estimated at {risk_metrics.get('estimated_volatility', 0.15):.1%}.",
+                "success": False,
+                "error": str(e)
+            }
     
     def _generate_action_items(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate actionable recommendations"""
@@ -943,7 +991,16 @@ class ExplanationAgent:
             
         except Exception as e:
             logger.error(f"Error generating action items: {str(e)}")
-            return {"error": str(e), "success": False}
+            return {
+                "actions": [
+                    "Review your portfolio allocation periodically",
+                    "Monitor market conditions and rebalance as needed",
+                    "Consult with a financial advisor for personalized advice"
+                ],
+                "content": "Basic action items provided in fallback mode.",
+                "success": False,
+                "error": str(e)
+            }
     
     def _generate_educational_content(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate educational content"""
@@ -970,7 +1027,11 @@ class ExplanationAgent:
             
         except Exception as e:
             logger.error(f"Error generating educational content: {str(e)}")
-            return {"error": str(e), "success": False}
+            return {
+                "content": f"Educational content: Diversified investing across multiple asset classes helps reduce risk. With your {data.get('risk_level', 'moderate')} risk profile and {data.get('investment_horizon', 5)} year horizon, this allocation balances growth potential with stability. Always consult a financial advisor before making investment decisions.",
+                "success": False,
+                "error": str(e)
+            }
     
     def _generate_investment_rationale(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate investment rationale explanation"""
@@ -996,7 +1057,13 @@ class ExplanationAgent:
             
         except Exception as e:
             logger.error(f"Error generating investment rationale: {str(e)}")
-            return {"error": str(e), "success": False}
+            allocation = data.get('macro_allocation', {})
+            main_allocations = [k for k, v in allocation.items() if (isinstance(v, (int, float)) and v > 0.1) or (isinstance(v, dict) and v.get('percentage', 0) > 0.1)]
+            return {
+                "content": f"Investment rationale: This portfolio emphasizes {', '.join(main_allocations[:2])} to match your risk tolerance and investment goals. The allocation strategy considers your {data.get('investment_horizon', 5)} year timeline and market conditions.",
+                "success": False,
+                "error": str(e)
+            }
     
     def _create_executive_summary(self, explanations: Dict[str, Any], 
                                 recommendations: Dict[str, Any]) -> Dict[str, Any]:
@@ -1039,24 +1106,36 @@ class ExplanationAgent:
         else:
             return "Aggressive"
     
-    def _format_allocation_text(self, allocation: Dict[str, float]) -> str:
+    def _format_allocation_text(self, allocation: Dict[str, Any]) -> str:
         """Format allocation for text display"""
         lines = []
         for asset, weight in allocation.items():
-            if weight > 0:
-                lines.append(f"• {asset.replace('_', ' ').title()}: {weight:.1%}")
+            # Handle both simple float values and complex dict structures
+            if isinstance(weight, dict):
+                weight_value = weight.get("percentage", 0)
+            else:
+                weight_value = weight
+                
+            if isinstance(weight_value, (int, float)) and weight_value > 0:
+                lines.append(f"• {asset.replace('_', ' ').title()}: {weight_value:.1%}")
         return "\n".join(lines)
     
     def _format_recommendations_text(self, recommendations: Dict[str, Any]) -> str:
         """Format asset recommendations for display"""
         lines = []
+        
+        # Handle the case where recommendations are nested under 'recommendations'
+        if "recommendations" in recommendations:
+            recommendations = recommendations["recommendations"]
+        
         for asset_class, items in recommendations.items():
             if isinstance(items, list) and items:
                 lines.append(f"\n{asset_class.replace('_', ' ').title()}:")
                 for item in items[:3]:  # Limit to top 3
-                    name = item.get("name", item.get("symbol", "Unknown"))
-                    amount = item.get("amount", 0)
-                    lines.append(f"  - {name}: ₹{amount:,.0f}")
+                    if isinstance(item, dict):
+                        name = item.get("name", item.get("symbol", "Unknown"))
+                        amount = item.get("amount", 0)
+                        lines.append(f"  - {name}: ₹{amount:,.0f}")
         return "\n".join(lines)
     
     def _format_risk_metrics_text(self, risk_metrics: Dict[str, Any]) -> str:
