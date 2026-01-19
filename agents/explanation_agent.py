@@ -1,9 +1,11 @@
-"""
-Explanation Agent Implementation for Agentic Portfolio Management System
-Handles generation of human-readable explanations and advice using Gemini API
-"""
 
-import google.generativeai as genai
+try:
+    import google.generativeai as genai
+    HAS_GENAI = True
+except ImportError:
+    HAS_GENAI = False
+    genai = None
+
 import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
@@ -53,6 +55,12 @@ class GeminiLLMInterface(BaseTool):
             api_key: Gemini API key (can also be set via GEMINI_API_KEY environment variable)
         """
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        
+        if not HAS_GENAI:
+            logger.warning("google.generativeai library not found. Using fallback mode.")
+            self.use_fallback = True
+            return
+
         if not self.api_key:
             logger.warning("No Gemini API key provided. Using fallback mode.")
             self.use_fallback = True

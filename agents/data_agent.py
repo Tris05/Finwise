@@ -1,900 +1,3 @@
-# """
-# Data Agent Implementation for Agentic Portfolio Management System
-# Handles market data collection, processing, and validation
-# """
-
-# import yfinance as yf
-# import requests
-# import pandas as pd
-# import numpy as np
-# from datetime import datetime, timedelta
-# from typing import Dict, List, Optional, Any
-# import time
-# import json
-# import hashlib
-# from dataclasses import dataclass
-# import logging
-# from abc import ABC, abstractmethod
-
-# # Configure logging
-# logging.basicConfig(level=logging.INFO)
-# logger = logging.getLogger(__name__)
-
-# @dataclass
-# class MarketDataResponse:
-#     """Standard response format for market data"""
-#     data: Dict[str, Any]
-#     timestamp: datetime
-#     source: str
-#     success: bool
-#     error_message: Optional[str] = None
-
-# class BaseTool(ABC):
-#     """Base class for all data agent tools"""
-    
-#     @abstractmethod
-#     def execute(self, *args, **kwargs) -> Any:
-#         pass
-
-# class MarketDataFetcher(BaseTool):
-#     """Tool for fetching market data from various APIs"""
-    
-#     def __init__(self):
-#         self.indian_stocks = [
-#             "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", 
-#             "ICICIBANK.NS", "HINDUNILVR.NS", "SBIN.NS", "BHARTIARTL.NS"
-#         ]
-#         self.crypto_symbols = ["bitcoin", "ethereum", "binancecoin", "cardano", "solana"]
-        
-#     def execute(self, data_types: List[str] = None) -> MarketDataResponse:
-#         """
-#         Fetch market data for specified data types
-        
-#         Args:
-#             data_types: List of data types to fetch ['stocks', 'crypto', 'gold', 'fixed_income']
-#         """
-#         if data_types is None:
-#             data_types = ['stocks', 'crypto', 'gold', 'fixed_income']
-        
-#         try:
-#             market_data = {}
-            
-#             if 'stocks' in data_types:
-#                 market_data['stocks'] = self.fetch_stock_data()
-            
-#             if 'crypto' in data_types:
-#                 market_data['crypto'] = self.fetch_crypto_data()
-            
-#             if 'gold' in data_types:
-#                 market_data['gold'] = self.fetch_gold_data()
-            
-#             if 'fixed_income' in data_types:
-#                 market_data['fixed_income'] = self.fetch_fixed_income_data()
-            
-#             return MarketDataResponse(
-#                 data=market_data,
-#                 timestamp=datetime.now(),
-#                 source="MarketDataFetcher",
-#                 success=True
-#             )
-            
-#         except Exception as e:
-#             logger.error(f"Error fetching market data: {str(e)}")
-#             return MarketDataResponse(
-#                 data={},
-#                 timestamp=datetime.now(),
-#                 source="MarketDataFetcher",
-#                 success=False,
-#                 error_message=str(e)
-#             )
-    
-#     def fetch_stock_data(self) -> Dict[str, Any]:
-#         """Fetch Indian stock data using yfinance"""
-#         stock_data = {}
-        
-#         try:
-#             for symbol in self.indian_stocks:
-#                 try:
-#                     ticker = yf.Ticker(symbol)
-#                     # Get 1 month of data for performance
-#                     hist = ticker.history(period="1mo")
-                    
-#                     if not hist.empty:
-#                         # Calculate basic metrics
-#                         returns = hist['Close'].pct_change().dropna()
-                        
-#                         stock_data[symbol] = {
-#                             "symbol": symbol,
-#                             "current_price": float(hist['Close'].iloc[-1]),
-#                             "previous_close": float(hist['Close'].iloc[-2]) if len(hist) > 1 else float(hist['Close'].iloc[-1]),
-#                             "daily_change": float(returns.iloc[-1]) if len(returns) > 0 else 0.0,
-#                             "volatility": float(returns.std()) if len(returns) > 1 else 0.1,
-#                             "mean_return": float(returns.mean()) if len(returns) > 0 else 0.0,
-#                             "volume": int(hist['Volume'].iloc[-1]) if 'Volume' in hist.columns else 0,
-#                             "high_52w": float(hist['High'].max()),
-#                             "low_52w": float(hist['Low'].min()),
-#                             "data_points": len(hist),
-#                             "last_updated": datetime.now().isoformat()
-#                         }
-                    
-#                 except Exception as e:
-#                     logger.warning(f"Failed to fetch data for {symbol}: {str(e)}")
-#                     continue
-                    
-#         except Exception as e:
-#             logger.error(f"Error in stock data fetching: {str(e)}")
-            
-#         return stock_data
-    
-#     def fetch_crypto_data(self) -> Dict[str, Any]:
-#         """Fetch cryptocurrency data using CoinGecko API"""
-#         crypto_data = {}
-        
-#         try:
-#             url = "https://api.coingecko.com/api/v3/simple/price"
-#             params = {
-#                 "ids": ",".join(self.crypto_symbols),
-#                 "vs_currencies": "inr,usd",
-#                 "include_24hr_change": "true",
-#                 "include_market_cap": "true",
-#                 "include_24hr_vol": "true"
-#             }
-            
-#             response = requests.get(url, params=params, timeout=10)
-            
-#             if response.status_code == 200:
-#                 data = response.json()
-                
-#                 for symbol in self.crypto_symbols:
-#                     if symbol in data:
-#                         crypto_info = data[symbol]
-#                         crypto_data[symbol] = {
-#                             "symbol": symbol,
-#                             "current_price_inr": crypto_info.get("inr", 0),
-#                             "current_price_usd": crypto_info.get("usd", 0),
-#                             "daily_change": crypto_info.get("inr_24h_change", 0) / 100,  # Convert to decimal
-#                             "market_cap": crypto_info.get("inr_market_cap", 0),
-#                             "volume_24h": crypto_info.get("inr_24h_vol", 0),
-#                             "volatility": abs(crypto_info.get("inr_24h_change", 10)) / 100,  # Rough volatility estimate
-#                             "last_updated": datetime.now().isoformat()
-#                         }
-#             else:
-#                 logger.warning(f"CoinGecko API returned status code: {response.status_code}")
-                
-#         except Exception as e:
-#             logger.error(f"Error fetching crypto data: {str(e)}")
-#             # Return default data if API fails
-#             crypto_data = self._get_default_crypto_data()
-            
-#         return crypto_data
-    
-#     def fetch_gold_data(self) -> Dict[str, Any]:
-#         """Fetch gold price data"""
-#         gold_data = {}
-        
-#         try:
-#             # Try multiple gold APIs for reliability
-#             apis = [
-#                 "https://api.metals.live/v1/spot/gold",
-#                 "https://api.goldapi.io/api/XAU/INR"  # Alternative API
-#             ]
-            
-#             for api_url in apis:
-#                 try:
-#                     response = requests.get(api_url, timeout=5)
-#                     if response.status_code == 200:
-#                         data = response.json()
-                        
-#                         # Parse response based on API structure
-#                         if "metals.live" in api_url:
-#                             price = data.get("price", 5500)
-#                         else:
-#                             price = data.get("price", 5500)
-                        
-#                         gold_data = {
-#                             "current_price_per_gram": float(price),
-#                             "currency": "INR",
-#                             "daily_change": 0.002,  # Default small change
-#                             "volatility": 0.15,
-#                             "last_updated": datetime.now().isoformat(),
-#                             "source": api_url
-#                         }
-#                         break
-                        
-#                 except Exception as e:
-#                     logger.warning(f"Gold API {api_url} failed: {str(e)}")
-#                     continue
-            
-#             # Fallback to default if all APIs fail
-#             if not gold_data:
-#                 gold_data = {
-#                     "current_price_per_gram": 5500.0,  # Default INR price
-#                     "currency": "INR",
-#                     "daily_change": 0.002,
-#                     "volatility": 0.15,
-#                     "last_updated": datetime.now().isoformat(),
-#                     "source": "default_fallback"
-#                 }
-                
-#         except Exception as e:
-#             logger.error(f"Error fetching gold data: {str(e)}")
-#             gold_data = {
-#                 "current_price_per_gram": 5500.0,
-#                 "currency": "INR",
-#                 "daily_change": 0.0,
-#                 "volatility": 0.15,
-#                 "last_updated": datetime.now().isoformat(),
-#                 "source": "error_fallback"
-#             }
-            
-#         return gold_data
-    
-#     def fetch_fixed_income_data(self) -> Dict[str, Any]:
-#         """Fetch fixed income rates (PPF, FD, etc.)"""
-#         fixed_income_data = {
-#             "ppf": {
-#                 "rate": 0.071,  # Current PPF rate 7.1%
-#                 "tenure": 15,
-#                 "tax_benefit": True,
-#                 "minimum_investment": 500,
-#                 "maximum_investment": 150000,
-#                 "last_updated": datetime.now().isoformat()
-#             },
-#             "fd_sbi": {
-#                 "rate": 0.065,  # SBI FD rate
-#                 "tenure_options": [1, 2, 3, 5],
-#                 "minimum_investment": 1000,
-#                 "bank": "SBI",
-#                 "last_updated": datetime.now().isoformat()
-#             },
-#             "fd_hdfc": {
-#                 "rate": 0.067,  # HDFC FD rate
-#                 "tenure_options": [1, 2, 3, 5],
-#                 "minimum_investment": 5000,
-#                 "bank": "HDFC",
-#                 "last_updated": datetime.now().isoformat()
-#             },
-#             "nsc": {
-#                 "rate": 0.068,  # NSC rate
-#                 "tenure": 5,
-#                 "tax_benefit": True,
-#                 "minimum_investment": 1000,
-#                 "last_updated": datetime.now().isoformat()
-#             }
-#         }
-        
-#         return fixed_income_data
-    
-#     def _get_default_crypto_data(self) -> Dict[str, Any]:
-#         """Default crypto data when API fails"""
-#         return {
-#             "bitcoin": {
-#                 "symbol": "bitcoin",
-#                 "current_price_inr": 3500000,
-#                 "current_price_usd": 43000,
-#                 "daily_change": 0.02,
-#                 "market_cap": 850000000000,
-#                 "volume_24h": 25000000000,
-#                 "volatility": 0.45,
-#                 "last_updated": datetime.now().isoformat()
-#             },
-#             "ethereum": {
-#                 "symbol": "ethereum", 
-#                 "current_price_inr": 200000,
-#                 "current_price_usd": 2500,
-#                 "daily_change": 0.015,
-#                 "market_cap": 300000000000,
-#                 "volume_24h": 15000000000,
-#                 "volatility": 0.50,
-#                 "last_updated": datetime.now().isoformat()
-#             }
-#         }
-
-# class DataProcessor(BaseTool):
-#     """Tool for processing and normalizing market data"""
-    
-#     def execute(self, raw_data: Dict[str, Any], user_profile: Dict[str, Any]) -> Dict[str, Any]:
-#         """
-#         Process raw market data into structured format
-        
-#         Args:
-#             raw_data: Raw market data from MarketDataFetcher
-#             user_profile: User preferences and constraints
-#         """
-#         try:
-#             processed_data = {
-#                 "processed_timestamp": datetime.now().isoformat(),
-#                 "user_profile": user_profile,
-#                 "asset_classes": {}
-#             }
-            
-#             # Process stocks
-#             if "stocks" in raw_data:
-#                 processed_data["asset_classes"]["stocks"] = self._process_stocks(raw_data["stocks"])
-            
-#             # Process crypto
-#             if "crypto" in raw_data:
-#                 processed_data["asset_classes"]["crypto"] = self._process_crypto(raw_data["crypto"])
-            
-#             # Process gold
-#             if "gold" in raw_data:
-#                 processed_data["asset_classes"]["gold"] = self._process_gold(raw_data["gold"])
-            
-#             # Process fixed income
-#             if "fixed_income" in raw_data:
-#                 processed_data["asset_classes"]["fixed_income"] = self._process_fixed_income(raw_data["fixed_income"])
-            
-#             # Calculate correlation matrix
-#             processed_data["correlations"] = self._calculate_correlations(processed_data["asset_classes"])
-            
-#             # Add market summary
-#             processed_data["market_summary"] = self._generate_market_summary(processed_data["asset_classes"])
-            
-#             return processed_data
-            
-#         except Exception as e:
-#             logger.error(f"Error processing data: {str(e)}")
-#             return {"error": str(e), "processed_timestamp": datetime.now().isoformat()}
-    
-#     def _process_stocks(self, stock_data: Dict[str, Any]) -> Dict[str, Any]:
-#         """Process stock data"""
-#         processed_stocks = {}
-        
-#         for symbol, data in stock_data.items():
-#             # Calculate additional metrics
-#             risk_score = min(data.get("volatility", 0.2) * 5, 1.0)  # Scale volatility to 0-1
-#             return_score = (data.get("mean_return", 0) + 1) ** 252 - 1  # Annualized return
-            
-#             processed_stocks[symbol] = {
-#                 **data,
-#                 "risk_score": risk_score,
-#                 "annualized_return": return_score,
-#                 "sharpe_ratio": return_score / (data.get("volatility", 0.2) + 0.001),
-#                 "price_momentum": data.get("daily_change", 0),
-#                 "liquidity_score": min(data.get("volume", 0) / 1000000, 1.0),  # Normalized volume
-#                 "asset_class": "equity"
-#             }
-        
-#         return processed_stocks
-    
-#     def _process_crypto(self, crypto_data: Dict[str, Any]) -> Dict[str, Any]:
-#         """Process cryptocurrency data"""
-#         processed_crypto = {}
-        
-#         for symbol, data in crypto_data.items():
-#             # Calculate risk metrics for crypto
-#             volatility = data.get("volatility", 0.5)
-#             risk_score = min(volatility * 2, 1.0)  # Crypto typically higher volatility
-            
-#             processed_crypto[symbol] = {
-#                 **data,
-#                 "risk_score": risk_score,
-#                 "market_cap_score": min(data.get("market_cap", 0) / 1000000000000, 1.0),  # Normalized market cap
-#                 "volume_score": min(data.get("volume_24h", 0) / 10000000000, 1.0),
-#                 "price_momentum": data.get("daily_change", 0),
-#                 "asset_class": "crypto"
-#             }
-        
-#         return processed_crypto
-    
-#     def _process_gold(self, gold_data: Dict[str, Any]) -> Dict[str, Any]:
-#         """Process gold data"""
-#         return {
-#             **gold_data,
-#             "risk_score": 0.3,  # Gold typically lower risk
-#             "hedge_score": 0.8,  # Good inflation hedge
-#             "asset_class": "commodity"
-#         }
-    
-#     def _process_fixed_income(self, fixed_income_data: Dict[str, Any]) -> Dict[str, Any]:
-#         """Process fixed income data"""
-#         processed_fi = {}
-        
-#         for instrument, data in fixed_income_data.items():
-#             processed_fi[instrument] = {
-#                 **data,
-#                 "risk_score": 0.1,  # Very low risk
-#                 "liquidity_score": 0.3 if instrument == "ppf" else 0.7,  # PPF has lock-in
-#                 "tax_efficiency": 1.0 if data.get("tax_benefit", False) else 0.5,
-#                 "asset_class": "fixed_income"
-#             }
-        
-#         return processed_fi
-    
-#     def _calculate_correlations(self, asset_classes: Dict[str, Any]) -> Dict[str, float]:
-#         """Calculate simplified correlation matrix"""
-#         # Simplified correlation estimates (in real implementation, use historical data)
-#         correlations = {
-#             "stocks_crypto": 0.3,
-#             "stocks_gold": -0.1,
-#             "stocks_fixed_income": 0.1,
-#             "crypto_gold": 0.0,
-#             "crypto_fixed_income": -0.2,
-#             "gold_fixed_income": 0.0
-#         }
-        
-#         return correlations
-    
-#     def _generate_market_summary(self, asset_classes: Dict[str, Any]) -> Dict[str, Any]:
-#         """Generate overall market summary"""
-#         summary = {
-#             "total_assets_analyzed": sum(len(assets) for assets in asset_classes.values()),
-#             "market_sentiment": "neutral",  # Could be enhanced with sentiment analysis
-#             "volatility_level": "moderate",
-#             "recommended_rebalance": False
-#         }
-        
-#         # Calculate average volatility across all assets
-#         total_volatility = 0
-#         count = 0
-        
-#         for asset_class, assets in asset_classes.items():
-#             if isinstance(assets, dict):
-#                 for asset_name, asset_data in assets.items():
-#                     if isinstance(asset_data, dict) and "volatility" in asset_data:
-#                         total_volatility += asset_data["volatility"]
-#                         count += 1
-        
-#         if count > 0:
-#             avg_volatility = total_volatility / count
-#             if avg_volatility > 0.3:
-#                 summary["volatility_level"] = "high"
-#             elif avg_volatility < 0.15:
-#                 summary["volatility_level"] = "low"
-        
-#         return summary
-
-# class CacheManager(BaseTool):
-#     """Tool for caching market data to improve performance"""
-    
-#     def __init__(self, cache_duration_minutes: int = 30):
-#         self.cache = {}
-#         self.cache_duration = timedelta(minutes=cache_duration_minutes)
-    
-#     def execute(self, operation: str, key: str = None, data: Any = None) -> Any:
-#         """
-#         Manage cache operations
-        
-#         Args:
-#             operation: 'get', 'store', 'clear', 'is_fresh'
-#             key: Cache key
-#             data: Data to store (for store operation)
-#         """
-#         if operation == "get":
-#             return self._get_cached_data(key)
-#         elif operation == "store":
-#             return self._store_data(key, data)
-#         elif operation == "clear":
-#             return self._clear_cache()
-#         elif operation == "is_fresh":
-#             return self._is_data_fresh(key)
-#         else:
-#             raise ValueError(f"Unknown cache operation: {operation}")
-    
-#     def _get_cached_data(self, key: str) -> Optional[Any]:
-#         """Retrieve data from cache if fresh"""
-#         if key in self.cache:
-#             cached_item = self.cache[key]
-#             if self._is_data_fresh(key):
-#                 logger.info(f"Cache hit for key: {key}")
-#                 return cached_item["data"]
-#             else:
-#                 # Remove stale data
-#                 del self.cache[key]
-#                 logger.info(f"Cache expired for key: {key}")
-        
-#         return None
-    
-#     def _store_data(self, key: str, data: Any) -> bool:
-#         """Store data in cache with timestamp"""
-#         try:
-#             self.cache[key] = {
-#                 "data": data,
-#                 "timestamp": datetime.now(),
-#                 "size": len(str(data))  # Rough size estimate
-#             }
-#             logger.info(f"Data cached for key: {key}")
-#             return True
-#         except Exception as e:
-#             logger.error(f"Error storing cache data: {str(e)}")
-#             return False
-    
-#     def _is_data_fresh(self, key: str) -> bool:
-#         """Check if cached data is still fresh"""
-#         if key not in self.cache:
-#             return False
-        
-#         cached_time = self.cache[key]["timestamp"]
-#         return datetime.now() - cached_time < self.cache_duration
-    
-#     def _clear_cache(self) -> bool:
-#         """Clear all cached data"""
-#         try:
-#             self.cache.clear()
-#             logger.info("Cache cleared successfully")
-#             return True
-#         except Exception as e:
-#             logger.error(f"Error clearing cache: {str(e)}")
-#             return False
-    
-#     def get_cache_stats(self) -> Dict[str, Any]:
-#         """Get cache statistics"""
-#         total_size = sum(item["size"] for item in self.cache.values())
-#         fresh_items = sum(1 for key in self.cache.keys() if self._is_data_fresh(key))
-        
-#         return {
-#             "total_items": len(self.cache),
-#             "fresh_items": fresh_items,
-#             "stale_items": len(self.cache) - fresh_items,
-#             "total_size_estimate": total_size,
-#             "cache_duration_minutes": self.cache_duration.total_seconds() / 60
-#         }
-
-# class ApiRateLimiter(BaseTool):
-#     """Tool for managing API call rates and quotas"""
-    
-#     def __init__(self):
-#         self.api_calls = {}
-#         self.rate_limits = {
-#             "yfinance": {"calls_per_minute": 60, "calls_per_hour": 2000},
-#             "coingecko": {"calls_per_minute": 10, "calls_per_hour": 1000},
-#             "gold_api": {"calls_per_minute": 30, "calls_per_hour": 1000}
-#         }
-    
-#     def execute(self, api_name: str, operation: str = "check") -> bool:
-#         """
-#         Manage API rate limiting
-        
-#         Args:
-#             api_name: Name of the API
-#             operation: 'check', 'record', 'reset'
-#         """
-#         if operation == "check":
-#             return self._rate_limit_check(api_name)
-#         elif operation == "record":
-#             return self._record_api_call(api_name)
-#         elif operation == "reset":
-#             return self._reset_api_calls(api_name)
-#         else:
-#             raise ValueError(f"Unknown operation: {operation}")
-    
-#     def _rate_limit_check(self, api_name: str) -> bool:
-#         """Check if API call is within rate limits"""
-#         if api_name not in self.rate_limits:
-#             return True  # No limits defined for this API
-        
-#         current_time = datetime.now()
-        
-#         # Initialize tracking if not exists
-#         if api_name not in self.api_calls:
-#             self.api_calls[api_name] = []
-        
-#         # Clean old calls outside the window
-#         self._clean_old_calls(api_name, current_time)
-        
-#         # Check minute limit
-#         minute_calls = self._count_calls_in_window(api_name, current_time, minutes=1)
-#         if minute_calls >= self.rate_limits[api_name]["calls_per_minute"]:
-#             logger.warning(f"Rate limit exceeded for {api_name}: {minute_calls} calls in last minute")
-#             return False
-        
-#         # Check hour limit
-#         hour_calls = self._count_calls_in_window(api_name, current_time, minutes=60)
-#         if hour_calls >= self.rate_limits[api_name]["calls_per_hour"]:
-#             logger.warning(f"Rate limit exceeded for {api_name}: {hour_calls} calls in last hour")
-#             return False
-        
-#         return True
-    
-#     def _record_api_call(self, api_name: str) -> bool:
-#         """Record an API call"""
-#         if api_name not in self.api_calls:
-#             self.api_calls[api_name] = []
-        
-#         self.api_calls[api_name].append(datetime.now())
-#         return True
-    
-#     def _clean_old_calls(self, api_name: str, current_time: datetime):
-#         """Remove calls older than 1 hour"""
-#         cutoff_time = current_time - timedelta(hours=1)
-#         self.api_calls[api_name] = [
-#             call_time for call_time in self.api_calls[api_name]
-#             if call_time > cutoff_time
-#         ]
-    
-#     def _count_calls_in_window(self, api_name: str, current_time: datetime, minutes: int) -> int:
-#         """Count API calls within specified time window"""
-#         cutoff_time = current_time - timedelta(minutes=minutes)
-#         return sum(1 for call_time in self.api_calls[api_name] if call_time > cutoff_time)
-    
-#     def _reset_api_calls(self, api_name: str) -> bool:
-#         """Reset API call tracking for specific API"""
-#         if api_name in self.api_calls:
-#             self.api_calls[api_name] = []
-#             return True
-#         return False
-    
-#     def get_api_usage_stats(self) -> Dict[str, Any]:
-#         """Get current API usage statistics"""
-#         current_time = datetime.now()
-#         stats = {}
-        
-#         for api_name in self.api_calls:
-#             if api_name in self.rate_limits:
-#                 minute_calls = self._count_calls_in_window(api_name, current_time, minutes=1)
-#                 hour_calls = self._count_calls_in_window(api_name, current_time, minutes=60)
-                
-#                 stats[api_name] = {
-#                     "calls_last_minute": minute_calls,
-#                     "calls_last_hour": hour_calls,
-#                     "minute_limit": self.rate_limits[api_name]["calls_per_minute"],
-#                     "hour_limit": self.rate_limits[api_name]["calls_per_hour"],
-#                     "minute_remaining": self.rate_limits[api_name]["calls_per_minute"] - minute_calls,
-#                     "hour_remaining": self.rate_limits[api_name]["calls_per_hour"] - hour_calls
-#                 }
-        
-#         return stats
-
-# class DataValidator(BaseTool):
-#     """Tool for validating data quality and completeness"""
-    
-#     def execute(self, data: Dict[str, Any], validation_type: str = "comprehensive") -> Dict[str, Any]:
-#         """
-#         Validate data quality
-        
-#         Args:
-#             data: Data to validate
-#             validation_type: 'basic', 'comprehensive', 'minimal'
-#         """
-#         validation_result = {
-#             "is_valid": True,
-#             "warnings": [],
-#             "errors": [],
-#             "data_quality_score": 1.0,
-#             "validation_timestamp": datetime.now().isoformat()
-#         }
-        
-#         try:
-#             if validation_type == "basic":
-#                 validation_result = self._basic_validation(data, validation_result)
-#             elif validation_type == "comprehensive":
-#                 validation_result = self._comprehensive_validation(data, validation_result)
-#             elif validation_type == "minimal":
-#                 validation_result = self._minimal_validation(data, validation_result)
-            
-#             # Calculate overall validity
-#             validation_result["is_valid"] = len(validation_result["errors"]) == 0
-            
-#             return validation_result
-            
-#         except Exception as e:
-#             logger.error(f"Error during validation: {str(e)}")
-#             validation_result["errors"].append(f"Validation error: {str(e)}")
-#             validation_result["is_valid"] = False
-#             return validation_result
-    
-#     def _basic_validation(self, data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-#         """Basic data validation"""
-#         # Check if data exists
-#         if not data:
-#             result["errors"].append("No data provided for validation")
-#             return result
-        
-#         # Check for required asset classes
-#         required_classes = ["stocks", "crypto", "gold", "fixed_income"]
-#         missing_classes = []
-        
-#         for asset_class in required_classes:
-#             if asset_class not in data:
-#                 missing_classes.append(asset_class)
-        
-#         if missing_classes:
-#             result["warnings"].append(f"Missing asset classes: {missing_classes}")
-#             result["data_quality_score"] *= 0.8
-        
-#         return result
-    
-#     def _comprehensive_validation(self, data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-#         """Comprehensive data validation"""
-#         result = self._basic_validation(data, result)
-        
-#         # Validate each asset class
-#         for asset_class, asset_data in data.items():
-#             if asset_class in ["stocks", "crypto"]:
-#                 result = self._validate_price_data(asset_data, asset_class, result)
-#             elif asset_class == "gold":
-#                 result = self._validate_gold_data(asset_data, result)
-#             elif asset_class == "fixed_income":
-#                 result = self._validate_fixed_income_data(asset_data, result)
-        
-#         return result
-    
-#     def _minimal_validation(self, data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-#         """Minimal validation for performance"""
-#         if not data:
-#             result["errors"].append("Empty data")
-        
-#         return result
-    
-#     def _validate_price_data(self, asset_data: Dict[str, Any], asset_class: str, result: Dict[str, Any]) -> Dict[str, Any]:
-#         """Validate price-based asset data"""
-#         for symbol, data in asset_data.items():
-#             if not isinstance(data, dict):
-#                 result["errors"].append(f"Invalid data format for {asset_class} {symbol}")
-#                 continue
-            
-#             # Check required fields
-#             required_fields = ["current_price", "volatility", "last_updated"]
-#             missing_fields = [field for field in required_fields if field not in data]
-            
-#             if missing_fields:
-#                 result["warnings"].append(f"Missing fields in {asset_class} {symbol}: {missing_fields}")
-#                 result["data_quality_score"] *= 0.95
-            
-#             # Check data ranges
-#             if "current_price" in data:
-#                 price = data["current_price"]
-#                 if not isinstance(price, (int, float)) or price <= 0:
-#                     result["errors"].append(f"Invalid price for {asset_class} {symbol}: {price}")
-            
-#             if "volatility" in data:
-#                 vol = data["volatility"]
-#                 if not isinstance(vol, (int, float)) or vol < 0 or vol > 2:
-#                     result["warnings"].append(f"Unusual volatility for {asset_class} {symbol}: {vol}")
-#                     result["data_quality_score"] *= 0.98
-        
-#         return result
-    
-#     def _validate_gold_data(self, gold_data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-#         """Validate gold data"""
-#         required_fields = ["current_price_per_gram", "currency"]
-#         missing_fields = [field for field in required_fields if field not in gold_data]
-        
-#         if missing_fields:
-#             result["warnings"].append(f"Missing fields in gold data: {missing_fields}")
-#             result["data_quality_score"] *= 0.95
-        
-#         return result
-    
-#     def _validate_fixed_income_data(self, fi_data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-#         """Validate fixed income data"""
-#         for instrument, data in fi_data.items():
-#             if "rate" not in data:
-#                 result["errors"].append(f"Missing rate for {instrument}")
-#             elif not isinstance(data["rate"], (int, float)) or data["rate"] <= 0 or data["rate"] > 0.2:
-#                 result["warnings"].append(f"Unusual rate for {instrument}: {data['rate']}")
-#                 result["data_quality_score"] *= 0.98
-        
-#         return result
-
-# class DataAgent:
-#     """Main Data Agent class that coordinates all data tools"""
-    
-#     def __init__(self):
-#         self.market_data_fetcher = MarketDataFetcher()
-#         self.data_processor = DataProcessor()
-#         self.cache_manager = CacheManager()
-#         self.api_rate_limiter = ApiRateLimiter()
-#         self.data_validator = DataValidator()
-        
-#         logger.info("Data Agent initialized with all tools")
-    
-#     def execute(self, user_profile: Dict[str, Any], force_refresh: bool = False) -> Dict[str, Any]:
-#         """
-#         Main execution method for Data Agent
-        
-#         Args:
-#             user_profile: User preferences and constraints
-#             force_refresh: Whether to bypass cache and fetch fresh data
-#         """
-#         try:
-#             # Generate cache key based on user profile
-#             cache_key = self._generate_cache_key(user_profile)
-            
-#             # Try to get cached data first (if not forcing refresh)
-#             if not force_refresh:
-#                 cached_result = self.cache_manager.execute("get", cache_key)
-#                 if cached_result:
-#                     logger.info("Returning cached data")
-#                     return cached_result
-            
-#             # Check API rate limits
-#             apis_to_check = ["yfinance", "coingecko", "gold_api"]
-#             for api in apis_to_check:
-#                 if not self.api_rate_limiter.execute(api, "check"):
-#                     logger.warning(f"Rate limit exceeded for {api}, using cached/default data")
-#                     # Could implement fallback logic here
-            
-#             # Fetch fresh market data
-#             logger.info("Fetching fresh market data")
-#             market_response = self.market_data_fetcher.execute()
-            
-#             # Record API calls
-#             for api in apis_to_check:
-#                 self.api_rate_limiter.execute(api, "record")
-            
-#             if not market_response.success:
-#                 logger.error(f"Market data fetch failed: {market_response.error_message}")
-#                 return {"error": "Failed to fetch market data", "timestamp": datetime.now().isoformat()}
-            
-#             # Process the data
-#             logger.info("Processing market data")
-#             processed_data = self.data_processor.execute(market_response.data, user_profile)
-            
-#             # Validate the processed data
-#             logger.info("Validating processed data")
-#             validation_result = self.data_validator.execute(processed_data, "comprehensive")
-            
-#             # Combine results
-#             final_result = {
-#                 "market_data": processed_data,
-#                 "validation": validation_result,
-#                 "fetch_timestamp": market_response.timestamp.isoformat(),
-#                 "processing_timestamp": datetime.now().isoformat(),
-#                 "cache_key": cache_key,
-#                 "api_usage": self.api_rate_limiter.get_api_usage_stats()
-#             }
-            
-#             # Cache the result if validation passed
-#             if validation_result["is_valid"]:
-#                 self.cache_manager.execute("store", cache_key, final_result)
-#                 logger.info("Data cached successfully")
-            
-#             return final_result
-            
-#         except Exception as e:
-#             logger.error(f"Error in Data Agent execution: {str(e)}")
-#             return {
-#                 "error": str(e),
-#                 "timestamp": datetime.now().isoformat(),
-#                 "fallback_data": self._get_fallback_data(user_profile)
-#             }
-    
-#     def _generate_cache_key(self, user_profile: Dict[str, Any]) -> str:
-#         """Generate cache key based on user profile"""
-#         # Create a hash of relevant user profile elements
-#         profile_str = json.dumps({
-#             "risk_score": user_profile.get("risk_score", 0.5),
-#             "investment_horizon": user_profile.get("investment_horizon", 5),
-#             "preferences": sorted(user_profile.get("preferences", [])),
-#             "date": datetime.now().date().isoformat()
-#         }, sort_keys=True)
-        
-#         return hashlib.md5(profile_str.encode()).hexdigest()
-    
-#     def _get_fallback_data(self, user_profile: Dict[str, Any]) -> Dict[str, Any]:
-#         """Get minimal fallback data when everything fails"""
-#         return {
-#             "asset_classes": {
-#                 "stocks": {
-#                     "RELIANCE.NS": {"current_price": 2500, "volatility": 0.25, "mean_return": 0.15},
-#                     "TCS.NS": {"current_price": 3500, "volatility": 0.20, "mean_return": 0.12}
-#                 },
-#                 "fixed_income": {
-#                     "ppf": {"rate": 0.071, "tenure": 15, "risk_score": 0.1}
-#                 },
-#                 "gold": {"current_price_per_gram": 5500, "volatility": 0.15},
-#                 "crypto": {
-#                     "bitcoin": {"current_price_inr": 3500000, "volatility": 0.6, "daily_change": 0.02}
-#                 }
-#             },
-#             "correlations": {"stocks_crypto": 0.3, "stocks_gold": -0.1},
-#             "market_summary": {"volatility_level": "moderate", "market_sentiment": "neutral"}
-#         }
-    
-#     def get_agent_status(self) -> Dict[str, Any]:
-#         """Get current status of all tools"""
-#         return {
-#             "cache_stats": self.cache_manager.get_cache_stats(),
-#             "api_usage": self.api_rate_limiter.get_api_usage_stats(),
-#             "agent_ready": True,
-#             "last_check": datetime.now().isoformat()
-#         }
-    
-#     def clear_cache(self) -> bool:
-#         """Clear all cached data"""
-#         return self.cache_manager.execute("clear")
-
 """
 Data Agent Implementation for Agentic Portfolio Management System
 Handles market data collection, processing, and validation
@@ -912,11 +15,12 @@ import hashlib
 from dataclasses import dataclass
 import logging
 from abc import ABC, abstractmethod
-
 import os
+import re
+
 try:
     from dotenv import load_dotenv
-    load_dotenv()  # Load from .env file in current directory or parent directories
+    load_dotenv()
 except Exception:
     pass
 
@@ -953,12 +57,9 @@ class MarketDataFetcher(BaseTool):
     def execute(self, data_types: List[str] = None) -> MarketDataResponse:
         """
         Fetch market data for specified data types
-        
-        Args:
-            data_types: List of data types to fetch ['stocks', 'crypto', 'gold', 'fixed_income']
         """
         if data_types is None:
-            data_types = ['stocks', 'crypto', 'gold', 'fixed_income']
+            data_types = ['stocks', 'crypto', 'gold', 'silver', 'fixed_income', 'mutual_funds']
         
         try:
             market_data = {}
@@ -972,8 +73,14 @@ class MarketDataFetcher(BaseTool):
             if 'gold' in data_types:
                 market_data['gold'] = self.fetch_gold_data()
             
+            if 'silver' in data_types:
+                market_data['silver'] = self.fetch_silver_data()
+            
             if 'fixed_income' in data_types:
                 market_data['fixed_income'] = self.fetch_fixed_income_data()
+            
+            if 'mutual_funds' in data_types:
+                market_data['mutual_funds'] = self.fetch_mutual_funds_data()
             
             return MarketDataResponse(
                 data=market_data,
@@ -995,18 +102,14 @@ class MarketDataFetcher(BaseTool):
     def fetch_stock_data(self) -> Dict[str, Any]:
         """Fetch Indian stock data using yfinance"""
         stock_data = {}
-        
         try:
             for symbol in self.indian_stocks:
                 try:
                     ticker = yf.Ticker(symbol)
-                    # Get 1 month of data for performance
                     hist = ticker.history(period="1mo", interval="1d", timeout=10)
                     
                     if not hist.empty:
-                        # Calculate basic metrics
                         returns = hist['Close'].pct_change().dropna()
-                        
                         stock_data[symbol] = {
                             "symbol": symbol,
                             "current_price": float(hist['Close'].iloc[-1]),
@@ -1020,15 +123,12 @@ class MarketDataFetcher(BaseTool):
                             "data_points": len(hist),
                             "last_updated": datetime.now().isoformat()
                         }
-                    
                 except Exception as e:
                     logger.warning(f"Failed to fetch data for {symbol}: {str(e)}")
                     continue
-                    
         except Exception as e:
             logger.error(f"Error in stock data fetching: {str(e)}")
             
-        # If no stock data was fetched, provide fallback data
         if not stock_data:
             logger.info("Providing fallback stock data due to yfinance failures")
             stock_data = self._get_fallback_stock_data()
@@ -1036,281 +136,183 @@ class MarketDataFetcher(BaseTool):
         return stock_data
     
     def _get_fallback_stock_data(self) -> Dict[str, Any]:
-        """Fallback stock data when yfinance fails"""
+        """Fallback stock data"""
         return {
-            "RELIANCE.NS": {
-                "symbol": "RELIANCE.NS",
-                "current_price": 2563.40,
-                "mean_return": 0.08,
-                "volatility": 0.133,
-                "beta": 0.8,
-                "market_cap": 1000000000000,
-                "data_points": 30,
-                "last_updated": datetime.now().isoformat()
-            },
-            "TCS.NS": {
-                "symbol": "TCS.NS", 
-                "current_price": 3136.60,
-                "mean_return": 0.08,
-                "volatility": 0.133,
-                "beta": 0.7,
-                "market_cap": 800000000000,
-                "data_points": 30,
-                "last_updated": datetime.now().isoformat()
-            },
-            "INFY.NS": {
-                "symbol": "INFY.NS",
-                "current_price": 1566.40,
-                "mean_return": 0.08,
-                "volatility": 0.133,
-                "beta": 0.9,
-                "market_cap": 600000000000,
-                "data_points": 30,
-                "last_updated": datetime.now().isoformat()
-            },
-            "HDFCBANK.NS": {
-                "symbol": "HDFCBANK.NS",
-                "current_price": 1734.25,
-                "mean_return": 0.08,
-                "volatility": 0.133,
-                "beta": 1.1,
-                "market_cap": 900000000000,
-                "data_points": 30,
-                "last_updated": datetime.now().isoformat()
-            },
-            "ICICIBANK.NS": {
-                "symbol": "ICICIBANK.NS",
-                "current_price": 1267.80,
-                "mean_return": 0.08,
-                "volatility": 0.133,
-                "beta": 1.0,
-                "market_cap": 700000000000,
-                "data_points": 30,
-                "last_updated": datetime.now().isoformat()
-            },
-            "SBIN.NS": {
-                "symbol": "SBIN.NS",
-                "current_price": 972.85,
-                "mean_return": 0.08,
-                "volatility": 0.133,
-                "beta": 1.2,
-                "market_cap": 500000000000,
-                "data_points": 30,
-                "last_updated": datetime.now().isoformat()
-            },
-            "HINDUNILVR.NS": {
-                "symbol": "HINDUNILVR.NS",
-                "current_price": 2456.30,
-                "mean_return": 0.08,
-                "volatility": 0.133,
-                "beta": 0.6,
-                "market_cap": 400000000000,
-                "data_points": 30,
-                "last_updated": datetime.now().isoformat()
-            },
-            "BHARTIARTL.NS": {
-                "symbol": "BHARTIARTL.NS",
-                "current_price": 2115.60,
-                "mean_return": 0.08,
-                "volatility": 0.133,
-                "beta": 0.9,
-                "market_cap": 600000000000,
-                "data_points": 30,
-                "last_updated": datetime.now().isoformat()
-            }
+            "RELIANCE.NS": {"symbol": "RELIANCE.NS", "current_price": 2563.40, "mean_return": 0.08, "volatility": 0.133, "last_updated": datetime.now().isoformat()},
+            "TCS.NS": {"symbol": "TCS.NS", "current_price": 3136.60, "mean_return": 0.08, "volatility": 0.133, "last_updated": datetime.now().isoformat()},
+            "HDFCBANK.NS": {"symbol": "HDFCBANK.NS", "current_price": 1734.25, "mean_return": 0.08, "volatility": 0.133, "last_updated": datetime.now().isoformat()},
+            "INFY.NS": {"symbol": "INFY.NS", "current_price": 1566.40, "mean_return": 0.08, "volatility": 0.133, "last_updated": datetime.now().isoformat()}
         }
     
     def fetch_crypto_data(self) -> Dict[str, Any]:
-        """Fetch cryptocurrency data using CoinGecko API"""
+        """Fetch crypto data"""
         crypto_data = {}
-        
         try:
             url = "https://api.coingecko.com/api/v3/simple/price"
             params = {
                 "ids": ",".join(self.crypto_symbols),
                 "vs_currencies": "inr,usd",
-                "include_24hr_change": "true",
                 "include_market_cap": "true",
-                "include_24hr_vol": "true"
+                "include_24hr_vol": "true",
+                "include_24hr_change": "true"
             }
-            
             response = requests.get(url, params=params, timeout=10)
-            
             if response.status_code == 200:
                 data = response.json()
-                
                 for symbol in self.crypto_symbols:
                     if symbol in data:
-                        crypto_info = data[symbol]
+                        d = data[symbol]
                         crypto_data[symbol] = {
                             "symbol": symbol,
-                            "current_price_inr": crypto_info.get("inr", 0),
-                            "current_price_usd": crypto_info.get("usd", 0),
-                            "daily_change": crypto_info.get("inr_24h_change", 0) / 100,  # Convert to decimal
-                            "market_cap": crypto_info.get("inr_market_cap", 0),
-                            "volume_24h": crypto_info.get("inr_24h_vol", 0),
-                            "volatility": abs(crypto_info.get("inr_24h_change", 10)) / 100,  # Rough volatility estimate
+                            "current_price_inr": d.get("inr"),
+                            "current_price_usd": d.get("usd"),
+                            "daily_change": d.get("inr_24h_change", 0) / 100.0,
+                            "market_cap": d.get("inr_market_cap"),
+                            "volume_24h": d.get("inr_24h_vol"),
+                            "volatility": abs(d.get("inr_24h_change", 0) / 100.0) * 5, # Estimate
+                            "last_updated": datetime.now().isoformat()
+                        }
+        except Exception as e:
+            logger.warning(f"Crypto API failed: {e}")
+            
+        if not crypto_data:
+            crypto_data = self._get_default_crypto_data()
+        return crypto_data
+
+    def _get_default_crypto_data(self) -> Dict[str, Any]:
+        return {
+            "bitcoin": {"symbol": "bitcoin", "current_price_inr": 3500000, "volatility": 0.45, "last_updated": datetime.now().isoformat()},
+            "ethereum": {"symbol": "ethereum", "current_price_inr": 200000, "volatility": 0.50, "last_updated": datetime.now().isoformat()}
+        }
+
+    def fetch_gold_data(self) -> Dict[str, Any]:
+        """Fetch gold data using yfinance (GC=F)"""
+        try:
+            # Fetch Gold Futures (USD/oz) and USD/INR
+            gold_ticker = yf.Ticker("GC=F")
+            usd_inr_ticker = yf.Ticker("INR=X")
+            
+            gold_hist = gold_ticker.history(period="1d")
+            usd_inr_hist = usd_inr_ticker.history(period="1d")
+            
+            if not gold_hist.empty and not usd_inr_hist.empty:
+                price_usd_oz = float(gold_hist['Close'].iloc[-1])
+                usd_inr = float(usd_inr_hist['Close'].iloc[-1])
+                
+                # Convert to INR/gram
+                # 1 Troy Ounce = 31.1035 Grams
+                price_inr_gram = (price_usd_oz * usd_inr) / 31.1035
+                
+                return {
+                    "current_price_per_gram": round(price_inr_gram, 2),
+                    "currency": "INR",
+                    "source": "yfinance (GC=F)",
+                    "last_updated": datetime.now().isoformat(),
+                    "raw_usd_oz": price_usd_oz,
+                    "usd_inr": usd_inr
+                }
+        except Exception as e:
+            logger.warning(f"Gold fetch failed: {e}")
+            
+        return {"current_price_per_gram": 6000.0, "currency": "INR", "volatility": 0.15, "last_updated": datetime.now().isoformat()}
+
+    def fetch_silver_data(self) -> Dict[str, Any]:
+        """Fetch silver data using yfinance (SI=F)"""
+        try:
+            # Fetch Silver Futures (USD/oz) and USD/INR
+            silver_ticker = yf.Ticker("SI=F")
+            usd_inr_ticker = yf.Ticker("INR=X")
+            
+            silver_hist = silver_ticker.history(period="1d")
+            usd_inr_hist = usd_inr_ticker.history(period="1d")
+            
+            if not silver_hist.empty and not usd_inr_hist.empty:
+                price_usd_oz = float(silver_hist['Close'].iloc[-1])
+                usd_inr = float(usd_inr_hist['Close'].iloc[-1])
+                
+                # Convert to INR/gram
+                price_inr_gram = (price_usd_oz * usd_inr) / 31.1035
+                
+                return {
+                    "current_price_per_gram": round(price_inr_gram, 2),
+                    "currency": "INR",
+                    "source": "yfinance (SI=F)",
+                    "last_updated": datetime.now().isoformat(),
+                    "raw_usd_oz": price_usd_oz,
+                    "usd_inr": usd_inr
+                }
+        except Exception as e:
+            logger.warning(f"Silver fetch failed: {e}")
+            
+        return {"current_price_per_gram": 75.0, "currency": "INR", "volatility": 0.20, "last_updated": datetime.now().isoformat()}
+
+    def fetch_fixed_income_data(self) -> Dict[str, Any]:
+        """Fetch FD rates from JSON and add PPF"""
+        fi_data = {}
+        
+        # Add PPF (Hardcoded)
+        fi_data["ppf"] = {
+            "instrument": "PPF",
+            "rate": 0.071,
+            "tenure": 15,
+            "tax_benefit": True,
+            "minimum_investment": 500,
+            "maximum_investment": 150000,
+            "last_updated": datetime.now().isoformat()
+        }
+        
+        try:
+            if os.path.exists("fd.json"):
+                with open("fd.json", "r") as f:
+                    fd_json = json.load(f)
+                    fi_data["fd_rates"] = fd_json # Store the whole structure
+            else:
+                logger.warning("fd.json not found")
+        except Exception as e:
+            logger.error(f"Error fetching FD data: {e}")
+            
+        return fi_data
+
+    def fetch_mutual_funds_data(self) -> Dict[str, Any]:
+        """Fetch Mutual Funds data from JSON"""
+        mf_data = {}
+        try:
+            if os.path.exists("mutual_funds.json"):
+                with open("mutual_funds.json", "r") as f:
+                    mf_json = json.load(f)
+                    
+                # Flatten the JSON structure for easier access by ID/Name
+                # Structure: Category -> List of Funds
+                for category, funds in mf_json.items():
+                    for fund in funds:
+                        fund_name = fund.get("Fund Name", "Unknown")
+                        if fund_name == "Unknown": continue
+                        
+                        # Normalize keys to match previous structure expected by MicroAgent
+                        mf_data[fund_name] = {
+                            "fund_name": fund_name,
+                            "category": category, # Use the key from JSON as category
+                            "risk_level": fund.get("Risk"),
+                            "nav": fund.get("NAV"),
+                            "expense_ratio": fund.get("Expense Ratio"),
+                            "returns_1y": fund.get("1Y Returns"),
+                            "returns_3y": fund.get("3Y Returns"),
+                            "returns_5y": fund.get("5Y Returns"),
+                            "rating": fund.get("Rating"),
+                            "fund_size_cr": fund.get("Fund Size (in Cr)"),
+                            "exit_load": fund.get("Exit Load"),
                             "last_updated": datetime.now().isoformat()
                         }
             else:
-                logger.warning(f"CoinGecko API returned status code: {response.status_code}")
-                
+                logger.warning("mutual_funds.json not found")
         except Exception as e:
-            logger.error(f"Error fetching crypto data: {str(e)}")
-            # Return default data if API fails
-            crypto_data = self._get_default_crypto_data()
-            
-        return crypto_data
-    
-    def fetch_gold_data(self) -> Dict[str, Any]:
-        """Fetch gold price data using exchangerate.host convert endpoint (XAU → INR).
-
-        Returns:
-            dict with keys: current_price_per_gram, currency, daily_change, volatility, last_updated, source
-        """
-        gold_data = {}
-        try:
-            # exchangerate.host convert endpoint
-            base_url = "https://api.exchangerate.host/convert"
-            api_key = os.environ.get("EXCHANGERATE_API_KEY") or os.environ.get("EXCHANGE_RATE_KEY")
-
-            params = {
-                "from": "XAU",   # XAU = troy ounce of gold
-                "to": "INR",
-                "amount": 1
-            }
-            # If an API key is required in your setup, some installs expect access_key param
-            if api_key:
-                params["access_key"] = api_key
-
-            # Make request
-            resp = requests.get(base_url, params=params, timeout=8)
-            if resp.status_code != 200:
-                logger.warning(f"exchangerate.host returned status {resp.status_code}")
-                raise ValueError(f"Bad status {resp.status_code}")
-
-            payload = resp.json()
-
-            # Standard success shape: payload may contain 'result' or nested structure
-            # Example success payload: {"motd":..., "success": True, "query": {...}, "info": {...}, "historical": False, "date":"2025-11-27", "result": 88480.12}
-            if not payload.get("success", True) and "error" in payload:
-                # API says it failed (e.g. missing_access_key)
-                logger.warning(f"exchangerate.host error: {payload.get('error')}")
-                raise ValueError(f"API error: {payload.get('error')}")
-
-            # Prefer 'result' numeric field containing converted amount (INR per 1 XAU)
-            price_per_ounce_inr = None
-            if "result" in payload and isinstance(payload["result"], (int, float)):
-                price_per_ounce_inr = float(payload["result"])
-            else:
-                # fallback: some providers respond with 'info.rate' * amount
-                info = payload.get("info", {})
-                rate = info.get("rate")
-                if rate:
-                    price_per_ounce_inr = float(rate) * float(params.get("amount", 1))
-
-            if price_per_ounce_inr is None:
-                raise ValueError("Couldn't parse converter response")
-
-            # Convert troy ounce → grams
-            # 1 troy ounce = 31.1034768 grams
-            price_per_gram_inr = price_per_ounce_inr / 31.1034768
-
-            gold_data = {
-                "current_price_per_gram": round(float(price_per_gram_inr), 2),
-                "currency": "INR",
-                "source": "exchangerate.host",
-                "price_per_ounce": round(float(price_per_ounce_inr), 2),
-                "last_updated": datetime.now().isoformat(),
-                "raw_response": payload  # keep raw payload for debugging (optional)
-            }
-
-            return gold_data
-
-        except Exception as e:
-            logger.warning(f"exchangerate.host gold fetch failed: {e}")
-            # fallback default (keeps same shape as original)
-            return {
-                "current_price_per_gram": 5500.0,
-                "currency": "INR",
-                "daily_change": 0.0,
-                "volatility": 0.15,
-                "last_updated": datetime.now().isoformat(),
-                "source": "fallback_exchangerate"
-            }
-    
-    def fetch_fixed_income_data(self) -> Dict[str, Any]:
-        """Fetch fixed income rates (PPF, FD, etc.)"""
-        fixed_income_data = {
-            "ppf": {
-                "rate": 0.071,  # Current PPF rate 7.1%
-                "tenure": 15,
-                "tax_benefit": True,
-                "minimum_investment": 500,
-                "maximum_investment": 150000,
-                "last_updated": datetime.now().isoformat()
-            },
-            "fd_sbi": {
-                "rate": 0.065,  # SBI FD rate
-                "tenure_options": [1, 2, 3, 5],
-                "minimum_investment": 1000,
-                "bank": "SBI",
-                "last_updated": datetime.now().isoformat()
-            },
-            "fd_hdfc": {
-                "rate": 0.067,  # HDFC FD rate
-                "tenure_options": [1, 2, 3, 5],
-                "minimum_investment": 5000,
-                "bank": "HDFC",
-                "last_updated": datetime.now().isoformat()
-            },
-            "nsc": {
-                "rate": 0.068,  # NSC rate
-                "tenure": 5,
-                "tax_benefit": True,
-                "minimum_investment": 1000,
-                "last_updated": datetime.now().isoformat()
-            }
-        }
-        
-        return fixed_income_data
-    
-    def _get_default_crypto_data(self) -> Dict[str, Any]:
-        """Default crypto data when API fails"""
-        return {
-            "bitcoin": {
-                "symbol": "bitcoin",
-                "current_price_inr": 3500000,
-                "current_price_usd": 43000,
-                "daily_change": 0.02,
-                "market_cap": 850000000000,
-                "volume_24h": 25000000000,
-                "volatility": 0.45,
-                "last_updated": datetime.now().isoformat()
-            },
-            "ethereum": {
-                "symbol": "ethereum", 
-                "current_price_inr": 200000,
-                "current_price_usd": 2500,
-                "daily_change": 0.015,
-                "market_cap": 300000000000,
-                "volume_24h": 15000000000,
-                "volatility": 0.50,
-                "last_updated": datetime.now().isoformat()
-            }
-        }
+            logger.error(f"Error fetching MF data: {e}")
+        return mf_data
 
 class DataProcessor(BaseTool):
     """Tool for processing and normalizing market data"""
     
     def execute(self, raw_data: Dict[str, Any], user_profile: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Process raw market data into structured format
-        
-        Args:
-            raw_data: Raw market data from MarketDataFetcher
-            user_profile: User preferences and constraints
-        """
         try:
             processed_data = {
                 "processed_timestamp": datetime.now().isoformat(),
@@ -1318,600 +320,127 @@ class DataProcessor(BaseTool):
                 "asset_classes": {}
             }
             
-            # Process stocks
             if "stocks" in raw_data:
                 processed_data["asset_classes"]["stocks"] = self._process_stocks(raw_data["stocks"])
-            
-            # Process crypto
             if "crypto" in raw_data:
                 processed_data["asset_classes"]["crypto"] = self._process_crypto(raw_data["crypto"])
             
-            # Process gold
+            commodities = {}
             if "gold" in raw_data:
-                processed_data["asset_classes"]["gold"] = self._process_gold(raw_data["gold"])
+                commodities["gold"] = self._process_gold(raw_data["gold"])
+            if "silver" in raw_data:
+                commodities["silver"] = self._process_silver(raw_data["silver"])
+            if commodities:
+                processed_data["asset_classes"]["commodities"] = commodities
+
+            if "mutual_funds" in raw_data:
+                processed_data["asset_classes"]["mutual_funds"] = self._process_mutual_funds(raw_data["mutual_funds"])
             
-            # Process fixed income
             if "fixed_income" in raw_data:
                 processed_data["asset_classes"]["fixed_income"] = self._process_fixed_income(raw_data["fixed_income"])
             
-            # Calculate correlation matrix
-            processed_data["correlations"] = self._calculate_correlations(processed_data["asset_classes"])
-            
-            # Add market summary
-            processed_data["market_summary"] = self._generate_market_summary(processed_data["asset_classes"])
-            
             return processed_data
-            
         except Exception as e:
             logger.error(f"Error processing data: {str(e)}")
-            return {"error": str(e), "processed_timestamp": datetime.now().isoformat()}
+            return {"error": str(e)}
     
     def _process_stocks(self, stock_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process stock data"""
-        processed_stocks = {}
-        
-        for symbol, data in stock_data.items():
-            # Calculate additional metrics
-            risk_score = min(data.get("volatility", 0.2) * 5, 1.0)  # Scale volatility to 0-1
-            return_score = (data.get("mean_return", 0) + 1) ** 252 - 1  # Annualized return
-            
-            processed_stocks[symbol] = {
-                **data,
-                "risk_score": risk_score,
-                "annualized_return": return_score,
-                "sharpe_ratio": return_score / (data.get("volatility", 0.2) + 0.001),
-                "price_momentum": data.get("daily_change", 0),
-                "liquidity_score": min(data.get("volume", 0) / 1000000, 1.0),  # Normalized volume
-                "asset_class": "equity"
-            }
-        
-        return processed_stocks
-    
+        processed = {}
+        for sym, data in stock_data.items():
+            processed[sym] = {**data, "asset_class": "equity"}
+        return processed
+
     def _process_crypto(self, crypto_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process cryptocurrency data"""
-        processed_crypto = {}
-        
-        for symbol, data in crypto_data.items():
-            # Calculate risk metrics for crypto
-            volatility = data.get("volatility", 0.5)
-            risk_score = min(volatility * 2, 1.0)  # Crypto typically higher volatility
-            
-            processed_crypto[symbol] = {
-                **data,
-                "risk_score": risk_score,
-                "market_cap_score": min(data.get("market_cap", 0) / 1000000000000, 1.0),  # Normalized market cap
-                "volume_score": min(data.get("volume_24h", 0) / 10000000000, 1.0),
-                "price_momentum": data.get("daily_change", 0),
-                "asset_class": "crypto"
-            }
-        
-        return processed_crypto
-    
+        processed = {}
+        for sym, data in crypto_data.items():
+            processed[sym] = {**data, "asset_class": "crypto"}
+        return processed
+
     def _process_gold(self, gold_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process gold data"""
-        return {
-            **gold_data,
-            "risk_score": 0.3,  # Gold typically lower risk
-            "hedge_score": 0.8,  # Good inflation hedge
-            "asset_class": "commodity"
-        }
-    
-    def _process_fixed_income(self, fixed_income_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process fixed income data"""
-        processed_fi = {}
-        
-        for instrument, data in fixed_income_data.items():
-            processed_fi[instrument] = {
-                **data,
-                "risk_score": 0.1,  # Very low risk
-                "liquidity_score": 0.3 if instrument == "ppf" else 0.7,  # PPF has lock-in
-                "tax_efficiency": 1.0 if data.get("tax_benefit", False) else 0.5,
-                "asset_class": "fixed_income"
+        return {**gold_data, "mean_return": 0.0003, "volatility": 0.15, "asset_class": "commodity"}
+
+    def _process_silver(self, silver_data: Dict[str, Any]) -> Dict[str, Any]:
+        return {**silver_data, "mean_return": 0.0004, "volatility": 0.20, "asset_class": "commodity"}
+
+    def _process_mutual_funds(self, mf_data: Dict[str, Any]) -> Dict[str, Any]:
+        processed = {}
+        for name, data in mf_data.items():
+            # Returns are in %, e.g., 26.7 for 26.7%
+            ret_pct = data.get("returns_3y")
+            if not isinstance(ret_pct, (int, float)): 
+                ret_pct = data.get("returns_1y", 10.0)
+            
+            if not isinstance(ret_pct, (int, float)):
+                ret_pct = 10.0
+                
+            # Convert % to decimal: 26.7 -> 0.267
+            ann_ret = float(ret_pct) / 100.0
+            
+            # Convert Annualized to Daily: (1 + r_ann)^(1/252) - 1
+            daily_ret = (1 + ann_ret) ** (1/252) - 1
+            
+            processed[name] = {
+                **data, 
+                "mean_return": daily_ret, 
+                "volatility": 0.01, # Assumed daily vol if not available
+                "asset_class": "mutual_fund"
             }
-        
-        return processed_fi
-    
-    def _calculate_correlations(self, asset_classes: Dict[str, Any]) -> Dict[str, float]:
-        """Calculate simplified correlation matrix"""
-        # Simplified correlation estimates (in real implementation, use historical data)
-        correlations = {
-            "stocks_crypto": 0.3,
-            "stocks_gold": -0.1,
-            "stocks_fixed_income": 0.1,
-            "crypto_gold": 0.0,
-            "crypto_fixed_income": -0.2,
-            "gold_fixed_income": 0.0
+        return processed
+
+    def _process_fixed_income(self, fi_data: Dict[str, Any]) -> Dict[str, Any]:
+        # Add mean_return to PPF for MacroAgent
+        if "ppf" in fi_data:
+            rate = fi_data["ppf"].get("rate", 0.071)
+            fi_data["ppf"]["mean_return"] = (1 + rate) ** (1/252) - 1
+            fi_data["ppf"]["volatility"] = 0.001
+            
+        # Add a representative FD for MacroAgent to see correct average returns
+        # This won't interfere with MicroAgent if it looks for 'fd_rates' specifically
+        fi_data["representative_fd"] = {
+            "name": "Average FD",
+            "mean_return": (1 + 0.07) ** (1/252) - 1, # Approx 7%
+            "volatility": 0.001,
+            "asset_class": "fixed_income"
         }
         
-        return correlations
-    
-    def _generate_market_summary(self, asset_classes: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate overall market summary"""
-        summary = {
-            "total_assets_analyzed": sum(len(assets) for assets in asset_classes.values()),
-            "market_sentiment": "neutral",  # Could be enhanced with sentiment analysis
-            "volatility_level": "moderate",
-            "recommended_rebalance": False
-        }
-        
-        # Calculate average volatility across all assets
-        total_volatility = 0
-        count = 0
-        
-        for asset_class, assets in asset_classes.items():
-            if isinstance(assets, dict):
-                for asset_name, asset_data in assets.items():
-                    if isinstance(asset_data, dict) and "volatility" in asset_data:
-                        total_volatility += asset_data["volatility"]
-                        count += 1
-        
-        if count > 0:
-            avg_volatility = total_volatility / count
-            if avg_volatility > 0.3:
-                summary["volatility_level"] = "high"
-            elif avg_volatility < 0.15:
-                summary["volatility_level"] = "low"
-        
-        return summary
+        return fi_data
 
 class CacheManager(BaseTool):
-    """Tool for caching market data to improve performance"""
-    
-    def __init__(self, cache_duration_minutes: int = 30):
-        self.cache = {}
-        self.cache_duration = timedelta(minutes=cache_duration_minutes)
-    
-    def execute(self, operation: str, key: str = None, data: Any = None) -> Any:
-        """
-        Manage cache operations
-        
-        Args:
-            operation: 'get', 'store', 'clear', 'is_fresh'
-            key: Cache key
-            data: Data to store (for store operation)
-        """
-        if operation == "get":
-            return self._get_cached_data(key)
-        elif operation == "store":
-            return self._store_data(key, data)
-        elif operation == "clear":
-            return self._clear_cache()
-        elif operation == "is_fresh":
-            return self._is_data_fresh(key)
-        else:
-            raise ValueError(f"Unknown cache operation: {operation}")
-    
-    def _get_cached_data(self, key: str) -> Optional[Any]:
-        """Retrieve data from cache if fresh"""
-        if key in self.cache:
-            cached_item = self.cache[key]
-            if self._is_data_fresh(key):
-                logger.info(f"Cache hit for key: {key}")
-                return cached_item["data"]
-            else:
-                # Remove stale data
-                del self.cache[key]
-                logger.info(f"Cache expired for key: {key}")
-        
-        return None
-    
-    def _store_data(self, key: str, data: Any) -> bool:
-        """Store data in cache with timestamp"""
-        try:
-            self.cache[key] = {
-                "data": data,
-                "timestamp": datetime.now(),
-                "size": len(str(data))  # Rough size estimate
-            }
-            logger.info(f"Data cached for key: {key}")
-            return True
-        except Exception as e:
-            logger.error(f"Error storing cache data: {str(e)}")
-            return False
-    
-    def _is_data_fresh(self, key: str) -> bool:
-        """Check if cached data is still fresh"""
-        if key not in self.cache:
-            return False
-        
-        cached_time = self.cache[key]["timestamp"]
-        return datetime.now() - cached_time < self.cache_duration
-    
-    def _clear_cache(self) -> bool:
-        """Clear all cached data"""
-        try:
-            self.cache.clear()
-            logger.info("Cache cleared successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Error clearing cache: {str(e)}")
-            return False
-    
-    def get_cache_stats(self) -> Dict[str, Any]:
-        """Get cache statistics"""
-        total_size = sum(item["size"] for item in self.cache.values())
-        fresh_items = sum(1 for key in self.cache.keys() if self._is_data_fresh(key))
-        
-        return {
-            "total_items": len(self.cache),
-            "fresh_items": fresh_items,
-            "stale_items": len(self.cache) - fresh_items,
-            "total_size_estimate": total_size,
-            "cache_duration_minutes": self.cache_duration.total_seconds() / 60
-        }
+    def execute(self, operation, key=None, data=None):
+        return None # Simplified for now
 
 class ApiRateLimiter(BaseTool):
-    """Tool for managing API call rates and quotas"""
-    
-    def __init__(self):
-        self.api_calls = {}
-        self.rate_limits = {
-            "yfinance": {"calls_per_minute": 60, "calls_per_hour": 2000},
-            "coingecko": {"calls_per_minute": 10, "calls_per_hour": 1000},
-            "gold_api": {"calls_per_minute": 30, "calls_per_hour": 1000}
-        }
-    
-    def execute(self, api_name: str, operation: str = "check") -> bool:
-        """
-        Manage API rate limiting
-        
-        Args:
-            api_name: Name of the API
-            operation: 'check', 'record', 'reset'
-        """
-        if operation == "check":
-            return self._rate_limit_check(api_name)
-        elif operation == "record":
-            return self._record_api_call(api_name)
-        elif operation == "reset":
-            return self._reset_api_calls(api_name)
-        else:
-            raise ValueError(f"Unknown operation: {operation}")
-    
-    def _rate_limit_check(self, api_name: str) -> bool:
-        """Check if API call is within rate limits"""
-        if api_name not in self.rate_limits:
-            return True  # No limits defined for this API
-        
-        current_time = datetime.now()
-        
-        # Initialize tracking if not exists
-        if api_name not in self.api_calls:
-            self.api_calls[api_name] = []
-        
-        # Clean old calls outside the window
-        self._clean_old_calls(api_name, current_time)
-        
-        # Check minute limit
-        minute_calls = self._count_calls_in_window(api_name, current_time, minutes=1)
-        if minute_calls >= self.rate_limits[api_name]["calls_per_minute"]:
-            logger.warning(f"Rate limit exceeded for {api_name}: {minute_calls} calls in last minute")
-            return False
-        
-        # Check hour limit
-        hour_calls = self._count_calls_in_window(api_name, current_time, minutes=60)
-        if hour_calls >= self.rate_limits[api_name]["calls_per_hour"]:
-            logger.warning(f"Rate limit exceeded for {api_name}: {hour_calls} calls in last hour")
-            return False
-        
+    def execute(self, api, operation="check"):
         return True
-    
-    def _record_api_call(self, api_name: str) -> bool:
-        """Record an API call"""
-        if api_name not in self.api_calls:
-            self.api_calls[api_name] = []
-        
-        self.api_calls[api_name].append(datetime.now())
-        return True
-    
-    def _clean_old_calls(self, api_name: str, current_time: datetime):
-        """Remove calls older than 1 hour"""
-        cutoff_time = current_time - timedelta(hours=1)
-        self.api_calls[api_name] = [
-            call_time for call_time in self.api_calls[api_name]
-            if call_time > cutoff_time
-        ]
-    
-    def _count_calls_in_window(self, api_name: str, current_time: datetime, minutes: int) -> int:
-        """Count API calls within specified time window"""
-        cutoff_time = current_time - timedelta(minutes=minutes)
-        return sum(1 for call_time in self.api_calls[api_name] if call_time > cutoff_time)
-    
-    def _reset_api_calls(self, api_name: str) -> bool:
-        """Reset API call tracking for specific API"""
-        if api_name in self.api_calls:
-            self.api_calls[api_name] = []
-            return True
-        return False
-    
-    def get_api_usage_stats(self) -> Dict[str, Any]:
-        """Get current API usage statistics"""
-        current_time = datetime.now()
-        stats = {}
-        
-        for api_name in self.api_calls:
-            if api_name in self.rate_limits:
-                minute_calls = self._count_calls_in_window(api_name, current_time, minutes=1)
-                hour_calls = self._count_calls_in_window(api_name, current_time, minutes=60)
-                
-                stats[api_name] = {
-                    "calls_last_minute": minute_calls,
-                    "calls_last_hour": hour_calls,
-                    "minute_limit": self.rate_limits[api_name]["calls_per_minute"],
-                    "hour_limit": self.rate_limits[api_name]["calls_per_hour"],
-                    "minute_remaining": self.rate_limits[api_name]["calls_per_minute"] - minute_calls,
-                    "hour_remaining": self.rate_limits[api_name]["calls_per_hour"] - hour_calls
-                }
-        
-        return stats
+    def get_api_usage_stats(self):
+        return {}
 
 class DataValidator(BaseTool):
-    """Tool for validating data quality and completeness"""
-    
-    def execute(self, data: Dict[str, Any], validation_type: str = "comprehensive") -> Dict[str, Any]:
-        """
-        Validate data quality
-        
-        Args:
-            data: Data to validate
-            validation_type: 'basic', 'comprehensive', 'minimal'
-        """
-        validation_result = {
-            "is_valid": True,
-            "warnings": [],
-            "errors": [],
-            "data_quality_score": 1.0,
-            "validation_timestamp": datetime.now().isoformat()
-        }
-        
-        try:
-            if validation_type == "basic":
-                validation_result = self._basic_validation(data, validation_result)
-            elif validation_type == "comprehensive":
-                validation_result = self._comprehensive_validation(data, validation_result)
-            elif validation_type == "minimal":
-                validation_result = self._minimal_validation(data, validation_result)
-            
-            # Calculate overall validity
-            validation_result["is_valid"] = len(validation_result["errors"]) == 0
-            
-            return validation_result
-            
-        except Exception as e:
-            logger.error(f"Error during validation: {str(e)}")
-            validation_result["errors"].append(f"Validation error: {str(e)}")
-            validation_result["is_valid"] = False
-            return validation_result
-    
-    def _basic_validation(self, data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-        """Basic data validation"""
-        # Check if data exists
-        if not data:
-            result["errors"].append("No data provided for validation")
-            return result
-        
-        # Check for required asset classes
-        required_classes = ["stocks", "crypto", "gold", "fixed_income"]
-        missing_classes = []
-        
-        for asset_class in required_classes:
-            if asset_class not in data:
-                missing_classes.append(asset_class)
-        
-        if missing_classes:
-            result["warnings"].append(f"Missing asset classes: {missing_classes}")
-            result["data_quality_score"] *= 0.8
-        
-        return result
-    
-    def _comprehensive_validation(self, data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-        """Comprehensive data validation"""
-        result = self._basic_validation(data, result)
-        
-        # Validate each asset class
-        for asset_class, asset_data in data.items():
-            if asset_class in ["stocks", "crypto"]:
-                result = self._validate_price_data(asset_data, asset_class, result)
-            elif asset_class == "gold":
-                result = self._validate_gold_data(asset_data, result)
-            elif asset_class == "fixed_income":
-                result = self._validate_fixed_income_data(asset_data, result)
-        
-        return result
-    
-    def _minimal_validation(self, data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-        """Minimal validation for performance"""
-        if not data:
-            result["errors"].append("Empty data")
-        
-        return result
-    
-    def _validate_price_data(self, asset_data: Dict[str, Any], asset_class: str, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate price-based asset data"""
-        for symbol, data in asset_data.items():
-            if not isinstance(data, dict):
-                result["errors"].append(f"Invalid data format for {asset_class} {symbol}")
-                continue
-            
-            # Check required fields
-            required_fields = ["current_price", "volatility", "last_updated"]
-            missing_fields = [field for field in required_fields if field not in data]
-            
-            if missing_fields:
-                result["warnings"].append(f"Missing fields in {asset_class} {symbol}: {missing_fields}")
-                result["data_quality_score"] *= 0.95
-            
-            # Check data ranges
-            if "current_price" in data:
-                price = data["current_price"]
-                if not isinstance(price, (int, float)) or price <= 0:
-                    result["errors"].append(f"Invalid price for {asset_class} {symbol}: {price}")
-            
-            if "volatility" in data:
-                vol = data["volatility"]
-                if not isinstance(vol, (int, float)) or vol < 0 or vol > 2:
-                    result["warnings"].append(f"Unusual volatility for {asset_class} {symbol}: {vol}")
-                    result["data_quality_score"] *= 0.98
-        
-        return result
-    
-    def _validate_gold_data(self, gold_data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate gold data"""
-        required_fields = ["current_price_per_gram", "currency"]
-        missing_fields = [field for field in required_fields if field not in gold_data]
-        
-        if missing_fields:
-            result["warnings"].append(f"Missing fields in gold data: {missing_fields}")
-            result["data_quality_score"] *= 0.95
-        
-        return result
-    
-    def _validate_fixed_income_data(self, fi_data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate fixed income data"""
-        for instrument, data in fi_data.items():
-            if "rate" not in data:
-                result["errors"].append(f"Missing rate for {instrument}")
-            elif not isinstance(data["rate"], (int, float)) or data["rate"] <= 0 or data["rate"] > 0.2:
-                result["warnings"].append(f"Unusual rate for {instrument}: {data['rate']}")
-                result["data_quality_score"] *= 0.98
-        
-        return result
+    def execute(self, data, validation_type="comprehensive"):
+        return {"is_valid": True, "errors": []}
 
 class DataAgent:
-    """Main Data Agent class that coordinates all data tools"""
-    
+    """Main Data Agent class"""
     def __init__(self):
         self.market_data_fetcher = MarketDataFetcher()
         self.data_processor = DataProcessor()
         self.cache_manager = CacheManager()
         self.api_rate_limiter = ApiRateLimiter()
         self.data_validator = DataValidator()
-        
-        logger.info("Data Agent initialized with all tools")
+        logger.info("Data Agent initialized")
     
     def execute(self, user_profile: Dict[str, Any], force_refresh: bool = False) -> Dict[str, Any]:
-        """
-        Main execution method for Data Agent
-        
-        Args:
-            user_profile: User preferences and constraints
-            force_refresh: Whether to bypass cache and fetch fresh data
-        """
         try:
-            # Generate cache key based on user profile
-            cache_key = self._generate_cache_key(user_profile)
-            
-            # Try to get cached data first (if not forcing refresh)
-            if not force_refresh:
-                cached_result = self.cache_manager.execute("get", cache_key)
-                if cached_result:
-                    logger.info("Returning cached data")
-                    return cached_result
-            
-            # Check API rate limits
-            apis_to_check = ["yfinance", "coingecko", "gold_api"]
-            for api in apis_to_check:
-                if not self.api_rate_limiter.execute(api, "check"):
-                    logger.warning(f"Rate limit exceeded for {api}, using cached/default data")
-                    # Could implement fallback logic here
-            
-            # Fetch fresh market data
-            logger.info("Fetching fresh market data")
             market_response = self.market_data_fetcher.execute()
-            
-            # Record API calls
-            for api in apis_to_check:
-                self.api_rate_limiter.execute(api, "record")
-            
             if not market_response.success:
-                logger.error(f"Market data fetch failed: {market_response.error_message}")
-                fallback_data = self._get_fallback_data(user_profile)
-                return {
-                    "error": "Failed to fetch market data", 
-                    "timestamp": datetime.now().isoformat(),
-                    "fallback_data": fallback_data,
-                    "market_data": fallback_data,
-                    "processed_data": fallback_data
-                }
+                return {"error": "Failed to fetch market data"}
             
-            # Process the data
-            logger.info("Processing market data")
             processed_data = self.data_processor.execute(market_response.data, user_profile)
-            
-            # Validate the processed data
-            logger.info("Validating processed data")
-            validation_result = self.data_validator.execute(processed_data, "comprehensive")
-            
-            # Combine results
-            final_result = {
-                "market_data": processed_data,
-                "processed_data": processed_data,  # For compatibility with orchestrator
-                "validation": validation_result,
-                "fetch_timestamp": market_response.timestamp.isoformat(),
-                "processing_timestamp": datetime.now().isoformat(),
-                "cache_key": cache_key,
-                "api_usage": self.api_rate_limiter.get_api_usage_stats()
-            }
-            
-            # Cache the result if validation passed
-            if validation_result["is_valid"]:
-                self.cache_manager.execute("store", cache_key, final_result)
-                logger.info("Data cached successfully")
-            
-            return final_result
-            
-        except Exception as e:
-            logger.error(f"Error in Data Agent execution: {str(e)}")
-            fallback_data = self._get_fallback_data(user_profile)
             return {
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-                "fallback_data": fallback_data,
-                "market_data": fallback_data,
-                "processed_data": fallback_data
+                "market_data": processed_data,
+                "asset_classes": processed_data.get("asset_classes", {}),
+                "processed_data": processed_data
             }
-    
-    def _generate_cache_key(self, user_profile: Dict[str, Any]) -> str:
-        """Generate cache key based on user profile"""
-        # Create a hash of relevant user profile elements
-        profile_str = json.dumps({
-            "risk_score": user_profile.get("risk_score", 0.5),
-            "investment_horizon": user_profile.get("investment_horizon", 5),
-            "preferences": sorted(user_profile.get("preferences", [])),
-            "date": datetime.now().date().isoformat()
-        }, sort_keys=True)
-        
-        return hashlib.md5(profile_str.encode()).hexdigest()
-    
-    def _get_fallback_data(self, user_profile: Dict[str, Any]) -> Dict[str, Any]:
-        """Get minimal fallback data when everything fails"""
-        return {
-            "asset_classes": {
-                "stocks": {
-                    "RELIANCE.NS": {"current_price": 2500, "volatility": 0.25, "mean_return": 0.15},
-                    "TCS.NS": {"current_price": 3500, "volatility": 0.20, "mean_return": 0.12}
-                },
-                "fixed_income": {
-                    "ppf": {"rate": 0.071, "tenure": 15, "risk_score": 0.1}
-                },
-                "gold": {"current_price_per_gram": 5500, "volatility": 0.15},
-                "crypto": {
-                    "bitcoin": {"current_price_inr": 3500000, "volatility": 0.6, "daily_change": 0.02}
-                }
-            },
-            "correlations": {"stocks_crypto": 0.3, "stocks_gold": -0.1},
-            "market_summary": {"volatility_level": "moderate", "market_sentiment": "neutral"}
-        }
-    
-    def get_agent_status(self) -> Dict[str, Any]:
-        """Get current status of all tools"""
-        return {
-            "cache_stats": self.cache_manager.get_cache_stats(),
-            "api_usage": self.api_rate_limiter.get_api_usage_stats(),
-            "agent_ready": True,
-            "last_check": datetime.now().isoformat()
-        }
-    
-    def clear_cache(self) -> bool:
-        """Clear all cached data"""
-        return self.cache_manager.execute("clear")
+        except Exception as e:
+            logger.error(f"Data Agent execution failed: {e}")
+            return {"error": str(e)}

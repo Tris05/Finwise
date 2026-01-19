@@ -179,18 +179,18 @@ class PPORefinementAgent:
                 adjustments['stocks'] -= 0.05
             if 'crypto' in adjustments:
                 adjustments['crypto'] -= 0.05
-            if 'fd_ppf' in adjustments:
-                adjustments['fd_ppf'] += 0.07
-            if 'gold' in adjustments:
-                adjustments['gold'] += 0.03
+            if 'fd' in adjustments:
+                adjustments['fd'] += 0.07
+            if 'commodities' in adjustments:
+                adjustments['commodities'] += 0.03
             logger.info("PPO Heuristic: High volatility. Reducing risk exposure.")
 
         elif volatility_level == 'low':
             # Low volatility -> Slight leverage into risk
             if 'stocks' in adjustments:
                 adjustments['stocks'] += 0.03
-            if 'fd_ppf' in adjustments:
-                adjustments['fd_ppf'] -= 0.03
+            if 'fd' in adjustments:
+                adjustments['fd'] -= 0.03
             logger.info("PPO Heuristic: Low volatility. Increasing equity exposure.")
 
         # --- Rule 2: Trend Following ---
@@ -201,10 +201,10 @@ class PPORefinementAgent:
                 adjustments['stocks'] += 0.05
             if 'crypto' in adjustments:
                 adjustments['crypto'] += 0.02
-            if 'fd_ppf' in adjustments:
-                adjustments['fd_ppf'] -= 0.05
-            if 'gold' in adjustments:
-                adjustments['gold'] -= 0.02
+            if 'fd' in adjustments:
+                adjustments['fd'] -= 0.05
+            if 'commodities' in adjustments:
+                adjustments['commodities'] -= 0.02
             logger.info("PPO Heuristic: Bullish trend. Increasing momentum assets.")
             
         elif market_trend == 'bearish':
@@ -212,24 +212,24 @@ class PPORefinementAgent:
                 adjustments['stocks'] -= 0.05
             if 'crypto' in adjustments:
                 adjustments['crypto'] -= 0.05 # Crypto suffers in bear markets
-            if 'gold' in adjustments:
-                adjustments['gold'] += 0.05 # Flight to safety
-            if 'fd_ppf' in adjustments:
-                adjustments['fd_ppf'] += 0.05
+            if 'commodities' in adjustments:
+                adjustments['commodities'] += 0.05 # Flight to safety
+            if 'fd' in adjustments:
+                adjustments['fd'] += 0.05
             logger.info("PPO Heuristic: Bearish trend. Defensive shift.")
 
-        # --- Rule 3: Inflation/Uncertainty (Gold Proxy) ---
-        # If Gold volatility is high but return is positive, it might be an uncertainty spike
+        # --- Rule 3: Inflation/Uncertainty (Commodities Proxy) ---
+        # If Commodities volatility is high but return is positive, it might be an uncertainty spike
         # We check this via a simple proxy or if explicitly passed
         inflation_signal = market_summary.get('inflation_signal', 'normal')
         if inflation_signal == 'high':
-             if 'gold' in adjustments:
-                adjustments['gold'] += 0.05
+             if 'commodities' in adjustments:
+                adjustments['commodities'] += 0.05
              if 'stocks' in adjustments:
                 adjustments['stocks'] -= 0.02
-             if 'fd_ppf' in adjustments:
-                adjustments['fd_ppf'] -= 0.03 # Real rates might be negative
-             logger.info("PPO Heuristic: High inflation signal. Increasing Gold.")
+             if 'fd' in adjustments:
+                adjustments['fd'] -= 0.03 # Real rates might be negative
+             logger.info("PPO Heuristic: High inflation signal. Increasing Commodities.")
 
         return adjustments
 
@@ -241,7 +241,7 @@ class MacroAgent:
     def __init__(self):
         self.optimizer = MarkowitzOptimizer()
         self.rl_agent = PPORefinementAgent() # Can pass model path here
-        self.asset_classes = ["stocks", "mutual_funds", "crypto", "gold", "fd_ppf"]
+        self.asset_classes = ["stocks", "mutual_funds", "crypto", "commodities", "fd", "ppf"]
         
     def execute(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -354,15 +354,24 @@ class MacroAgent:
             "stocks": {"return": 0.12, "vol": 0.18},
             "mutual_funds": {"return": 0.10, "vol": 0.12},
             "crypto": {"return": 0.40, "vol": 0.60},
-            "gold": {"return": 0.08, "vol": 0.15},
-            "fd_ppf": {"return": 0.07, "vol": 0.01}
+            "commodities": {"return": 0.08, "vol": 0.15},
+            "fd": {"return": 0.07, "vol": 0.01},
+            "ppf": {"return": 0.071, "vol": 0.005}
         }
 
         for asset_class in self.asset_classes:
             mapping.append(asset_class)
             
-            # Try to calculate from real data
-            class_data = asset_classes_data.get(asset_class, {})
+            # Special handling for FD and PPF which are inside 'fixed_income'
+            if asset_class == 'fd':
+                class_data = asset_classes_data.get('fixed_income', {}).get('representative_fd', {})
+                # Wrap in dict to match generic logic if it's a single item
+                if class_data: class_data = {'fd': class_data}
+            elif asset_class == 'ppf':
+                class_data = asset_classes_data.get('fixed_income', {}).get('ppf', {})
+                if class_data: class_data = {'ppf': class_data}
+            else:
+                class_data = asset_classes_data.get(asset_class, {})
             
             # If we have individual assets, average them
             if isinstance(class_data, dict) and class_data:
@@ -402,13 +411,14 @@ class MacroAgent:
         # we will build a synthetic covariance matrix using volatilities and a correlation matrix assumption.
         
         # Assumed Correlation Matrix (Simplified)
-        # Stocks, MF, Crypto, Gold, FD
+        # Stocks, MF, Crypto, Commodities, FD
         corr_matrix = np.array([
-            [1.0, 0.8, 0.3, 0.1, 0.0], # Stocks
-            [0.8, 1.0, 0.2, 0.1, 0.0], # MF
-            [0.3, 0.2, 1.0, 0.1, 0.0], # Crypto
-            [0.1, 0.1, 0.1, 1.0, 0.1], # Gold
-            [0.0, 0.0, 0.0, 0.1, 1.0]  # FD
+            [1.0, 0.8, 0.3, 0.1, 0.0, 0.0], # Stocks
+            [0.8, 1.0, 0.2, 0.1, 0.0, 0.0], # MF
+            [0.3, 0.2, 1.0, 0.1, 0.0, 0.0], # Crypto
+            [0.1, 0.1, 0.1, 1.0, 0.1, 0.1], # Commodities
+            [0.0, 0.0, 0.0, 0.1, 1.0, 0.5], # FD
+            [0.0, 0.0, 0.0, 0.1, 0.5, 1.0]  # PPF
         ])
         
         # Cov_ij = Corr_ij * Vol_i * Vol_j
@@ -441,11 +451,11 @@ class MacroAgent:
     def _rule_based_fallback(self, risk_score: float) -> Dict[str, float]:
         """Simple rule-based allocation for fallback"""
         if risk_score <= 0.3: # Conservative
-            return {"stocks": 0.1, "mutual_funds": 0.2, "crypto": 0.0, "gold": 0.2, "fd_ppf": 0.5}
+            return {"stocks": 0.1, "mutual_funds": 0.2, "crypto": 0.0, "commodities": 0.2, "fd": 0.3, "ppf": 0.2}
         elif risk_score <= 0.7: # Moderate
-            return {"stocks": 0.3, "mutual_funds": 0.3, "crypto": 0.05, "gold": 0.15, "fd_ppf": 0.2}
+            return {"stocks": 0.3, "mutual_funds": 0.3, "crypto": 0.05, "commodities": 0.15, "fd": 0.1, "ppf": 0.1}
         else: # Aggressive
-            return {"stocks": 0.5, "mutual_funds": 0.2, "crypto": 0.15, "gold": 0.1, "fd_ppf": 0.05}
+            return {"stocks": 0.5, "mutual_funds": 0.2, "crypto": 0.15, "commodities": 0.1, "fd": 0.05, "ppf": 0.0}
 
 if __name__ == "__main__":
     # Simple test

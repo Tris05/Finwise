@@ -140,7 +140,7 @@ class StockSelector:
                     "risk_score": min(volatility * 5, 1.0)
                 })
             
-            logger.info(f"Stock allocation complete: {len(recs)} stocks, total ₹{sum(r['amount'] for r in recs):,.0f}")
+            logger.info(f"Stock allocation complete: {len(recs)} stocks, total INR {sum(r['amount'] for r in recs):,.0f}")
             return recs
             
         except Exception as e:
@@ -149,11 +149,12 @@ class StockSelector:
 
 
 class CryptoSelector:
-    """Selects cryptocurrencies with core allocation strategy (BTC/ETH)"""
+    """Selects cryptocurrencies using dynamic risk-adjusted scoring"""
     
     def select(self, amount: float, available_crypto: Dict[str, Any], user_profile: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Select cryptocurrencies with 70/30 BTC/ETH split
+        Select cryptocurrencies based on scoring: (DailyChange / Volatility) * log(MarketCap)
+        Prioritizes blue-chip assets but adapts to market data.
         
         Args:
             amount: Amount to allocate to crypto
@@ -169,77 +170,107 @@ class CryptoSelector:
             return []
 
         try:
-            # Normalize keys to lowercase for matching
-            prioritized = {k.lower(): v for k, v in available_crypto.items()}
+            import math
+            scored = []
             
-            # Initialize picks dictionary (FIX: was missing initialization)
-            picks = {}
+            for sym, data in available_crypto.items():
+                # Extract metrics
+                price = data.get(FIELD_KEYS["crypto_price"], data.get("price", 0)) or 0.0
+                if price <= 0: continue
+                
+                daily_change = data.get("daily_change", 0.0) # e.g. 0.02 for 2%
+                volatility = data.get("volatility", 0.05) # e.g. 0.05
+                market_cap = data.get("market_cap", 0) or 0
+                
+                # Minimum volatility floor to prevent division by zero/extreme scores
+                volatility = max(volatility, 0.02)
+                
+                # Base Score: Return / Risk
+                # We use a small positive bias for daily_change to avoid negative scores for stable coins in slight red
+                # but primarily we want positive momentum. 
+                # If daily_change is negative, score decreases.
+                
+                # Standardized Score Formula:
+                # 1. Performance Metric: (1 + Daily_Change) / Volatility
+                # 2. Safety Metric: log10(Market Cap)
+                
+                perf_metric = (1.0 + daily_change) / volatility
+                safety_metric = math.log10(market_cap) if market_cap > 1000 else 1.0
+                
+                final_score = perf_metric * safety_metric
+                
+                # Boost for 'Blue Chips' explicitly (BTC/ETH) to ensure core stability
+                sym_lower = sym.lower()
+                if "bitcoin" in sym_lower or "btc" in sym_lower:
+                    final_score *= 1.5
+                elif "ethereum" in sym_lower or "eth" in sym_lower:
+                    final_score *= 1.3
+                    
+                scored.append({
+                    "symbol": sym,
+                    "data": data,
+                    "score": final_score,
+                    "price": price
+                })
+                
+            # Sort by score descending
+            scored.sort(key=lambda x: x["score"], reverse=True)
             
-            # Prefer BTC and ETH
-            if "bitcoin" in prioritized or "btc" in prioritized:
-                key = "bitcoin" if "bitcoin" in prioritized else "btc"
-                picks[key] = prioritized[key]
-            if "ethereum" in prioritized or "eth" in prioritized:
-                key = "ethereum" if "ethereum" in prioritized else "eth"
-                picks[key] = prioritized[key]
-
-            # Fallback to top 2 available cryptos
-            if not picks:
-                items = list(available_crypto.items())[:2]
-                picks = {k.lower(): v for k, v in items}
-                logger.info(f"Using fallback crypto selection: {list(picks.keys())}")
-
-            # Apply 70/30 weighting if we have 2 cryptos, else equal weight
-            keys = list(picks.keys())
-            weights = {}
-            if len(keys) == 2:
-                weights[keys[0]] = 0.7
-                weights[keys[1]] = 0.3
-            elif len(keys) == 1:
-                weights[keys[0]] = 1.0
-            else:
-                # More than 2, distribute evenly
-                for k in keys:
-                    weights[k] = 1.0 / len(keys)
-
+            # Select top 3 assets
+            top_picks = scored[:3]
+            if not top_picks:
+                return []
+                
+            total_score = sum(p["score"] for p in top_picks)
+            
             recs = []
-            for k, w in weights.items():
-                data = picks[k]
-                price = data.get(FIELD_KEYS["crypto_price"], data.get("price", 1)) or 1.0
-                alloc = amount * w
-                qty = alloc / price if price else 0.0
+            for item in top_picks:
+                sym = item["symbol"]
+                d = item["data"]
+                score = item["score"]
+                price = item["price"]
+                
+                # Calculate weight
+                weight = score / total_score if total_score > 0 else 1.0 / len(top_picks)
+                alloc_amt = amount * weight
+                qty = alloc_amt / price
                 
                 recs.append({
-                    "symbol": k.upper(),
-                    "name": data.get("name", k.title()),
+                    "symbol": sym.upper(),
+                    "name": d.get("name", sym.title()),
                     "asset_class": "crypto",
-                    "amount": round(alloc, 2),
+                    "amount": round(alloc_amt, 2),
                     "quantity": qty,
                     "current_price": price,
-                    "rationale": f"Core crypto allocation ({w*100:.0f}% of crypto budget)",
-                    "score": 8.0,
-                    "volatility": data.get("volatility", 0.5),
-                    "daily_change": data.get("daily_change", 0.0)
+                    "rationale": f"Dynamic Score: {score:.1f} (Vol: {d.get('volatility',0):.2f}, Cap: ₹{d.get('market_cap',0)/1e7:.0f}Cr)",
+                    "score": float(round(score, 2)),
+                    "volatility": d.get("volatility"),
+                    "daily_change": d.get("daily_change")
                 })
-            
-            logger.info(f"Crypto allocation complete: {len(recs)} assets, total ₹{sum(r['amount'] for r in recs):,.0f}")
+                
+            logger.info(f"Crypto allocation complete: {len(recs)} assets selected")
             return recs
-            
+
         except Exception as e:
             logger.error(f"Error in crypto selection: {str(e)}", exc_info=True)
             return []
 
 
 class MutualFundSelector:
-    """Selects mutual funds based on multi-factor scoring"""
+    """Selects mutual funds based on risk profile and standard categories"""
     
     def select(self, amount: float, user_profile: Dict[str, Any], available_funds: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """
-        Select mutual funds based on returns, expense ratio, and category fit
+        Select mutual funds based on risk score and industry standard categories.
+        
+        Categories:
+        - Large Cap, Mid Cap, Small Cap, Flexi Cap
+        - Aggressive Hybrid, Balanced Advantage
+        - Corporate Bond/Debt
         
         Args:
-            amount: Amount to allocate to mutual funds
-            user_profile: User risk profile and preferences
+            amount: Amount to allocate
+            user_profile: User risk profile
             available_funds: Fund data from data agent
         """
         if amount <= 0:
@@ -248,305 +279,460 @@ class MutualFundSelector:
 
         try:
             risk = user_profile.get("risk_score", 0.5)
+            horizon = user_profile.get("investment_horizon", 5)
             recs = []
+            
+            # Define allocation rules based on risk score and horizon
+            # Format: (Category Name, Weight)
+            allocation_rules = []
+            
+            # Horizon Override Logic
+            # 1. Short Term (< 3 years): Force Conservative Mix regardless of risk score
+            # 2. Medium Term (3-5 years): Cap Aggressiveness (No Heavy Small Cap)
+            # 3. Long Term (> 5 years): Use Risk Score fully
+            
+            effective_risk_category = "high" # default
+            
+            if horizon < 3:
+                effective_risk_category = "low"
+                logger.info("Horizon < 3 years: Enforcing conservative MF allocation")
+            elif horizon < 5:
+                if risk > 0.7:
+                     effective_risk_category = "medium" # Downgrade high risk to medium
+                     logger.info("Horizon < 5 years: Capping aggressive MF allocation to medium")
+                else:
+                    # Use actual risk score if already low/medium
+                    effective_risk_category = "low" if risk < 0.4 else "medium"
+            else:
+                 # Horizon >= 5: Trust the risk score
+                 if risk < 0.4: effective_risk_category = "low"
+                 elif risk <= 0.7: effective_risk_category = "medium"
+                 else: effective_risk_category = "high"
 
-            # Data-driven selection if funds available
-            if available_funds:
-                scored = []
-                for fid, meta in available_funds.items():
-                    nav = meta.get(FIELD_KEYS["mf_nav"], meta.get("nav", 1.0)) or 1.0
-                    one_y = meta.get(FIELD_KEYS["mf_return_1y"], meta.get("one_year_return", meta.get("return_1y", 0.0))) or 0.0
-                    exp = meta.get(FIELD_KEYS["mf_expense_ratio"], meta.get("expense_ratio", 0.01)) or 0.01
-                    cat = (meta.get("category", meta.get("type", "Equity")) or "Equity").lower()
+            if effective_risk_category == "low":  # Low Risk / Short Horizon
+                allocation_rules = [
+                    ("Balanced Advantage", 0.40),
+                    ("Large Cap", 0.30),
+                    ("Corporate Bond", 0.20),
+                    ("Aggressive Hybrid", 0.10)
+                ]
+            elif effective_risk_category == "medium":  # Medium Risk / Medium Horizon
+                allocation_rules = [
+                    ("Flexi Cap", 0.35),
+                    ("Large Cap", 0.30),
+                    ("Mid Cap", 0.20),
+                    ("Aggressive Hybrid", 0.15)
+                ]
+            else:  # High Risk / Long Horizon
+                allocation_rules = [
+                    ("Small Cap", 0.40),
+                    ("Mid Cap", 0.30),
+                    ("Flexi Cap", 0.20),
+                    ("Large Cap", 0.10)
+                ]
+            
+            logger.info(f"MF Allocation Strategy (Risk: {risk}): {allocation_rules}")
 
-                    # Base score: reward returns, penalize expense ratio
-                    score = (one_y * 100.0) / (exp + 0.01)
-
-                    # Adjust by category vs user risk
-                    if risk < 0.4 and cat in ("debt", "liquid", "short-term", "index"):
-                        score *= 1.2
-                    if risk > 0.7 and cat in ("small cap", "mid cap", "flexi cap", "sector"):
-                        score *= 1.15
-
-                    # Boost for AUM (larger funds)
-                    aum = meta.get("aum")
-                    if aum:
-                        score *= (1 + min(0.5, aum / (1e9 + aum)))
-
-                    scored.append((fid, meta, nav, score, cat))
-
-                # Sort and select top funds
-                scored.sort(key=lambda x: x[3], reverse=True)
-                top_k = min(5, len(scored))
+            # Helper to find best fund in a category
+            def get_best_fund(category_name: str) -> Optional[Dict[str, Any]]:
+                if not available_funds:
+                    return None
                 
-                if top_k > 0:
-                    top = scored[:top_k]
-                    total_score = sum(max(s[3], 0.0001) for s in top)
+                candidates = []
+                for fid, meta in available_funds.items():
+                    # Check if category matches
+                    # We check both 'category' field and fund name for keywords
+                    cat_str = str(meta.get("category", "")).lower()
+                    name_str = str(meta.get("fund_name", "")).lower()
                     
-                    for fid, meta, nav, score, cat in top:
-                        weight = (score / total_score) if total_score > 0 else 1.0 / top_k
-                        alloc = amount * weight
-                        units = alloc / nav if nav else 0.0
-                        
-                        recs.append({
-                            "symbol": fid,
-                            "name": meta.get("name", fid),
-                            "asset_class": "mutual_funds",
-                            "amount": round(alloc, 2),
-                            "quantity": units,
-                            "current_price": nav,
-                            "category": cat,
-                            "rationale": f"Multi-factor score: {score:.2f} (Category: {cat}, 1Y Return: {one_y*100:.1f}%, Expense: {exp*100:.2f}%)",
-                            "score": float(round(score, 2)),
-                            "expense_ratio": exp,
-                            "one_year_return": one_y
-                        })
+                    match = False
+                    target = category_name.lower()
                     
-                    logger.info(f"MF allocation (data-driven): {len(recs)} funds, total ₹{sum(r['amount'] for r in recs):,.0f}")
-                    return recs
+                    # Specific mapping logic
+                    if target == "large cap":
+                        if "large cap" in cat_str or "bluechip" in cat_str or "large cap" in name_str: match = True
+                    elif target == "mid cap":
+                        if "mid cap" in cat_str or "emerging" in cat_str or "mid cap" in name_str: match = True
+                    elif target == "small cap":
+                        if "small cap" in cat_str or "small cap" in name_str: match = True
+                    elif target == "flexi cap":
+                        if "flexi cap" in cat_str or "multi cap" in cat_str or "flexi cap" in name_str: match = True
+                    elif target == "aggressive hybrid":
+                        if "aggressive hybrid" in cat_str or "equity hybrid" in cat_str: match = True
+                    elif target == "balanced advantage":
+                        if "balanced advantage" in cat_str or "dynamic asset" in cat_str or "balanced advantage" in name_str: match = True
+                    elif target == "corporate bond":
+                        if "corporate bond" in cat_str or "ultra short" in cat_str or "debt" in cat_str or "liquid" in cat_str: match = True
+                    
+                    if match:
+                        # Get return (prioritize 3Y, then 1Y)
+                        ret = meta.get("returns_3y")
+                        if not isinstance(ret, (int, float)):
+                            ret = meta.get("returns_1y", 0.0)
+                        if not isinstance(ret, (int, float)):
+                            ret = 0.0
+                        candidates.append((fid, meta, ret))
+                
+                if not candidates:
+                    return None
+                
+                # Sort by return descending
+                candidates.sort(key=lambda x: x[2], reverse=True)
+                return candidates[0] # Return best fund (fid, meta, ret)
 
-            # Fallback to risk-based recommendations
-            logger.info(f"Using fallback MF recommendations for risk_score={risk}")
-            nav = 100.0
-            
-            if risk <= 0.4:  # Conservative
-                recs.extend([
-                    {
-                        "symbol": "MF-INDEX",
-                        "name": "Nifty 50 Index Fund",
+            # Execute allocation
+            for cat_name, weight in allocation_rules:
+                alloc_amt = amount * weight
+                if alloc_amt <= 0: continue
+                
+                best_fund_tuple = get_best_fund(cat_name)
+                
+                if best_fund_tuple:
+                    fid, meta, ret = best_fund_tuple
+                    nav = meta.get(FIELD_KEYS["mf_nav"], meta.get("nav", 10.0)) or 10.0
+                    
+                    recs.append({
+                        "symbol": fid,
+                        "name": meta.get("fund_name", fid),
                         "asset_class": "mutual_funds",
-                        "amount": round(amount * 0.9, 2),
-                        "quantity": (amount * 0.9) / nav,
+                        "amount": round(alloc_amt, 2),
+                        "quantity": alloc_amt / nav,
                         "current_price": nav,
-                        "category": "index",
-                        "rationale": "Conservative index allocation for stable returns",
+                        "category": cat_name,
+                        "rationale": f"Best {cat_name} fund based on returns ({ret*100:.1f}%). Allocation: {weight*100:.0f}%",
+                        "score": 9.0,
+                        "return_metric": ret
+                    })
+                else:
+                    # Fallback if no fund found in Excel for this category
+                    # Create a generic placeholder
+                    recs.append({
+                        "symbol": f"MF-{cat_name.upper().replace(' ', '-')}",
+                        "name": f"Generic {cat_name} Fund",
+                        "asset_class": "mutual_funds",
+                        "amount": round(alloc_amt, 2),
+                        "quantity": alloc_amt / 100.0,
+                        "current_price": 100.0,
+                        "category": cat_name,
+                        "rationale": f"Recommended {cat_name} allocation ({weight*100:.0f}%). (No specific fund data found)",
                         "score": 5.0
-                    },
-                    {
-                        "symbol": "MF-DEBT",
-                        "name": "Short Term Debt Fund",
-                        "asset_class": "mutual_funds",
-                        "amount": round(amount * 0.1, 2),
-                        "quantity": (amount * 0.1) / nav,
-                        "current_price": nav,
-                        "category": "debt",
-                        "rationale": "Debt exposure for stability",
-                        "score": 5.0
-                    }
-                ])
-            elif risk <= 0.7:  # Moderate
-                recs.extend([
-                    {
-                        "symbol": "MF-FLEX",
-                        "name": "Flexi Cap Fund",
-                        "asset_class": "mutual_funds",
-                        "amount": round(amount * 0.7, 2),
-                        "quantity": (amount * 0.7) / nav,
-                        "current_price": nav,
-                        "category": "flexi cap",
-                        "rationale": "Balanced flexi-cap allocation",
-                        "score": 6.5
-                    },
-                    {
-                        "symbol": "MF-NEXT50",
-                        "name": "Nifty Next 50 Index",
-                        "asset_class": "mutual_funds",
-                        "amount": round(amount * 0.3, 2),
-                        "quantity": (amount * 0.3) / nav,
-                        "current_price": nav,
-                        "category": "index",
-                        "rationale": "Mid-cap index exposure",
-                        "score": 6.0
-                    }
-                ])
-            else:  # Aggressive
-                recs.extend([
-                    {
-                        "symbol": "MF-SMALL",
-                        "name": "Small Cap Fund",
-                        "asset_class": "mutual_funds",
-                        "amount": round(amount * 0.6, 2),
-                        "quantity": (amount * 0.6) / nav,
-                        "current_price": nav,
-                        "category": "small cap",
-                        "rationale": "High-growth small-cap allocation",
-                        "score": 6.0
-                    },
-                    {
-                        "symbol": "MF-MID",
-                        "name": "Mid Cap Fund",
-                        "asset_class": "mutual_funds",
-                        "amount": round(amount * 0.4, 2),
-                        "quantity": (amount * 0.4) / nav,
-                        "current_price": nav,
-                        "category": "mid cap",
-                        "rationale": "Mid-cap growth exposure",
-                        "score": 6.0
-                    }
-                ])
-            
-            logger.info(f"MF allocation (fallback): {len(recs)} funds, total ₹{sum(r['amount'] for r in recs):,.0f}")
+                    })
+
+            logger.info(f"MF allocation complete: {len(recs)} funds, total INR {sum(r['amount'] for r in recs):,.0f}")
             return recs
-            
+
         except Exception as e:
             logger.error(f"Error in mutual fund selection: {str(e)}", exc_info=True)
             return []
 
 
-class GoldSelector:
-    """Selects gold investment (ETF preferred)"""
+class CommoditySelector:
+    """Selects commodities (Gold & Silver) investment based on risk, horizon, and GSR"""
     
-    def select(self, amount: float, gold_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def select(self, amount: float, commodity_data: Dict[str, Any], user_profile: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Select gold ETF allocation
+        Select commodity allocation (Gold & Silver)
         
         Args:
-            amount: Amount to allocate to gold
-            gold_data: Gold price data from data agent
+            amount: Amount to allocate to commodities
+            commodity_data: Commodity data from data agent (contains 'gold' and 'silver')
+            user_profile: User preferences (risk_score, investment_horizon)
         """
         if amount <= 0:
-            logger.info("Gold selection skipped: amount <= 0")
+            logger.info("Commodity selection skipped: amount <= 0")
             return []
             
         try:
-            price_per_gram = gold_data.get(FIELD_KEYS["gold_price_per_gram"], gold_data.get("current_price_per_gram"))
+            recs = []
+            risk_score = user_profile.get("risk_score", 0.5)
+            horizon = user_profile.get("investment_horizon", 5)
             
-            if price_per_gram is None:
-                price_per_gram = 6000.0  # Fallback price
-                logger.warning(f"Using fallback gold price: ₹{price_per_gram}/gram")
+            # 1. Base Allocation by Risk Score
+            if risk_score < 0.4:
+                gold_weight = 0.85
+                silver_weight = 0.15
+            elif risk_score <= 0.7:
+                gold_weight = 0.70
+                silver_weight = 0.30
+            else:
+                gold_weight = 0.55
+                silver_weight = 0.45
+                
+            logger.info(f"Base Commodity Split (Risk {risk_score}): Gold {gold_weight:.2f}, Silver {silver_weight:.2f}")
+
+            # 2. Horizon Adjustment
+            if horizon < 3:
+                # Short term -> More Gold (+5%)
+                adjustment = 0.05
+                gold_weight += adjustment
+                silver_weight -= adjustment
+                logger.info(f"Horizon Adjustment (<3y): Gold +5%, Silver -5%")
+            elif horizon > 7:
+                # Long term -> More Silver (+5%)
+                adjustment = 0.05
+                gold_weight -= adjustment
+                silver_weight += adjustment
+                logger.info(f"Horizon Adjustment (>7y): Gold -5%, Silver +5%")
+
+            # 3. Market Trend Adjustment (GSR)
+            gold_data = commodity_data.get("gold", {})
+            silver_data = commodity_data.get("silver", {})
             
-            # ETF unit price heuristic
-            etf_unit_price = max(1.0, price_per_gram / 10.0)
-            qty = amount / etf_unit_price
+            gold_price = gold_data.get("current_price_per_gram", 0)
+            silver_price = silver_data.get("current_price_per_gram", 0)
             
-            rec = {
-                "symbol": gold_data.get("preferred_etf_symbol", "GOLDBEES"),
-                "name": gold_data.get("preferred_etf_name", "Gold ETF"),
-                "asset_class": "gold",
-                "amount": round(amount, 2),
-                "quantity": qty,
-                "current_price": etf_unit_price,
-                "rationale": f"Gold ETF for inflation hedge and portfolio diversification (Gold: ₹{price_per_gram:.0f}/gram)",
-                "score": 9.0,
-                "underlying_gold_price": price_per_gram
-            }
+            if gold_price > 0 and silver_price > 0:
+                gsr = gold_price / silver_price
+                logger.info(f"Gold-Silver Ratio (GSR): {gsr:.2f}")
+                
+                if gsr > 80:
+                    # Silver undervalued -> Shift to Silver
+                    gold_weight -= 0.05
+                    silver_weight += 0.05
+                    logger.info("GSR > 80: Silver undervalued -> Silver +5%")
+                elif gsr < 70:
+                    # Silver expensive -> Shift to Gold
+                    gold_weight += 0.05
+                    silver_weight -= 0.05
+                    logger.info("GSR < 70: Silver expensive -> Gold +5%")
+            else:
+                logger.warning("Could not calculate GSR (missing prices)")
+
+            # Normalize weights (ensure 0 <= w <= 1 and sum = 1)
+            gold_weight = max(0.0, min(1.0, gold_weight))
+            silver_weight = max(0.0, min(1.0, silver_weight))
             
-            logger.info(f"Gold allocation: {rec['name']}, ₹{amount:,.0f}")
-            return [rec]
+            # Re-normalize if sum != 1 (due to clamping)
+            total_w = gold_weight + silver_weight
+            if total_w > 0:
+                gold_weight /= total_w
+                silver_weight /= total_w
+            
+            logger.info(f"Final Commodity Split: Gold {gold_weight:.2%}, Silver {silver_weight:.2%}")
+
+            # --- Gold Allocation ---
+            if gold_weight > 0:
+                gold_amt = amount * gold_weight
+                price_per_gram = gold_data.get("current_price_per_gram", 6000.0)
+                
+                # ETF unit price heuristic (approx 1/10th gram or 1 gram)
+                etf_unit_price = max(1.0, price_per_gram / 10.0)
+                qty = gold_amt / etf_unit_price
+                
+                recs.append({
+                    "symbol": "GOLDBEES",
+                    "name": "Gold ETF",
+                    "asset_class": "commodities",
+                    "amount": round(gold_amt, 2),
+                    "quantity": qty,
+                    "current_price": etf_unit_price,
+                    "rationale": f"Gold allocation ({gold_weight*100:.0f}%) for stability. Price: INR {price_per_gram:.0f}/g",
+                    "score": 9.0,
+                    "sub_asset_class": "gold"
+                })
+                
+            # --- Silver Allocation ---
+            if silver_weight > 0:
+                silver_amt = amount * silver_weight
+                price_per_gram = silver_data.get("current_price_per_gram", 75.0)
+                
+                # Silver ETF unit price heuristic
+                etf_unit_price = max(1.0, price_per_gram * 10.0) # Silver ETFs often represent more grams
+                qty = silver_amt / etf_unit_price
+                
+                recs.append({
+                    "symbol": "SILVERBEES",
+                    "name": "Silver ETF",
+                    "asset_class": "commodities",
+                    "amount": round(silver_amt, 2),
+                    "quantity": qty,
+                    "current_price": etf_unit_price,
+                    "rationale": f"Silver allocation ({silver_weight*100:.0f}%) for growth. Price: INR {price_per_gram:.0f}/g",
+                    "score": 8.5,
+                    "sub_asset_class": "silver"
+                })
+            
+            logger.info(f"Commodity allocation: {len(recs)} assets, total INR {sum(r['amount'] for r in recs):,.0f}")
+            return recs
             
         except Exception as e:
-            logger.error(f"Error in gold selection: {str(e)}", exc_info=True)
+            logger.error(f"Error in commodity selection: {str(e)}", exc_info=True)
             return []
 
 
 class FixedIncomeSelector:
-    """Selects fixed income products (PPF, FD, bonds)"""
+    """Selects fixed income products (PPF, FD) based on detailed matrix"""
     
-    def select(self, amount: float, fi_data: Dict[str, Any], user_profile: Dict[str, Any], constants: Dict[str, Any] = None) -> List[Dict[str, Any]]:
-        """
-        Select fixed income allocation (PPF vs FD based on horizon)
+    def select_ppf(self, amount: float, fi_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Select PPF allocation"""
+        if amount <= 0: return []
         
-        Args:
-            amount: Amount to allocate to fixed income
-            fi_data: Fixed income data from data agent
-            user_profile: User profile with investment horizon
-            constants: System constants (e.g., PPF limits)
-        """
-        if amount <= 0:
-            logger.info("Fixed income selection skipped: amount <= 0")
-            return []
-            
-        try:
-            constants = constants or {}
-            ppf_limit = constants.get("ppf_annual_limit", 150000)
-            horizon = user_profile.get("investment_horizon", 5)
-            recs = []
+        recs = []
+        ppf_rate = fi_data.get("ppf", {}).get("rate", 0.071)
+        recs.append({
+            "symbol": "PPF",
+            "name": "Public Provident Fund",
+            "asset_class": "ppf",
+            "amount": round(amount, 2),
+            "quantity": 1,
+            "current_price": amount,
+            "rate": ppf_rate,
+            "tenure": 15,
+            "rationale": f"Tax-free long-term savings at {ppf_rate*100:.1f}% p.a.",
+            "score": 9.0,
+            "tax_benefit": "80C + Tax-free returns"
+        })
+        return recs
 
-            # Extract FD and bond products if available
-            fd_products = fi_data.get("fd_products") if isinstance(fi_data, dict) else None
+    def select_fd(self, amount: float, fi_data: Dict[str, Any], user_profile: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Select FD allocation based on risk and horizon"""
+        if amount <= 0: return []
+        
+        try:
+            risk_score = user_profile.get("risk_score", 0.5)
+            horizon = user_profile.get("investment_horizon", 5)
+            age = user_profile.get("age", 30)
+            is_senior = age >= 60
             
-            # If DataAgent exposes fd_sbi / fd_hdfc entries rather than a list, collect them
-            if not fd_products and isinstance(fi_data, dict):
-                fd_products = []
-                for k, v in fi_data.items():
-                    if isinstance(k, str) and k.lower().startswith("fd_") and isinstance(v, dict):
-                        fd_products.append({
-                            "id": k.upper(),
-                            "bank": v.get("bank", k.upper()),
-                            "rate": v.get("rate", 0.0),
-                            "tenure_options": v.get("tenure_options", v.get("tenure_options", [1,3,5]))
+            recs = []
+            
+            # --- FD Matrix Allocation Logic ---
+            allocation = {}
+
+            # 1. LOW RISK (< 0.4)
+            if risk_score < 0.4:
+                if horizon < 3:
+                    if is_senior: allocation = {"Senior_1_3y": 1.0}
+                    else: allocation = {"Regular_1_3y": 1.0}
+                elif horizon <= 7:
+                    if is_senior: allocation = {"Senior_5_10y": 1.0}
+                    else: allocation = {"Regular_5_10y": 1.0}
+                else: # > 7
+                    if is_senior: allocation = {"Senior_5_10y": 1.0}
+                    else: allocation = {"Regular_5_10y": 1.0}
+
+            # 2. MODERATE RISK (0.4 <= risk <= 0.7)
+            elif risk_score <= 0.7:
+                if horizon < 3:
+                    if is_senior:
+                        allocation = {"Senior_1_3y": 0.70, "Corporate_Senior_1y": 0.30}
+                    else:
+                        allocation = {"Regular_1_3y": 0.70, "Corporate_1y": 0.30}
+                elif horizon <= 7:
+                    if is_senior:
+                        allocation = {"Senior_5_10y": 0.60, "Corporate_Senior_3y": 0.40}
+                    else:
+                        allocation = {"Regular_5_10y": 0.60, "Corporate_3y": 0.40}
+                else: # > 7
+                    if is_senior:
+                        allocation = {"Senior_5_10y": 0.55, "Corporate_Senior_5y": 0.45}
+                    else:
+                        allocation = {"Regular_5_10y": 0.55, "Corporate_5y": 0.45}
+
+            # 3. HIGH RISK (> 0.7)
+            else:
+                if horizon < 3:
+                    if is_senior:
+                        allocation = {"Senior_1_3y": 0.20, "Corporate_Senior_1y": 0.80}
+                    else:
+                        allocation = {"Regular_1_3y": 0.20, "Corporate_1y": 0.80}
+                elif horizon <= 7:
+                    if is_senior:
+                        allocation = {"Senior_5_10y": 0.10, "Corporate_Senior_3y": 0.90}
+                    else:
+                        allocation = {"Regular_5_10y": 0.10, "Corporate_3y": 0.90}
+                else: # > 7
+                    if is_senior:
+                        allocation = {"Senior_5_10y": 0.10, "Corporate_Senior_5y": 0.90}
+                    else:
+                        allocation = {"Regular_5_10y": 0.10, "Corporate_5y": 0.90}
+
+            logger.info(f"FD Matrix Allocation: {allocation}")
+
+            # --- Product Selection Helpers ---
+            fd_rates = fi_data.get("fd_rates", {})
+            regular_fds = fd_rates.get("regularFd", {})
+            corporate_fds = fd_rates.get("corporateFd", [])
+
+            def get_best_bank_fds(tenure_key, is_senior_rate, count=2):
+                candidates = regular_fds.get(tenure_key, [])
+                valid = []
+                for c in candidates:
+                    rate = c.get("seniorRate") if is_senior_rate else c.get("generalRate")
+                    if rate is not None:
+                        valid.append((c, rate))
+                valid.sort(key=lambda x: x[1], reverse=True)
+                return valid[:count]
+
+            def get_best_corporate_fd(tenure_field, is_senior_rate):
+                valid = []
+                for c in corporate_fds:
+                    base_rate = c.get(tenure_field)
+                    if base_rate is not None:
+                        rate = base_rate + (c.get("seniorBonus", 0) if is_senior_rate else 0)
+                        valid.append((c, rate))
+                valid.sort(key=lambda x: x[1], reverse=True)
+                return valid[0] if valid else None
+
+            # --- Execute Allocation ---
+            for category, weight in allocation.items():
+                alloc_amt = amount * weight
+                if alloc_amt <= 0: continue
+
+                if "Regular" in category or "Senior" in category and "Corporate" not in category:
+                    # Bank FD
+                    tenure_key = "tenure_1_3_years" if "1_3y" in category else "tenure_5_10_years"
+                    use_senior_rate = "Senior" in category
+                    
+                    best_fds = get_best_bank_fds(tenure_key, use_senior_rate, count=2)
+                    splits = [0.6, 0.4] if len(best_fds) > 1 else [1.0]
+                    
+                    for i, (fd, rate) in enumerate(best_fds):
+                        split_amt = alloc_amt * splits[i]
+                        recs.append({
+                            "symbol": f"FD-BANK-{fd.get('bank', 'Unknown').upper().replace(' ', '-')}",
+                            "name": f"{fd.get('bank')} FD ({'Senior' if use_senior_rate else 'Regular'})",
+                            "asset_class": "fd",
+                            "amount": round(split_amt, 2),
+                            "quantity": 1,
+                            "current_price": split_amt,
+                            "rate": rate / 100.0,
+                            "tenure": 1 if "1_3y" in category else 5,
+                            "rationale": f"Top Bank FD for {category} at {rate}%",
+                            "score": 8.0,
+                            "bank": fd.get("bank")
                         })
 
-            # PPF allocation for long-term investors
-            ppf_alloc = 0.0
-            if horizon >= 15:
-                ppf_alloc = min(amount * 0.5, ppf_limit)
-            elif horizon >= 10:
-                ppf_alloc = min(amount * 0.3, ppf_limit)
-            
-            remaining = max(0.0, amount - ppf_alloc)
-
-            # Add PPF if allocated
-            if ppf_alloc > 0:
-                ppf_rate = fi_data.get("ppf", {}).get("rate", 0.071) if isinstance(fi_data, dict) else 0.071
-                recs.append({
-                    "symbol": "PPF",
-                    "name": "Public Provident Fund",
-                    "asset_class": "fd_ppf",
-                    "amount": round(ppf_alloc, 2),
-                    "quantity": 1,
-                    "current_price": ppf_alloc,
-                    "rate": ppf_rate,
-                    "tenure": 15,
-                    "rationale": f"Tax-free long-term savings at {ppf_rate*100:.1f}% p.a. (Horizon: {horizon} years)",
-                    "score": 9.0,
-                    "tax_benefit": "80C + Tax-free returns"
-                })
-
-            # FD allocation
-            if remaining > 0:
-                if fd_products and isinstance(fd_products, list):
-                    # Select best FD by rate
-                    best = max(fd_products, key=lambda x: x.get("rate", 0))
-                    fd_rate = best.get("rate", 0.065)
-                    fd_bank = best.get("bank", "SBI")
-                    fd_tenure = best.get("tenure_options", [5])[0] if best.get("tenure_options") else 5
+                elif "Corporate" in category:
+                    # Corporate FD
+                    if "1y" in category: tenure_field = "oneYear"
+                    elif "3y" in category: tenure_field = "threeYear"
+                    else: tenure_field = "fiveYear"
                     
-                    recs.append({
-                        "symbol": best.get("id", "FD-CHOICE"),
-                        "name": f"{fd_bank} Fixed Deposit",
-                        "asset_class": "fd_ppf",
-                        "amount": round(remaining, 2),
-                        "quantity": 1,
-                        "current_price": remaining,
-                        "rate": fd_rate,
-                        "tenure": fd_tenure,
-                        "rationale": f"Fixed deposit at {fd_rate*100:.2f}% p.a. for {fd_tenure} years",
-                        "score": float(fd_rate * 10),
-                        "bank": fd_bank
-                    })
-                else:
-                    # Fallback FD
-                    fd_rate = 0.065
-                    recs.append({
-                        "symbol": "FD-FALLBACK",
-                        "name": "SBI Fixed Deposit",
-                        "asset_class": "fd_ppf",
-                        "amount": round(remaining, 2),
-                        "quantity": 1,
-                        "current_price": remaining,
-                        "rate": fd_rate,
-                        "tenure": min(horizon, 5),
-                        "rationale": f"Safe fixed deposit at {fd_rate*100:.1f}% p.a.",
-                        "score": 7.0,
-                        "bank": "SBI"
-                    })
+                    use_senior_rate = "Senior" in category
+                    best_corp = get_best_corporate_fd(tenure_field, use_senior_rate)
+                    
+                    if best_corp:
+                        fd, rate = best_corp
+                        recs.append({
+                            "symbol": f"FD-CORP-{fd.get('company', 'Unknown').upper().replace(' ', '-')}",
+                            "name": f"{fd.get('company')} FD ({'Senior' if use_senior_rate else 'Regular'})",
+                            "asset_class": "fd",
+                            "amount": round(alloc_amt, 2),
+                            "quantity": 1,
+                            "current_price": alloc_amt,
+                            "rate": rate / 100.0,
+                            "tenure": 1 if "1y" in category else (3 if "3y" in category else 5),
+                            "rationale": f"Best Corporate FD for {category} at {rate}% (Rating: {fd.get('creditRating')})",
+                            "score": 7.5,
+                            "company": fd.get("company")
+                        })
 
-            logger.info(f"Fixed income allocation: {len(recs)} products, total ₹{sum(r['amount'] for r in recs):,.0f}")
+            logger.info(f"FD allocation: {len(recs)} products, total INR {sum(r['amount'] for r in recs):,.0f}")
             return recs
             
         except Exception as e:
-            logger.error(f"Error in fixed income selection: {str(e)}", exc_info=True)
+            logger.error(f"Error in FD selection: {str(e)}", exc_info=True)
             return []
 
 
@@ -564,7 +750,7 @@ class MicroAgent:
         self.stock_selector = StockSelector()
         self.crypto_selector = CryptoSelector()
         self.mf_selector = MutualFundSelector()
-        self.gold_selector = GoldSelector()
+        self.commodity_selector = CommoditySelector()
         self.fi_selector = FixedIncomeSelector()
         logger.info("Micro Agent initialized with all selectors")
 
@@ -590,7 +776,7 @@ class MicroAgent:
             total_assets = state.get("total_assets", 0) or 0
             if total_assets == 0:
                 total_assets = 100000.0
-                logger.warning(f"total_assets missing - using fallback: ₹{total_assets:,.0f}")
+                logger.warning(f"total_assets missing - using fallback: INR {total_assets:,.0f}")
 
             macro_alloc = state.get("macro_allocation", {})
             if not macro_alloc:
@@ -601,7 +787,7 @@ class MicroAgent:
             user_profile = state.get("user_profile", {}) or {}
             constants = state.get("constants", {})
             
-            logger.info(f"Total Assets: ₹{total_assets:,.0f}")
+            logger.info(f"Total Assets: INR {total_assets:,.0f}")
             logger.info(f"Macro Allocation: {macro_alloc}")
             logger.info(f"User Risk Score: {user_profile.get('risk_score', 'N/A')}")
             logger.info(f"Investment Horizon: {user_profile.get('investment_horizon', 'N/A')} years")
@@ -620,7 +806,7 @@ class MicroAgent:
             # 1. Stocks
             logger.info("\n--- Stock Selection ---")
             stocks_amt = macro_alloc.get("stocks", 0) * total_assets
-            logger.info(f"Stock budget: ₹{stocks_amt:,.0f} ({macro_alloc.get('stocks', 0):.1%})")
+            logger.info(f"Stock budget: INR {stocks_amt:,.0f} ({macro_alloc.get('stocks', 0):.1%})")
             recs["stocks"] = self.stock_selector.select(
                 stocks_amt, 
                 get_market_data("stocks"), 
@@ -630,7 +816,7 @@ class MicroAgent:
             # 2. Crypto
             logger.info("\n--- Crypto Selection ---")
             crypto_amt = macro_alloc.get("crypto", 0) * total_assets
-            logger.info(f"Crypto budget: ₹{crypto_amt:,.0f} ({macro_alloc.get('crypto', 0):.1%})")
+            logger.info(f"Crypto budget: INR {crypto_amt:,.0f} ({macro_alloc.get('crypto', 0):.1%})")
             recs["crypto"] = self.crypto_selector.select(
                 crypto_amt, 
                 get_market_data("crypto"), 
@@ -640,32 +826,45 @@ class MicroAgent:
             # 3. Mutual Funds
             logger.info("\n--- Mutual Fund Selection ---")
             mf_amt = macro_alloc.get("mutual_funds", 0) * total_assets
-            logger.info(f"MF budget: ₹{mf_amt:,.0f} ({macro_alloc.get('mutual_funds', 0):.1%})")
+            logger.info(f"MF budget: INR {mf_amt:,.0f} ({macro_alloc.get('mutual_funds', 0):.1%})")
             recs["mutual_funds"] = self.mf_selector.select(
                 mf_amt, 
                 user_profile, 
                 get_market_data("mutual_funds")
             )
 
-            # 4. Gold
-            logger.info("\n--- Gold Selection ---")
-            gold_amt = macro_alloc.get("gold", 0) * total_assets
-            logger.info(f"Gold budget: ₹{gold_amt:,.0f} ({macro_alloc.get('gold', 0):.1%})")
-            recs["gold"] = self.gold_selector.select(
-                gold_amt, 
-                get_market_data("gold")
-            )
+            # 4. Commodities
+            logger.info("\n--- Commodity Selection ---")
+            comm_amt = macro_alloc.get("commodities", 0) * total_assets
+            logger.info(f"Commodity budget: INR {comm_amt:,.0f} ({macro_alloc.get('commodities', 0):.1%})")
+            recs["commodities"] = self.commodity_selector.select(comm_amt, get_market_data("commodities"), user_profile)
 
-            # 5. Fixed Income
+            # 5. Fixed Income (FD & PPF)
             logger.info("\n--- Fixed Income Selection ---")
-            fi_amt = macro_alloc.get("fd_ppf", 0) * total_assets
-            logger.info(f"FI budget: ₹{fi_amt:,.0f} ({macro_alloc.get('fd_ppf', 0):.1%})")
-            recs["fd_ppf"] = self.fi_selector.select(
-                fi_amt, 
-                get_market_data("fixed_income"), 
-                user_profile, 
-                constants
-            )
+            
+            # PPF Logic with Spillover
+            ppf_max_limit = 150000.0
+            ppf_amt = macro_alloc.get("ppf", 0) * total_assets
+            ppf_overflow = 0.0
+            
+            if ppf_amt > ppf_max_limit:
+                ppf_overflow = ppf_amt - ppf_max_limit
+                logger.warning(f"PPF allocation INR {ppf_amt:,.0f} exceeds limit. Capping at INR {ppf_max_limit:,.0f}. Overflow: INR {ppf_overflow:,.0f} -> Moving to FD.")
+                ppf_amt = ppf_max_limit
+            
+            logger.info(f"PPF Final budget: INR {ppf_amt:,.0f}")
+            recs["ppf"] = self.fi_selector.select_ppf(ppf_amt, get_market_data("fixed_income"))
+            
+            # FD (Base + Spillover)
+            fd_base_amt = macro_alloc.get("fd", 0) * total_assets
+            fd_amt = fd_base_amt + ppf_overflow
+            
+            if ppf_overflow > 0:
+                logger.info(f"FD budget: INR {fd_base_amt:,.0f} (Base) + INR {ppf_overflow:,.0f} (PPF Overflow) = INR {fd_amt:,.0f}")
+            else:
+                logger.info(f"FD budget: INR {fd_amt:,.0f} ({macro_alloc.get('fd', 0):.1%})")
+                
+            recs["fd"] = self.fi_selector.select_fd(fd_amt, get_market_data("fixed_income"), user_profile)
 
             # Validation
             self._validate_recommendations(recs, macro_alloc, total_assets)
@@ -702,7 +901,7 @@ class MicroAgent:
             diff_pct = (diff / total_assets * 100) if total_assets > 0 else 0
             
             status = "✓" if diff < total_assets * 0.02 else "⚠"  # 2% tolerance
-            logger.info(f"{status} {asset_class}: Expected ₹{expected_amount:,.0f}, Actual ₹{actual_amount:,.0f} (Δ {diff_pct:.2f}%)")
+            logger.info(f"{status} {asset_class}: Expected INR {expected_amount:,.0f}, Actual INR {actual_amount:,.0f} (Delta {diff_pct:.2f}%)")
 
 
 # For standalone testing
@@ -716,7 +915,7 @@ if __name__ == "__main__":
             "stocks": 0.3,
             "crypto": 0.1,
             "mutual_funds": 0.3,
-            "gold": 0.1,
+            "commodities": 0.1,
             "fd_ppf": 0.2
         },
         "market_data": {
@@ -728,10 +927,20 @@ if __name__ == "__main__":
                 "bitcoin": {"current_price_inr": 3500000, "volatility": 0.45},
                 "ethereum": {"current_price_inr": 200000, "volatility": 0.50}
             },
-            "gold": {"current_price_per_gram": 6000},
+            "commodities": {
+                "gold": {"current_price_per_gram": 6000},
+                "silver": {"current_price_per_gram": 75}
+            },
             "fixed_income": {
                 "ppf": {"rate": 0.071},
                 "fd_products": [{"id": "SBI-FD", "bank": "SBI", "rate": 0.065, "tenure_options": [5]}]
+            },
+            "mutual_funds": {
+                "MF-001": {"fund_name": "SBI Bluechip Fund", "category": "Large Cap", "returns_3y": 0.15},
+                "MF-002": {"fund_name": "Kotak Emerging Equity", "category": "Mid Cap", "returns_3y": 0.18},
+                "MF-003": {"fund_name": "Nippon Small Cap", "category": "Small Cap", "returns_3y": 0.25},
+                "MF-004": {"fund_name": "Parag Parikh Flexi Cap", "category": "Flexi Cap", "returns_3y": 0.20},
+                "MF-005": {"fund_name": "SBI Balanced Advantage", "category": "Balanced Advantage", "returns_3y": 0.12}
             }
         },
         "user_profile": {
@@ -750,4 +959,4 @@ if __name__ == "__main__":
     for asset_class, recommendations in result["asset_recommendations"].items():
         print(f"\n{asset_class.upper()}:")
         for rec in recommendations:
-            print(f"  • {rec['name']}: ₹{rec['amount']:,.0f}")
+            print(f"  • {rec['name']}: INR {rec['amount']:,.0f}")

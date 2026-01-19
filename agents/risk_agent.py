@@ -136,7 +136,15 @@ class RiskCalculator(BaseTool):
         expected_return = 0.0
         for asset_class, weight in macro_allocation.items():
             if weight > 0:
-                return_rate = asset_returns.get(asset_class, 0.06)
+                # Map asset class to return assumption
+                if asset_class in ["fd", "ppf"]:
+                    base_key = "fd_ppf"
+                elif asset_class == "commodities":
+                    base_key = "gold"
+                else:
+                    base_key = asset_class
+                
+                return_rate = asset_returns.get(base_key, 0.06)
                 expected_return += weight * return_rate
         
         return expected_return
@@ -175,7 +183,15 @@ class RiskCalculator(BaseTool):
         weighted_variance = 0.0
         for asset_class, weight in macro_allocation.items():
             if weight > 0:
-                volatility = asset_volatilities.get(asset_class, 0.15)
+                # Map asset class to volatility assumption
+                if asset_class in ["fd", "ppf"]:
+                    base_key = "fd_ppf"
+                elif asset_class == "commodities":
+                    base_key = "gold"
+                else:
+                    base_key = asset_class
+                
+                volatility = asset_volatilities.get(base_key, 0.15)
                 weighted_variance += (weight ** 2) * (volatility ** 2)
         
         return math.sqrt(weighted_variance)
@@ -200,7 +216,15 @@ class RiskCalculator(BaseTool):
         portfolio_beta = 0.0
         for asset_class, weight in macro_allocation.items():
             if weight > 0:
-                beta = asset_betas.get(asset_class, 0.5)
+                # Map asset class to beta assumption
+                if asset_class in ["fd", "ppf"]:
+                    base_key = "fd_ppf"
+                elif asset_class == "commodities":
+                    base_key = "gold"
+                else:
+                    base_key = asset_class
+                
+                beta = asset_betas.get(base_key, 0.5)
                 portfolio_beta += weight * beta
         
         return portfolio_beta
@@ -219,7 +243,15 @@ class RiskCalculator(BaseTool):
         weighted_correlation = 0.0
         for asset_class, weight in macro_allocation.items():
             if weight > 0:
-                correlation = asset_correlations.get(asset_class, 0.3)
+                # Map asset class to correlation assumption
+                if asset_class in ["fd", "ppf"]:
+                    base_key = "fd_ppf"
+                elif asset_class == "commodities":
+                    base_key = "gold"
+                else:
+                    base_key = asset_class
+                
+                correlation = asset_correlations.get(base_key, 0.3)
                 weighted_correlation += weight * correlation
         
         return weighted_correlation
@@ -304,7 +336,15 @@ class RiskCalculator(BaseTool):
         weighted_liquidity = 0.0
         for asset_class, weight in macro_allocation.items():
             if weight > 0:
-                liquidity = asset_liquidity_scores.get(asset_class, 0.5)
+                # Map asset class to liquidity assumption
+                if asset_class in ["fd", "ppf"]:
+                    base_key = "fd_ppf"
+                elif asset_class == "commodities":
+                    base_key = "gold"
+                else:
+                    base_key = asset_class
+                
+                liquidity = asset_liquidity_scores.get(base_key, 0.5)
                 weighted_liquidity += weight * liquidity
         
         return weighted_liquidity
@@ -326,7 +366,12 @@ class RiskCalculator(BaseTool):
         stress_results["inflation_shock"] = expected_return + inflation_shock - expected_return
         
         # Interest rate rise (affecting bonds and growth stocks)
-        fixed_income_exposure = macro_allocation.get("fd_ppf", 0) + macro_allocation.get("fixed_income", 0)
+        fixed_income_exposure = (
+            macro_allocation.get("fd_ppf", 0) + 
+            macro_allocation.get("fd", 0) + 
+            macro_allocation.get("ppf", 0) + 
+            macro_allocation.get("fixed_income", 0)
+        )
         growth_stock_exposure = equity_exposure * 0.6  # Assume 60% growth stocks
         
         interest_rate_impact = -(fixed_income_exposure * 0.08 + growth_stock_exposure * 0.10)
@@ -359,7 +404,15 @@ class RiskCalculator(BaseTool):
         weighted_risk = 0.0
         for asset_class, weight in macro_allocation.items():
             if weight > 0:
-                risk_score = asset_risk_scores.get(asset_class, 0.5)
+                # Map asset class to risk score assumption
+                if asset_class in ["fd", "ppf"]:
+                    base_key = "fd_ppf"
+                elif asset_class == "commodities":
+                    base_key = "gold"
+                else:
+                    base_key = asset_class
+                
+                risk_score = asset_risk_scores.get(base_key, 0.5)
                 weighted_risk += weight * risk_score
         
         return weighted_risk
@@ -432,6 +485,8 @@ class ConstraintValidator(BaseTool):
             # Validate minimum fixed income allocation
             fixed_income_allocation = (
                 macro_allocation.get("fd_ppf", 0) + 
+                macro_allocation.get("fd", 0) + 
+                macro_allocation.get("ppf", 0) + 
                 macro_allocation.get("fixed_income", 0)
             )
             min_fixed_income = constraints.get("min_fixed_income", self._get_min_fixed_income_by_risk(risk_score))
@@ -521,6 +576,8 @@ class ConstraintValidator(BaseTool):
         elif investment_style == "aggressive":
             fixed_income_allocation = (
                 macro_allocation.get("fd_ppf", 0) + 
+                macro_allocation.get("fd", 0) + 
+                macro_allocation.get("ppf", 0) + 
                 macro_allocation.get("fixed_income", 0)
             )
             if fixed_income_allocation > 0.30:
@@ -582,7 +639,7 @@ class StressTester(BaseTool):
             macro_allocation.get("stocks", 0) * equity_impact +
             macro_allocation.get("mutual_funds", 0) * equity_impact * 0.7 +
             macro_allocation.get("crypto", 0) * crypto_impact +
-            macro_allocation.get("gold", 0) * gold_impact
+            (macro_allocation.get("gold", 0) + macro_allocation.get("commodities", 0)) * gold_impact
         )
         
         return {
@@ -607,9 +664,9 @@ class StressTester(BaseTool):
         gold_real_return = 0.03
         
         portfolio_impact = (
-            (macro_allocation.get("fd_ppf", 0) + macro_allocation.get("fixed_income", 0)) * fixed_income_real_return +
+            (macro_allocation.get("fd_ppf", 0) + macro_allocation.get("fd", 0) + macro_allocation.get("ppf", 0) + macro_allocation.get("fixed_income", 0)) * fixed_income_real_return +
             (macro_allocation.get("stocks", 0) + macro_allocation.get("mutual_funds", 0)) * equity_real_return +
-            macro_allocation.get("gold", 0) * gold_real_return
+            (macro_allocation.get("gold", 0) + macro_allocation.get("commodities", 0)) * gold_real_return
         )
         
         return {
@@ -630,7 +687,7 @@ class StressTester(BaseTool):
         growth_stock_impact = -0.15
         
         portfolio_impact = (
-            (macro_allocation.get("fd_ppf", 0) + macro_allocation.get("fixed_income", 0)) * bond_impact +
+            (macro_allocation.get("fd_ppf", 0) + macro_allocation.get("fd", 0) + macro_allocation.get("ppf", 0) + macro_allocation.get("fixed_income", 0)) * bond_impact +
             macro_allocation.get("stocks", 0) * growth_stock_impact * 0.6  # Assume 60% growth stocks
         )
         
@@ -713,6 +770,8 @@ class Rebalancer(BaseTool):
                 min_fixed_income = constraints.get("min_fixed_income", self._get_min_fixed_income_by_risk(risk_score))
                 current_fi = (
                     adjusted_allocation.get("fd_ppf", 0) + 
+                    adjusted_allocation.get("fd", 0) + 
+                    adjusted_allocation.get("ppf", 0) + 
                     adjusted_allocation.get("fixed_income", 0)
                 )
                 
@@ -720,7 +779,8 @@ class Rebalancer(BaseTool):
                     shortage = min_fixed_income - current_fi
                     # Take from stocks to meet minimum
                     adjusted_allocation["stocks"] = max(0, adjusted_allocation.get("stocks", 0) - shortage)
-                    adjusted_allocation["fd_ppf"] = adjusted_allocation.get("fd_ppf", 0) + shortage
+                    # Add to fd as default safer choice
+                    adjusted_allocation["fd"] = adjusted_allocation.get("fd", 0) + shortage
             
             # Ensure allocations sum to 1.0
             total = sum(adjusted_allocation.values())
@@ -831,7 +891,7 @@ class ComplianceChecker(BaseTool):
         """Check investment limits per asset class"""
         
         # PPF annual limit check
-        ppf_allocation = macro_allocation.get("fd_ppf", 0) * total_assets
+        ppf_allocation = (macro_allocation.get("fd_ppf", 0) + macro_allocation.get("ppf", 0)) * total_assets
         if ppf_allocation > 150000:  # PPF annual limit is ₹1.5 lakh
             result["violations"].append(f"PPF allocation ₹{ppf_allocation:,.0f} exceeds annual limit of ₹1.5 lakh")
         
@@ -944,6 +1004,9 @@ class RiskAgent:
                 "adjusted_allocation": adjusted_allocation,
                 "overall_assessment": "APPROVED" if not all_violations else "NEEDS_ADJUSTMENT",
                 "risk_violations": all_violations,
+                "overall_risk_level": risk_metrics.get("overall_risk_level", "Moderate"),
+                "expected_annual_return": risk_metrics.get("expected_annual_return", 0.0),
+                "sharpe_ratio": risk_metrics.get("sharpe_ratio", 0.0),
                 "assessment_timestamp": datetime.now().isoformat()
             }
             

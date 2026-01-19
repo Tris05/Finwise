@@ -237,7 +237,7 @@ def test_complete_workflow():
         if violations:
             print(f"\n  [WARNING] Risk Violations: {len(violations)}")
             for v in violations[:3]:
-                print(f"    - {v}")
+                safe_print(f"    - {v}")
         else:
             print(f"\n  [OK] No risk violations")
         
@@ -294,8 +294,8 @@ def test_complete_workflow():
         "user_profile": ["risk_score", "investment_horizon"],
         "total_assets": None,
         "market_data": None,
-        "macro_allocation": ["stocks", "mutual_funds", "crypto", "gold", "fd_ppf"],
-        "asset_recommendations": ["stocks", "mutual_funds", "crypto", "gold", "fd_ppf"],
+        "macro_allocation": ["stocks", "mutual_funds", "crypto", "commodities", "fd", "ppf"],
+        "asset_recommendations": ["stocks", "mutual_funds", "crypto", "commodities", "fd", "ppf"],
         "risk_assessment": ["overall_risk_level", "expected_annual_return", "sharpe_ratio"]
     }
     
