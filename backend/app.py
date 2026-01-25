@@ -5,23 +5,87 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image
 from io import BytesIO
+from dotenv import load_dotenv
 
-# Local modules (copy the other .py files into same folder)
+# Load environment variables
+load_dotenv()
+
+# Local modules
 from ocr import pdf_to_images, image_ocr_words
 from layout_model import LayoutModel
 from extractor import extract_from_text
 from scorer import score_financial_fields
+from gamification_agent import GamificationAgent
 
 app = Flask(__name__, static_folder="static")
 CORS(app)  # allow cross-origin requests from frontend
 
+# Initialize Agents
+gamification_agent = GamificationAgent()
+
 POPPLER_PATH = None  # set if needed on Windows
-layout_model = LayoutModel(device="cpu")  # change to "cuda" if you have GPU and torch GPU available
+layout_model = LayoutModel(device="cpu")
 
 @app.route("/")
 def index():
     return jsonify({"ok": True, "message": "FinWise backend running"})
 
+# --- Gamification Routes ---
+@app.route("/api/gamification/user/status", methods=["GET"])
+def get_user_status():
+    print(f"[DEBUG] Route /user/status called")
+    user_id = request.args.get("userId", "test_user_123")
+    status = gamification_agent.get_user_status(user_id)
+    return jsonify(status)
+
+@app.route("/api/gamification/questions", methods=["GET"])
+def get_questions():
+    topic = request.args.get("topic")
+    limit = int(request.args.get("limit", 5))
+    user_id = request.args.get("userId", "test_user_123")
+    
+    if not topic:
+        return jsonify({"error": "Topic is required"}), 400
+        
+    questions = gamification_agent.fetch_questions(topic, user_id, limit)
+    return jsonify({"questions": questions})
+
+@app.route("/api/gamification/quiz/submit", methods=["POST"])
+def submit_quiz():
+    print(f"[DEBUG] Route /quiz/submit called")
+    data = request.json
+    user_id = data.get("userId", "test_user_123")
+    topic = data.get("topic")
+    attempted = data.get("attempted", 0)
+    correct = data.get("correct", 0)
+    
+    if not topic:
+        return jsonify({"error": "Topic is required"}), 400
+        
+    result = gamification_agent.submit_quiz(user_id, topic, attempted, correct)
+    return jsonify(result)
+
+@app.route("/api/gamification/quiz/explain", methods=["POST"])
+def explain_quiz():
+    data = request.json
+    results = data.get("results", [])
+    explanation = gamification_agent.get_quiz_explanations(results)
+    return jsonify({"explanation": explanation})
+
+@app.route("/api/gamification/quiz/continue", methods=["POST"])
+def continue_quiz():
+    print(f"[DEBUG] Route /quiz/continue called")
+    data = request.json
+    user_id = data.get("userId", "test_user_123")
+    topic = data.get("topic")
+    
+    if not topic:
+        return jsonify({"error": "Topic is required"}), 400
+        
+    result = gamification_agent.continue_quiz(user_id, topic)
+    return jsonify(result)
+
+# --- Financial Analysis Route ---
 @app.route("/analyze", methods=["POST"])
 def analyze():
     if "file" not in request.files:
@@ -62,7 +126,6 @@ def analyze():
 
     score, reasons = score_financial_fields(regex_fields)
     
-
     page_images = []
     for p_idx, page_img in enumerate(pages):
         buffer = BytesIO()

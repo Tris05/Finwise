@@ -27,7 +27,7 @@ const items = [
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/salary", label: "Salary", icon: BadgeDollarSign },
   { href: "/loan", label: "Loan", icon: Landmark },
-  { href: "/learning", label: "Learning", icon: GraduationCap },
+  { href: "/learning", label: "Grow Your Knowledge", icon: GraduationCap },
   { href: "/security", label: "Security", icon: ShieldCheck },
   { href: "/settings", label: "Settings", icon: Settings },
 ]
@@ -52,7 +52,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             className={cn(
               "relative flex items-center gap-3 rounded-md px-3 py-2 mb-1 text-sm hover:bg-gradient-to-r hover:from-[var(--color-accent)]/30 hover:to-transparent",
               pathname.startsWith(href) &&
-                "bg-accent text-accent-foreground border-l-4 border-l-[var(--color-primary)]",
+              "bg-accent text-accent-foreground border-l-4 border-l-[var(--color-primary)]",
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
