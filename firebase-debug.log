@@ -1,0 +1,124 @@
+[debug] [2026-01-26T13:46:40.674Z] ----------------------------------------------------------------------
+[debug] [2026-01-26T13:46:40.675Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\91910\Downloads\Finwise\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2026-01-26T13:46:40.676Z] CLI Version:   15.4.0
+[debug] [2026-01-26T13:46:40.676Z] Platform:      win32
+[debug] [2026-01-26T13:46:40.676Z] Node Version:  v22.7.0
+[debug] [2026-01-26T13:46:40.676Z] Time:          Mon Jan 26 2026 19:16:40 GMT+0530 (India Standard Time)
+[debug] [2026-01-26T13:46:40.676Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-26T13:46:42.356Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-26T13:46:42.357Z] > authorizing via signed-in user (nishitwadhwani2902@gmail.com)
+[debug] [2026-01-26T13:46:42.357Z] [iam] checking project finwise-7dade for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-01-26T13:46:42.358Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:42.358Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:42.358Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions [none]
+[debug] [2026-01-26T13:46:42.358Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions x-goog-quota-user=projects/finwise-7dade
+[debug] [2026-01-26T13:46:42.358Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-01-26T13:46:44.191Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions 200
+[debug] [2026-01-26T13:46:44.191Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-01-26T13:46:44.191Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:44.191Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:44.191Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/finwise-7dade/serviceAccounts/finwise-7dade@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-01-26T13:46:44.191Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/finwise-7dade/serviceAccounts/finwise-7dade@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-01-26T13:46:45.865Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/finwise-7dade/serviceAccounts/finwise-7dade@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-01-26T13:46:45.865Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/finwise-7dade/serviceAccounts/finwise-7dade@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'finwise-7dade'...
+[info] 
+[info] i  deploying functions 
+[debug] [2026-01-26T13:46:45.867Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:45.867Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:45.867Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade [none]
+[debug] [2026-01-26T13:46:46.223Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade 200
+[debug] [2026-01-26T13:46:46.223Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade {"projectNumber":"997042770279","projectId":"finwise-7dade","lifecycleState":"ACTIVE","name":"FinWise","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-10-25T11:03:50.186517Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-01-26T13:46:46.226Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:46.226Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:46.226Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/finwise-7dade/adminSdkConfig [none]
+[debug] [2026-01-26T13:46:46.626Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/finwise-7dade/adminSdkConfig 200
+[debug] [2026-01-26T13:46:46.626Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/finwise-7dade/adminSdkConfig {"projectId":"finwise-7dade","databaseURL":"https://finwise-7dade-default-rtdb.firebaseio.com","storageBucket":"finwise-7dade.firebasestorage.app"}
+[debug] [2026-01-26T13:46:46.626Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:46.627Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:46:46.627Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/finwise-7dade/configs [none]
+[debug] [2026-01-26T13:46:47.228Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/finwise-7dade/configs 200
+[debug] [2026-01-26T13:46:47.228Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/finwise-7dade/configs {}
+[debug] [2026-01-26T13:46:47.229Z] Customer code is not Node
+[debug] [2026-01-26T13:46:47.229Z] Validating python source
+[debug] [2026-01-26T13:46:47.229Z] Building python source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[debug] [2026-01-26T13:46:47.230Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-01-26T13:46:47.240Z] Running command with virtualenv: command="C:\Users\91910\Downloads\Finwise\functions\venv\Scripts\activate.bat", args=["","&&","python.exe","-c","\"import firebase_functions; import os; print(os.path.dirname(firebase_functions.__file__))\""]
+[debug] [2026-01-26T13:46:47.254Z] stderr: The system cannot find the path specified.
+
+[debug] [2026-01-26T13:46:47.389Z] Error: spawn "C:\Users\91910\Downloads\Finwise\functions\venv\Scripts\activate.bat" ENOENT
+    at notFoundError (C:\Users\91910\Downloads\Finwise\node_modules\cross-spawn\lib\enoent.js:6:26)
+    at verifyENOENT (C:\Users\91910\Downloads\Finwise\node_modules\cross-spawn\lib\enoent.js:40:16)
+    at cp.emit (C:\Users\91910\Downloads\Finwise\node_modules\cross-spawn\lib\enoent.js:27:25)
+    at ChildProcess._handle.onexit (node:internal/child_process:294:12)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-01-26T13:48:42.134Z] ----------------------------------------------------------------------
+[debug] [2026-01-26T13:48:42.136Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\91910\Downloads\Finwise\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2026-01-26T13:48:42.136Z] CLI Version:   15.4.0
+[debug] [2026-01-26T13:48:42.136Z] Platform:      win32
+[debug] [2026-01-26T13:48:42.136Z] Node Version:  v22.7.0
+[debug] [2026-01-26T13:48:42.137Z] Time:          Mon Jan 26 2026 19:18:42 GMT+0530 (India Standard Time)
+[debug] [2026-01-26T13:48:42.137Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-26T13:48:43.109Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-26T13:48:43.109Z] > authorizing via signed-in user (nishitwadhwani2902@gmail.com)
+[debug] [2026-01-26T13:48:43.109Z] [iam] checking project finwise-7dade for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-01-26T13:48:43.110Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:43.110Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:43.111Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions [none]
+[debug] [2026-01-26T13:48:43.111Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions x-goog-quota-user=projects/finwise-7dade
+[debug] [2026-01-26T13:48:43.111Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-01-26T13:48:44.703Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions 200
+[debug] [2026-01-26T13:48:44.703Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-01-26T13:48:44.703Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:44.704Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:44.704Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/finwise-7dade/serviceAccounts/finwise-7dade@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-01-26T13:48:44.704Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/finwise-7dade/serviceAccounts/finwise-7dade@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-01-26T13:48:45.050Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/finwise-7dade/serviceAccounts/finwise-7dade@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-01-26T13:48:45.050Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/finwise-7dade/serviceAccounts/finwise-7dade@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'finwise-7dade'...
+[info] 
+[info] i  deploying functions 
+[debug] [2026-01-26T13:48:45.052Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:45.052Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:45.052Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade [none]
+[debug] [2026-01-26T13:48:45.381Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade 200
+[debug] [2026-01-26T13:48:45.381Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/finwise-7dade {"projectNumber":"997042770279","projectId":"finwise-7dade","lifecycleState":"ACTIVE","name":"FinWise","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-10-25T11:03:50.186517Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-01-26T13:48:45.383Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:45.383Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:45.383Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/finwise-7dade/adminSdkConfig [none]
+[debug] [2026-01-26T13:48:45.750Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/finwise-7dade/adminSdkConfig 200
+[debug] [2026-01-26T13:48:45.751Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/finwise-7dade/adminSdkConfig {"projectId":"finwise-7dade","databaseURL":"https://finwise-7dade-default-rtdb.firebaseio.com","storageBucket":"finwise-7dade.firebasestorage.app"}
+[debug] [2026-01-26T13:48:45.751Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:45.751Z] Checked if tokens are valid: true, expires at: 1769437335162
+[debug] [2026-01-26T13:48:45.751Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/finwise-7dade/configs [none]
+[debug] [2026-01-26T13:48:46.106Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/finwise-7dade/configs 200
+[debug] [2026-01-26T13:48:46.106Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/finwise-7dade/configs {}
+[debug] [2026-01-26T13:48:46.107Z] Customer code is not Node
+[debug] [2026-01-26T13:48:46.107Z] Validating python source
+[debug] [2026-01-26T13:48:46.107Z] Building python source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[debug] [2026-01-26T13:48:46.108Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-01-26T13:48:46.113Z] Running command with virtualenv: command="C:\Users\91910\Downloads\Finwise\functions\venv\Scripts\activate.bat", args=["","&&","python.exe","-c","\"import firebase_functions; import os; print(os.path.dirname(firebase_functions.__file__))\""]
+[debug] [2026-01-26T13:48:46.124Z] stderr: The system cannot find the path specified.
+
+[debug] [2026-01-26T13:48:46.254Z] Error: spawn "C:\Users\91910\Downloads\Finwise\functions\venv\Scripts\activate.bat" ENOENT
+    at notFoundError (C:\Users\91910\Downloads\Finwise\node_modules\cross-spawn\lib\enoent.js:6:26)
+    at verifyENOENT (C:\Users\91910\Downloads\Finwise\node_modules\cross-spawn\lib\enoent.js:40:16)
+    at cp.emit (C:\Users\91910\Downloads\Finwise\node_modules\cross-spawn\lib\enoent.js:27:25)
+    at ChildProcess._handle.onexit (node:internal/child_process:294:12)
+[error] 
+[error] Error: An unexpected error has occurred.

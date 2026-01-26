@@ -24,6 +24,7 @@ import { useMarketData } from "@/hooks/use-market-data"
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Area, AreaChart } from "recharts"
 import { formatINR } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { RefreshCw, Wifi, WifiOff } from "lucide-react"
 
 // Sample data - in a real app, this would come from your backend
 
@@ -213,7 +214,7 @@ const calculatePortfolioData = (investments: any[]) => {
   const totalGainPercent = (totalGain / (totalValue - totalGain)) * 100
   const dayChange = investments.reduce((sum, inv) => sum + (inv.dayChange * inv.quantity), 0)
   const dayChangePercent = (dayChange / totalValue) * 100
-  
+
   return {
     totalValue,
     totalGain,
@@ -233,7 +234,7 @@ const calculatePortfolioAllocation = (investments: any[]) => {
     acc[category].value += investment.currentValue
     return acc
   }, {} as Record<string, { name: string; value: number; color: string }>)
-  
+
   return Object.values(allocation)
 }
 
@@ -459,7 +460,7 @@ export default function InvestmentsPage() {
         const newPrice = asset.price * (1 + randomChange)
         const change = newPrice - asset.price
         const changePercent = (change / asset.price) * 100
-        
+
         return {
           ...asset,
           price: newPrice,
@@ -486,7 +487,7 @@ Dividend Yield: ${asset.dividend}%
 Risk Level: ${asset.riskLevel}
 Recommendation: ${asset.recommendation}
     `
-    
+
     toast({
       title: `${asset.symbol} Details`,
       description: details,
@@ -520,11 +521,11 @@ Recommendation: ${asset.recommendation}
     // Create CSV content
     const csvContent = [
       "Date,Type,Asset,Quantity,Price,Amount,Status,Category",
-      ...transactions.map(t => 
+      ...transactions.map(t =>
         `${t.date},${t.type},${t.asset},${t.quantity},${t.price},${t.amount},${t.status},${t.category}`
       )
     ].join('\n')
-    
+
     // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
@@ -538,9 +539,9 @@ Recommendation: ${asset.recommendation}
   }
 
   const handleToggleWatch = (symbol: string) => {
-    setMarketAssets(prev => 
-      prev.map(asset => 
-        asset.symbol === symbol 
+    setMarketAssets(prev =>
+      prev.map(asset =>
+        asset.symbol === symbol
           ? { ...asset, isWatched: !asset.isWatched }
           : asset
       )
@@ -572,7 +573,7 @@ Recommendation: ${asset.recommendation}
       recommendation: "Buy" as const,
       riskLevel: "Medium" as const
     }
-    
+
     // Open add transaction modal with this asset
     setSelectedAsset(newInvestment)
     setAddTransactionOpen(true)
@@ -635,7 +636,7 @@ Recommendation: ${asset.recommendation}
       category: "Equity", // This should be determined from the investment
       notes: sellData.notes
     }
-    
+
     setTransactions(prev => [sellTransaction, ...prev])
     setSellInvestmentOpen(false)
     setSelectedInvestment(null)
@@ -643,7 +644,7 @@ Recommendation: ${asset.recommendation}
 
   const handleRefreshRecommendations = () => {
     setIsLoading(true)
-    
+
     // Simulate API call
     setTimeout(() => {
       toast({
@@ -656,14 +657,14 @@ Recommendation: ${asset.recommendation}
 
   const handleAddToWatchlist = (stock: any) => {
     // Add to watchlist state
-    setMarketAssets(prev => 
-      prev.map(asset => 
-        asset.symbol === stock.symbol 
+    setMarketAssets(prev =>
+      prev.map(asset =>
+        asset.symbol === stock.symbol
           ? { ...asset, isWatched: true }
           : asset
       )
     )
-    
+
     // Show success toast
     toast({
       title: "Added to Watchlist",
@@ -695,7 +696,7 @@ Recommendation: ${asset.recommendation}
       recommendation: "Buy" as const,
       riskLevel: "Medium" as const
     }
-    
+
     setSelectedAsset(newInvestment)
     setAddTransactionOpen(true)
   }
@@ -756,18 +757,18 @@ Recommendation: ${asset.recommendation}
             <CardContent className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={performanceData}>
-                  <XAxis 
-                    dataKey="month" 
+                  <XAxis
+                    dataKey="month"
                     axisLine={false}
                     tickLine={false}
                     className="text-xs text-muted-foreground"
                   />
-                  <YAxis 
+                  <YAxis
                     axisLine={false}
                     tickLine={false}
                     className="text-xs text-muted-foreground"
                   />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
@@ -775,20 +776,20 @@ Recommendation: ${asset.recommendation}
                       boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                     }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#3B82F6" 
-                    fill="#3B82F6" 
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#3B82F6"
+                    fill="#3B82F6"
                     fillOpacity={0.1}
                     strokeWidth={2}
                     name="Your Portfolio"
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="benchmark" 
-                    stroke="#10B981" 
-                    fill="#10B981" 
+                  <Area
+                    type="monotone"
+                    dataKey="benchmark"
+                    stroke="#10B981"
+                    fill="#10B981"
                     fillOpacity={0.1}
                     strokeWidth={2}
                     name="Benchmark"
@@ -807,8 +808,8 @@ Recommendation: ${asset.recommendation}
               </div>
             </CardHeader>
             <CardContent>
-              <PortfolioPie 
-                data={portfolioAllocation} 
+              <PortfolioPie
+                data={portfolioAllocation}
                 onSliceClick={handlePieSliceClick}
               />
             </CardContent>
@@ -817,43 +818,43 @@ Recommendation: ${asset.recommendation}
           {/* Main Content Tabs */}
           <Tabs defaultValue="portfolio" className="w-full">
             <TabsList className="grid w-full grid-cols-7 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
-              <TabsTrigger 
-                value="portfolio" 
+              <TabsTrigger
+                value="portfolio"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Portfolio
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="search"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Search Stocks
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="recommendations"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 AI Recommendations
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="transactions"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Transactions
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="market"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Market
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="goals"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Goals
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="analysis"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
@@ -923,7 +924,7 @@ Recommendation: ${asset.recommendation}
                       <CardTitle className="text-xl font-semibold">Risk Analysis</CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">Your portfolio risk assessment</p>
                     </div>
-            </CardHeader>
+                  </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
                       <div className="flex justify-between items-center p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
@@ -954,8 +955,8 @@ Recommendation: ${asset.recommendation}
                         </Badge>
                       </div>
                     </div>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
 
                 <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
                   <CardHeader className="pb-4">
@@ -973,10 +974,10 @@ Recommendation: ${asset.recommendation}
                         Refresh
                       </Button>
                     </div>
-            </CardHeader>
+                  </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div 
+                      <div
                         className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors"
                         onClick={() => {
                           const query = "Help me increase my equity allocation. What stocks should I consider?"
@@ -991,7 +992,7 @@ Recommendation: ${asset.recommendation}
                           </div>
                         </div>
                       </div>
-                      <div 
+                      <div
                         className="p-4 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
                         onClick={() => {
                           const query = "Help me add international diversification to my portfolio. What international funds should I consider?"
@@ -1006,7 +1007,7 @@ Recommendation: ${asset.recommendation}
                           </div>
                         </div>
                       </div>
-                      <div 
+                      <div
                         className="p-4 border border-orange-200 dark:border-orange-800 rounded-lg bg-orange-50 dark:bg-orange-950/20 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/30 transition-colors"
                         onClick={() => {
                           setRebalanceOpen(true)
@@ -1021,32 +1022,32 @@ Recommendation: ${asset.recommendation}
                         </div>
                       </div>
                     </div>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>
         </div>
 
         <RebalanceModal open={rebalanceOpen} onOpenChange={setRebalanceOpen} />
-        <AddTransactionModal 
-          open={addTransactionOpen} 
+        <AddTransactionModal
+          open={addTransactionOpen}
           onOpenChange={setAddTransactionOpen}
           onAddTransaction={handleAddTransactionSubmit}
         />
-        <AddGoalModal 
-          open={addGoalOpen} 
+        <AddGoalModal
+          open={addGoalOpen}
           onOpenChange={setAddGoalOpen}
           onAddGoal={handleAddGoalSubmit}
         />
-        <EditGoalModal 
-          open={editGoalOpen} 
+        <EditGoalModal
+          open={editGoalOpen}
           onOpenChange={setEditGoalOpen}
           goal={selectedGoal}
           onUpdateGoal={handleUpdateGoal}
         />
-        <SellInvestmentModal 
-          open={sellInvestmentOpen} 
+        <SellInvestmentModal
+          open={sellInvestmentOpen}
           onOpenChange={setSellInvestmentOpen}
           investment={selectedInvestment}
           onSellInvestment={handleSellInvestmentSubmit}

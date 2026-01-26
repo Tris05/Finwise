@@ -4,6 +4,8 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -15,14 +17,39 @@ export default function LoginPage() {
   const { toast } = useToast()
   const router = useRouter()
 
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
       toast({ title: "Welcome back!", description: "Logged in successfully." })
       router.push("/dashboard")
-    }, 800)
+    } catch (error: any) {
+      console.error("Login error:", error)
+      let errorMessage = "Failed to log in. Please check your credentials."
+
+      if (error.code === 'auth/invalid-credential') {
+        errorMessage = "Invalid email or password."
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = "No account found with this email."
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = "Incorrect password."
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many failed attempts. Please try again later."
+      }
+
+      toast({
+        title: "Login failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -46,8 +73,20 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={onSubmit} className="space-y-3">
-            <Input type="email" placeholder="Email" required />
-            <Input type="password" placeholder="Password" required />
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
             <Button className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
