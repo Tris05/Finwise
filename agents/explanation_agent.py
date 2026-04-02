@@ -170,6 +170,9 @@ You are an expert financial advisor providing portfolio recommendations. Generat
 **Recommended Portfolio Allocation:**
 {macro_allocation_text}
 
+**Micro-Allocation Strategy:**
+{micro_strategy_summary}
+
 **Specific Investment Recommendations:**
 {asset_recommendations_text}
 
@@ -905,6 +908,7 @@ class ExplanationAgent:
                 "age": data["age"],
                 "total_investment": data["total_investment"],
                 "macro_allocation_text": self._format_allocation_text(data["macro_allocation"]),
+                "micro_strategy_summary": self._generate_micro_strategy_summary(data),
                 "asset_recommendations_text": self._format_recommendations_text(data["asset_recommendations"]),
                 "risk_metrics_text": self._format_risk_metrics_text(data["risk_metrics"]),
                 "market_summary_text": self._format_market_summary_text(data["market_summary"])
@@ -1040,6 +1044,45 @@ class ExplanationAgent:
                 "success": False,
                 "error": str(e)
             }
+    
+    def _generate_micro_strategy_summary(self, data: Dict[str, Any]) -> str:
+        """Generate one-line strategy summaries for each asset class based on profile"""
+        try:
+            risk_score = data.get("risk_score", 0.5)
+            horizon = data.get("investment_horizon", 5)
+            
+            strategies = []
+            
+            # 1. Mutual Funds
+            if risk_score > 0.7 and horizon > 5:
+                mf_text = "Allocates to Small and Mid Cap funds to maximize long-term growth potential."
+            elif risk_score < 0.4 or horizon < 3:
+                mf_text = "Prioritizes Large Cap and Hybrid funds to ensure capital preservation and stability."
+            else:
+                mf_text = "Balances growth and stability through a diversified mix of Flexi Cap and Large Cap funds."
+            strategies.append(f"• Mutual Funds: {mf_text}")
+                
+            # 2. Stocks
+            strategies.append("• Stocks: Selects stocks with high risk-adjusted returns, filtering for volatility and sector performance relative to your risk profile.")
+            
+            # 3. Crypto
+            strategies.append("• Crypto: Allocates to blue-chip cryptocurrencies (BTC/ETH) for growth, strictly limiting exposure based on volatility metrics.")
+            
+            # 4. FD
+            if risk_score > 0.6:
+                fd_text = f"Includes Corporate FDs for higher yields, with tenure matched to your {horizon}-year horizon."
+            else:
+                fd_text = f"Prioritizes secure Bank FDs, with tenure matched to your {horizon}-year horizon."
+            strategies.append(f"• Fixed Deposits: {fd_text}")
+                
+            # 5. PPF
+            strategies.append("• PPF: Leverages tax-free returns and government backing as a risk-free anchor for long-term wealth accumulation.")
+            
+            return "\n".join(strategies)
+            
+        except Exception as e:
+            logger.error(f"Error generating micro strategy summary: {str(e)}")
+            return "Micro-allocation strategy based on risk-adjusted selection across asset classes."
     
     def _generate_investment_rationale(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate investment rationale explanation"""
