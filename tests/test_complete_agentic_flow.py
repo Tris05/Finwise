@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
-"""
-Complete Agentic Workflow Test
-Tests all 6 agents working together to provide comprehensive portfolio recommendations
-"""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent / "agents"))
 
 from orchestration_agent import OrchestrationAgent
 import json

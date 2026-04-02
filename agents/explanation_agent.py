@@ -132,7 +132,8 @@ class PromptTemplateManager(BaseTool):
             "risk_explanation": self._get_risk_explanation_template(),
             "action_items": self._get_action_items_template(),
             "educational_content": self._get_educational_content_template(),
-            "investment_rationale": self._get_investment_rationale_template()
+            "investment_rationale": self._get_investment_rationale_template(),
+            "consolidated_explanation": self._get_consolidated_explanation_template()
         }
     
     def execute(self, template_type: str, data: Dict[str, Any]) -> str:
@@ -314,6 +315,38 @@ Investment Horizon: {investment_horizon} years
 
 This portfolio has been designed based on your risk tolerance and investment goals. 
 Please consult with a financial advisor for detailed guidance.
+"""
+
+    def _get_consolidated_explanation_template(self) -> str:
+        """Template for a consolidated portfolio explanation in JSON format"""
+        return """
+You are an expert financial advisor. Based on the provided data, generate a comprehensive portfolio explanation.
+Return the response STRICTLY as a valid JSON object with the following keys:
+- "portfolio_summary": A clear overview of the allocation strategy and rationale.
+- "risk_explanation": A simple explanation of portfolio risk, volatility, and stress test results.
+- "action_items": A list of specific, prioritized steps for the investor.
+- "educational_content": Key concepts explained simply (diversification, etc.).
+- "investment_rationale": Rationale for specific picks and weights.
+
+**User Profile:**
+- Risk Score: {risk_score}/1.0 ({risk_level} risk tolerance)
+- Investment Horizon: {investment_horizon} years
+- Age: {age} years
+- Total Investment: ₹{total_investment:,.0f}
+
+**Recommended Portfolio Allocation:**
+{macro_allocation_text}
+
+**Specific Investment Recommendations:**
+{asset_recommendations_text}
+
+**Risk Assessment Metrics:**
+{risk_metrics_text}
+
+**Market Summary:**
+{market_summary_text}
+
+Ensure the content is professional, accessible, and structured with clear markdown where appropriate within the JSON strings.
 """
 
 class ContentStructurer(BaseTool):
@@ -797,23 +830,55 @@ class ExplanationAgent:
                 risk_agent_output, user_profile, total_assets
             )
             
-            # Generate different types of explanations
+            # Generate consolidated explanation in a single API call
+            logger.info("Generating consolidated portfolio explanation (1 API call)")
+            
+            # Prepare formatted data for the single prompt
+            formatting_data = {
+                "risk_score": consolidated_data["risk_score"],
+                "risk_level": consolidated_data["risk_level"],
+                "investment_horizon": consolidated_data["investment_horizon"],
+                "age": consolidated_data["age"],
+                "total_investment": consolidated_data["total_investment"],
+                "macro_allocation_text": self._format_allocation_text(consolidated_data["macro_allocation"]),
+                "asset_recommendations_text": self._format_recommendations_text(consolidated_data["asset_recommendations"]),
+                "risk_metrics_text": self._format_risk_metrics_text(consolidated_data["risk_metrics"]),
+                "market_summary_text": self._format_market_summary_text(consolidated_data["market_summary"])
+            }
+            
+            prompt = self.prompt_manager.execute("consolidated_explanation", formatting_data)
+            llm_response = self.llm_interface.execute(prompt)
+            
             explanations = {}
+            if llm_response["success"]:
+                try:
+                    # Clean the response content for JSON parsing
+                    content = llm_response["content"]
+                    if "```json" in content:
+                        content = content.split("```json")[1].split("```")[0].strip()
+                    elif "```" in content:
+                        content = content.split("```")[1].split("```")[0].strip()
+                    
+                    explanations = json.loads(content)
+                    logger.info("Successfully parsed consolidated LLM response")
+                except Exception as e:
+                    logger.error(f"Failed to parse consolidated JSON response: {str(e)}")
             
-            # 1. Portfolio Summary
-            explanations["portfolio_summary"] = self._generate_portfolio_summary(consolidated_data)
-            
-            # 2. Risk Explanation
-            explanations["risk_explanation"] = self._generate_risk_explanation(consolidated_data)
-            
-            # 3. Action Items
-            explanations["action_items"] = self._generate_action_items(consolidated_data)
-            
-            # 4. Educational Content
-            explanations["educational_content"] = self._generate_educational_content(consolidated_data)
-            
-            # 5. Investment Rationale
-            explanations["investment_rationale"] = self._generate_investment_rationale(consolidated_data)
+            # Helper to ensure we have content for each part, even if parsing failed
+            def get_content(key, generator_func):
+                if key in explanations and explanations[key]:
+                    return explanations[key]
+                logger.warning(f"Key '{key}' missing or empty, generating individually (fallback)")
+                return generator_func(consolidated_data)
+
+            # Map keys and provide fallbacks if parsing failed for specific keys
+            final_explanations = {
+                "portfolio_summary": get_content("portfolio_summary", self._generate_portfolio_summary),
+                "risk_explanation": get_content("risk_explanation", self._generate_risk_explanation),
+                "action_items": get_content("action_items", self._generate_action_items),
+                "educational_content": get_content("educational_content", self._generate_educational_content),
+                "investment_rationale": get_content("investment_rationale", self._generate_investment_rationale)
+            }
             
             # Generate recommendations
             recommendations = self.recommendation_engine.execute(
@@ -823,12 +888,11 @@ class ExplanationAgent:
             # Generate visualizations
             visualizations = self.visualization_generator.execute(consolidated_data)
             
-            # Compile final explanation package - extract text from complex objects
+            # Compile final explanation package
             def extract_text(obj, fallback=""):
                 if isinstance(obj, str):
                     return obj
                 elif isinstance(obj, dict):
-                    # Try to extract text from various possible structures
                     if "content" in obj and isinstance(obj["content"], dict):
                         return obj["content"].get("raw_content", fallback)
                     elif "summary" in obj:
@@ -840,10 +904,10 @@ class ExplanationAgent:
                 else:
                     return fallback
             
-            portfolio_summary = explanations.get("portfolio_summary", {})
-            risk_explanation = explanations.get("risk_explanation", {})
-            educational_content = explanations.get("educational_content", {})
-            action_items = explanations.get("action_items", [])
+            portfolio_summary = final_explanations.get("portfolio_summary", {})
+            risk_explanation = final_explanations.get("risk_explanation", {})
+            educational_content = final_explanations.get("educational_content", {})
+            action_items = final_explanations.get("action_items", [])
             
             final_advice = {
                 "allocation_summary": extract_text(portfolio_summary, "Portfolio allocation generated based on your risk profile and investment goals."),

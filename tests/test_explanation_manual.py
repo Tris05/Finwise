@@ -1,7 +1,10 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent / "agents"))
 
 import logging
 from datetime import datetime
-from agents.explanation_agent import ExplanationAgent
+from explanation_agent import ExplanationAgent
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO)

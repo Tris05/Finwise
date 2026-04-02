@@ -47,7 +47,8 @@ The agent updates the state with:
     "mutual_funds": 0.25,
     "crypto": 0.05,
     "gold": 0.10,
-    "fd_ppf": 0.15
+    "fd": 0.15,
+    "ppf": 0.15
   },
   "strategy_metadata": {
     "strategy_used": "markowitz_ppo_hybrid",

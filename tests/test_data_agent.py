@@ -3,9 +3,7 @@ Comprehensive test for Data Agent
 Tests all functionality including gold API
 """
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "agents"))
 
 from data_agent import DataAgent
 import json

@@ -10,7 +10,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Add agents directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "agents"))
 
 from data_agent import DataAgent
 from macro_agent import MacroAgent
