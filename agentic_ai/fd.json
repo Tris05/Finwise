@@ -1,0 +1,290 @@
+{
+  "regularFd": {
+    "tenure_1_3_years": [
+      {
+        "bank": "Bank",
+        "generalRate": null,
+        "seniorRate": null
+      },
+      {
+        "bank": "Axis Bank",
+        "generalRate": 6.6,
+        "seniorRate": 7.1
+      },
+      {
+        "bank": "Bandhan Bank",
+        "generalRate": 7.2,
+        "seniorRate": 7.7
+      },
+      {
+        "bank": "Bank of Baroda",
+        "generalRate": 6.5,
+        "seniorRate": 7.0
+      },
+      {
+        "bank": "Central Bank of India",
+        "generalRate": 6.5,
+        "seniorRate": 7.0
+      },
+      {
+        "bank": "HDFC Bank",
+        "generalRate": 6.6,
+        "seniorRate": 7.1
+      },
+      {
+        "bank": "ICICI Bank",
+        "generalRate": 6.6,
+        "seniorRate": 7.1
+      },
+      {
+        "bank": "IDBI Bank",
+        "generalRate": 6.55,
+        "seniorRate": 7.05
+      },
+      {
+        "bank": "IDFC FIRST Bank",
+        "generalRate": 7.0,
+        "seniorRate": 7.5
+      },
+      {
+        "bank": "IndusInd Bank",
+        "generalRate": 7.0,
+        "seniorRate": 7.5
+      },
+      {
+        "bank": "Karnataka Bank",
+        "generalRate": 6.5,
+        "seniorRate": 6.75
+      },
+      {
+        "bank": "Kotak Mahindra Bank",
+        "generalRate": 6.6,
+        "seniorRate": 7.1
+      },
+      {
+        "bank": "Bank of Maharashtra",
+        "generalRate": 6.65,
+        "seniorRate": 7.15
+      },
+      {
+        "bank": "Punjab National Bank",
+        "generalRate": 6.6,
+        "seniorRate": 7.1
+      },
+      {
+        "bank": "RBL Bank",
+        "generalRate": 7.2,
+        "seniorRate": 7.7
+      },
+      {
+        "bank": "South Indian Bank",
+        "generalRate": 6.6,
+        "seniorRate": 7.25
+      },
+      {
+        "bank": "State Bank of India",
+        "generalRate": 6.45,
+        "seniorRate": 6.95
+      },
+      {
+        "bank": "Tamilnad Mercantile Bank",
+        "generalRate": 6.9,
+        "seniorRate": 7.4
+      },
+      {
+        "bank": "Union Bank of India",
+        "generalRate": 6.6,
+        "seniorRate": 7.1
+      },
+      {
+        "bank": "YES Bank",
+        "generalRate": 7.0,
+        "seniorRate": 7.75
+      }
+    ],
+    "tenure_5_10_years": [
+      {
+        "bank": "Bank",
+        "generalRate": null,
+        "seniorRate": null
+      },
+      {
+        "bank": "Axis Bank",
+        "generalRate": 6.6,
+        "seniorRate": 7.35
+      },
+      {
+        "bank": "Bandhan Bank",
+        "generalRate": 5.85,
+        "seniorRate": 6.6
+      },
+      {
+        "bank": "Bank of Baroda",
+        "generalRate": 6.4,
+        "seniorRate": 7.0
+      },
+      {
+        "bank": "Central Bank of India",
+        "generalRate": 6.25,
+        "seniorRate": 6.75
+      },
+      {
+        "bank": "HDFC Bank",
+        "generalRate": 6.4,
+        "seniorRate": 6.9
+      },
+      {
+        "bank": "ICICI Bank",
+        "generalRate": 6.6,
+        "seniorRate": 7.1
+      },
+      {
+        "bank": "IDBI Bank",
+        "generalRate": 6.25,
+        "seniorRate": 6.75
+      },
+      {
+        "bank": "IDFC FIRST Bank",
+        "generalRate": 7.0,
+        "seniorRate": 7.5
+      },
+      {
+        "bank": "IndusInd Bank",
+        "generalRate": 6.65,
+        "seniorRate": 7.15
+      },
+      {
+        "bank": "Karnataka Bank",
+        "generalRate": 5.5,
+        "seniorRate": 5.75
+      },
+      {
+        "bank": "Kotak Mahindra Bank",
+        "generalRate": 6.25,
+        "seniorRate": 6.75
+      },
+      {
+        "bank": "Bank of Maharashtra",
+        "generalRate": 6.1,
+        "seniorRate": 6.6
+      },
+      {
+        "bank": "Punjab National Bank",
+        "generalRate": 6.25,
+        "seniorRate": 6.8
+      },
+      {
+        "bank": "RBL Bank",
+        "generalRate": 6.7,
+        "seniorRate": 7.2
+      },
+      {
+        "bank": "South Indian Bank",
+        "generalRate": 6.0,
+        "seniorRate": 6.5
+      },
+      {
+        "bank": "State Bank of India",
+        "generalRate": 6.05,
+        "seniorRate": 7.05
+      },
+      {
+        "bank": "Tamilnad Mercantile Bank",
+        "generalRate": 6.6,
+        "seniorRate": 7.1
+      },
+      {
+        "bank": "Union Bank of India",
+        "generalRate": 6.4,
+        "seniorRate": 6.9
+      },
+      {
+        "bank": "YES Bank",
+        "generalRate": 6.75,
+        "seniorRate": 7.5
+      }
+    ]
+  },
+  "corporateFd": [
+    {
+      "company": "Shriram Finance",
+      "creditRating": "ICRA-AA+/Stable IND AA+/Stable by India Ratings & Research",
+      "oneYear": 7.0,
+      "threeYear": 7.25,
+      "fiveYear": 7.25,
+      "seniorBonus": 0.5
+    },
+    {
+      "company": "Muthoot Capital Services Limited",
+      "creditRating": "CRISIL-A+/Stable",
+      "oneYear": 7.9,
+      "threeYear": 8.95,
+      "fiveYear": 8.5,
+      "seniorBonus": 0.25
+    },
+    {
+      "company": "Manipal Housing Finance",
+      "creditRating": "ACUITE A–",
+      "oneYear": 8.25,
+      "threeYear": 8.25,
+      "fiveYear": 7.75,
+      "seniorBonus": 0.25
+    },
+    {
+      "company": "Mahindra Finance",
+      "creditRating": "IND AAA/Stable by India Ratings",
+      "oneYear": 7.0,
+      "threeYear": 6.6,
+      "fiveYear": 7.0,
+      "seniorBonus": 0.25
+    },
+    {
+      "company": "PNB Housing Finance Ltd.",
+      "creditRating": "CRISIL-AA/Stable",
+      "oneYear": 6.85,
+      "threeYear": 7.1,
+      "fiveYear": 7.1,
+      "seniorBonus": 0.25
+    },
+    {
+      "company": "Sundaram Home Finance",
+      "creditRating": "CARE AA+/Stable CRISIL AA+/Stable",
+      "oneYear": 7.5,
+      "threeYear": 7.7,
+      "fiveYear": 7.15,
+      "seniorBonus": 0.35
+    },
+    {
+      "company": "ICICI Home Finance",
+      "creditRating": "ICRA-AA+/Stable, CARE AA+/Stable",
+      "oneYear": 6.75,
+      "threeYear": 6.75,
+      "fiveYear": 7.0,
+      "seniorBonus": 0.35
+    },
+    {
+      "company": "Sundaram Finance",
+      "creditRating": "CRISIL AAA/Stable",
+      "oneYear": 7.5,
+      "threeYear": 7.5,
+      "fiveYear": 7.3,
+      "seniorBonus": 0.25
+    },
+    {
+      "company": "LIC Housing Finance Ltd.",
+      "creditRating": "CRISIL AAA/Stable",
+      "oneYear": 6.75,
+      "threeYear": 6.85,
+      "fiveYear": 6.9,
+      "seniorBonus": 0.25
+    },
+    {
+      "company": "Kerala Transport Development Finance Corporation",
+      "creditRating": "Govt of Kerala",
+      "oneYear": 7.0,
+      "threeYear": 7.25,
+      "fiveYear": 7.75,
+      "seniorBonus": 0.25
+    }
+  ]
+}  
