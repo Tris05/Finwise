@@ -82,10 +82,13 @@ def fix_ordinal_encoder():
     # Fit on categorical data
     ordinal_encoder.fit(df[categorical_features])
     
+    from pathlib import Path
+    base_path = Path(__file__).parent.parent / "models"
+    
     # Save the fixed ordinal encoder
-    with open('ordinal_encoder.pkl', 'wb') as f:
+    with open(base_path / 'ordinal_encoder.pkl', 'wb') as f:
         pickle.dump(ordinal_encoder, f)
-    print("SUCCESS: Fixed ordinal_encoder.pkl saved successfully")
+    print(f"SUCCESS: Fixed ordinal_encoder.pkl saved successfully to {base_path}")
     
     # Test the encoder
     print("\nTesting the fixed ordinal encoder...")

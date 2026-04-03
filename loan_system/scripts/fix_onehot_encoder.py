@@ -50,10 +50,13 @@ def fix_onehot_encoder():
     # Fit on categorical data
     one_hot_encoder.fit(df[categorical_features])
     
+    from pathlib import Path
+    base_path = Path(__file__).parent.parent / "models"
+    
     # Save the fixed OneHotEncoder
-    with open('one_hot_encoder.pkl', 'wb') as f:
+    with open(base_path / 'one_hot_encoder.pkl', 'wb') as f:
         pickle.dump(one_hot_encoder, f)
-    print("SUCCESS: Fixed one_hot_encoder.pkl saved successfully")
+    print(f"SUCCESS: Fixed one_hot_encoder.pkl saved successfully to {base_path}")
     
     # Test the encoder
     print("\nTesting the fixed OneHotEncoder...")

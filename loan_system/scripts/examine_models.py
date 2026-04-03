@@ -9,15 +9,18 @@ import numpy as np
 def examine_model():
     """Examine the XGBoost models to understand their structure"""
     try:
+        from pathlib import Path
+        base_path = Path(__file__).parent.parent / "models"
+        
         # Load the risk model
-        with open('xgb_risk_model.pkl', 'rb') as f:
+        with open(base_path / 'xgb_risk_model.pkl', 'rb') as f:
             risk_model = pickle.load(f)
         
         print("Risk Model Type:", type(risk_model))
         print("Risk Model Features:", risk_model.n_features_in_)
         
         # Load the approval model
-        with open('xgb_approval_model.pkl', 'rb') as f:
+        with open(base_path / 'xgb_approval_model.pkl', 'rb') as f:
             approval_model = pickle.load(f)
         
         print("Approval Model Type:", type(approval_model))

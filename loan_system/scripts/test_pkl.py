@@ -18,16 +18,20 @@ def test_pkl_files():
     
     results = {}
     
-    for file in model_files:
+    from pathlib import Path
+    base_path = Path(__file__).parent.parent / "models"
+    
+    for file_name in model_files:
+        full_path = base_path / file_name
         try:
-            if os.path.exists(file):
-                with open(file, 'rb') as f:
+            if full_path.exists():
+                with open(full_path, 'rb') as f:
                     model = pickle.load(f)
-                    results[file] = f"SUCCESS - Type: {type(model).__name__}"
-                    print(f"SUCCESS {file}: {type(model).__name__}")
+                    results[file_name] = f"SUCCESS - Type: {type(model).__name__}"
+                    print(f"SUCCESS {file_name}: {type(model).__name__}")
             else:
-                results[file] = "FILE NOT FOUND"
-                print(f"FAILED {file}: FILE NOT FOUND")
+                results[file_name] = "FILE NOT FOUND"
+                print(f"FAILED {file_name}: FILE NOT FOUND at {full_path}")
         except Exception as e:
             results[file] = f"ERROR: {str(e)}"
             print(f"FAILED {file}: ERROR - {str(e)}")

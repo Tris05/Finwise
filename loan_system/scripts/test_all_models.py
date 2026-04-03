@@ -6,9 +6,11 @@ Test script to verify all 5 .pkl models work together
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 def test_loan_prediction():
     """Test the loan prediction with sample data"""
+    path = Path(__file__).parent
     
     # Sample loan data
     sample_data = {
@@ -50,13 +52,14 @@ def test_loan_prediction():
         # Convert to JSON string
         input_json = json.dumps(sample_data)
         
-        # Run the loan prediction script
+        # Run the loan prediction script (in the same folder)
         result = subprocess.run(
             ['python', 'loan_prediction.py'],
             input=input_json,
             text=True,
             capture_output=True,
-            timeout=30
+            timeout=30,
+            cwd=path # Ensure we run it from its own directory
         )
         
         if result.returncode == 0:
@@ -100,10 +103,13 @@ def test_individual_models():
     try:
         import pickle
         import numpy as np
+        from pathlib import Path
+        
+        base_path = Path(__file__).parent.parent / "models"
         
         # Test XGBoost models
         print("\n1. Testing XGBoost Risk Model...")
-        with open('xgb_risk_model.pkl', 'rb') as f:
+        with open(base_path / 'xgb_risk_model.pkl', 'rb') as f:
             risk_model = pickle.load(f)
         
         # Create test data with correct number of features
@@ -112,7 +118,7 @@ def test_individual_models():
         print(f"SUCCESS: Risk model prediction: {risk_pred[0]}")
         
         print("\n2. Testing XGBoost Approval Model...")
-        with open('xgb_approval_model.pkl', 'rb') as f:
+        with open(base_path / 'xgb_approval_model.pkl', 'rb') as f:
             approval_model = pickle.load(f)
         
         approval_pred = approval_model.predict_proba(test_features)
@@ -120,7 +126,7 @@ def test_individual_models():
         
         # Test sklearn models
         print("\n3. Testing StandardScaler...")
-        with open('scaler.pkl', 'rb') as f:
+        with open(base_path / 'scaler.pkl', 'rb') as f:
             scaler = pickle.load(f)
         
         # Test with 30 numerical features
@@ -129,7 +135,7 @@ def test_individual_models():
         print(f"SUCCESS: Scaler transformation: {scaled_data.shape}")
         
         print("\n4. Testing OrdinalEncoder...")
-        with open('ordinal_encoder.pkl', 'rb') as f:
+        with open(base_path / 'ordinal_encoder.pkl', 'rb') as f:
             ordinal_encoder = pickle.load(f)
         
         # Test with 6 categorical features - use proper string format
@@ -138,7 +144,7 @@ def test_individual_models():
         print(f"SUCCESS: Ordinal encoder transformation: {ordinal_data.shape}")
         
         print("\n5. Testing OneHotEncoder...")
-        with open('one_hot_encoder.pkl', 'rb') as f:
+        with open(base_path / 'one_hot_encoder.pkl', 'rb') as f:
             one_hot_encoder = pickle.load(f)
         
         onehot_data = one_hot_encoder.transform(test_categorical)

@@ -14,11 +14,13 @@ from pathlib import Path
 def load_models():
     """Load all the required .pkl models"""
     try:
+        base_path = Path(__file__).parent.parent / "models"
+        
         # Load the XGBoost models (these work)
-        with open('xgb_risk_model.pkl', 'rb') as f:
+        with open(base_path / 'xgb_risk_model.pkl', 'rb') as f:
             xgb_risk = pickle.load(f)
         
-        with open('xgb_approval_model.pkl', 'rb') as f:
+        with open(base_path / 'xgb_approval_model.pkl', 'rb') as f:
             xgb_approval = pickle.load(f)
         
         # Try to load scikit-learn models, but handle errors gracefully
@@ -27,7 +29,7 @@ def load_models():
         one_hot_encoder = None
         
         try:
-            with open('scaler.pkl', 'rb') as f:
+            with open(base_path / 'scaler.pkl', 'rb') as f:
                 scaler = pickle.load(f)
         except Exception as e:
             print(f"Warning: Could not load scaler.pkl: {e}", file=sys.stderr)
@@ -36,7 +38,7 @@ def load_models():
             scaler = StandardScaler()
         
         try:
-            with open('ordinal_encoder.pkl', 'rb') as f:
+            with open(base_path / 'ordinal_encoder.pkl', 'rb') as f:
                 ordinal_encoder = pickle.load(f)
         except Exception as e:
             print(f"Warning: Could not load ordinal_encoder.pkl: {e}", file=sys.stderr)
@@ -45,7 +47,7 @@ def load_models():
             ordinal_encoder = OrdinalEncoder()
         
         try:
-            with open('one_hot_encoder.pkl', 'rb') as f:
+            with open(base_path / 'one_hot_encoder.pkl', 'rb') as f:
                 one_hot_encoder = pickle.load(f)
         except Exception as e:
             print(f"Warning: Could not load one_hot_encoder.pkl: {e}", file=sys.stderr)

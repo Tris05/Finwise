@@ -87,13 +87,16 @@ def regenerate_models():
     print(f"Numerical features: {len(numerical_features)}")
     print(f"Categorical features: {len(categorical_features)}")
     
+    from pathlib import Path
+    base_path = Path(__file__).parent.parent / "models"
+    
     # 1. Create and fit StandardScaler
     print("\n1. Creating StandardScaler...")
     scaler = StandardScaler()
     scaler.fit(df[numerical_features])
     
     # Save scaler
-    with open('scaler.pkl', 'wb') as f:
+    with open(base_path / 'scaler.pkl', 'wb') as f:
         pickle.dump(scaler, f)
     print("SUCCESS: scaler.pkl saved successfully")
     
@@ -103,7 +106,7 @@ def regenerate_models():
     ordinal_encoder.fit(df[categorical_features])
     
     # Save ordinal encoder
-    with open('ordinal_encoder.pkl', 'wb') as f:
+    with open(base_path / 'ordinal_encoder.pkl', 'wb') as f:
         pickle.dump(ordinal_encoder, f)
     print("SUCCESS: ordinal_encoder.pkl saved successfully")
     
@@ -113,7 +116,7 @@ def regenerate_models():
     one_hot_encoder.fit(df[categorical_features])
     
     # Save one-hot encoder
-    with open('one_hot_encoder.pkl', 'wb') as f:
+    with open(base_path / 'one_hot_encoder.pkl', 'wb') as f:
         pickle.dump(one_hot_encoder, f)
     print("SUCCESS: one_hot_encoder.pkl saved successfully")
     
@@ -130,18 +133,21 @@ def regenerate_models():
 def test_models():
     """Test that the regenerated models can be loaded and used"""
     try:
+        from pathlib import Path
+        base_path = Path(__file__).parent.parent / "models"
+        
         # Test scaler
-        with open('scaler.pkl', 'rb') as f:
+        with open(base_path / 'scaler.pkl', 'rb') as f:
             test_scaler = pickle.load(f)
         print("SUCCESS: Scaler loads successfully")
         
         # Test ordinal encoder
-        with open('ordinal_encoder.pkl', 'rb') as f:
+        with open(base_path / 'ordinal_encoder.pkl', 'rb') as f:
             test_ordinal = pickle.load(f)
         print("SUCCESS: Ordinal encoder loads successfully")
         
         # Test one-hot encoder
-        with open('one_hot_encoder.pkl', 'rb') as f:
+        with open(base_path / 'one_hot_encoder.pkl', 'rb') as f:
             test_onehot = pickle.load(f)
         print("SUCCESS: One-hot encoder loads successfully")
         
