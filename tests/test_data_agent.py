@@ -1,8 +1,6 @@
-"""
-Comprehensive test for Data Agent
-Tests all functionality including gold API
-"""
-
+import sys
+import logging
+from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "agents"))
 
 from data_agent import DataAgent
@@ -57,23 +55,20 @@ def test_data_agent():
         stocks = asset_classes["stocks"]
         print(f"\n[STOCKS] {len(stocks)} stocks fetched")
         for symbol, data in list(stocks.items())[:3]:
-            print(f"  - {symbol}: Rs.{data.get('current_price', 0):,.2f}")
+            print(f"  - {symbol}: {data.get('current_price', 0):,.2f}")
     
     # Crypto
     if "crypto" in asset_classes:
         crypto = asset_classes["crypto"]
         print(f"\n[CRYPTO] {len(crypto)} cryptocurrencies fetched")
         for symbol, data in list(crypto.items())[:3]:
-            print(f"  - {symbol}: Rs.{data.get('current_price_inr', 0):,.2f}")
+            print(f"  - {symbol}: {data.get('current_price_inr', 0):,.2f}")
     
     # Gold
     if "gold" in asset_classes:
         gold = asset_classes["gold"]
         print(f"\n[GOLD] Gold data fetched")
-        print(f"  Price per gram: Rs.{gold.get('current_price_per_gram', 0):,.2f}")
-        print(f"  Source: {gold.get('source', 'N/A')}")
-        if "price_per_ounce" in gold:
-            print(f"  Price per ounce: Rs.{gold.get('price_per_ounce', 0):,.2f}")
+        print(f"  Price per gram: {gold.get('current_price_per_gram', 0):,.2f}")
     
     # Fixed Income
     if "fixed_income" in asset_classes:
@@ -81,47 +76,6 @@ def test_data_agent():
         print(f"\n[FIXED INCOME] {len(fi)} instruments available")
         for instrument, data in list(fi.items())[:3]:
             print(f"  - {instrument}: {data.get('rate', 0)*100:.2f}%")
-    
-    # Market Summary
-    print_section("MARKET SUMMARY")
-    
-    market_summary = market_data.get("market_summary", {})
-    print(f"\nTotal Assets Analyzed: {market_summary.get('total_assets_analyzed', 0)}")
-    print(f"Market Sentiment: {market_summary.get('market_sentiment', 'N/A')}")
-    print(f"Volatility Level: {market_summary.get('volatility_level', 'N/A')}")
-    
-    # Validation
-    print_section("DATA VALIDATION")
-    
-    validation = result.get("validation", {})
-    print(f"\nValidation Status: {'PASSED' if validation.get('is_valid') else 'FAILED'}")
-    print(f"Data Quality Score: {validation.get('data_quality_score', 0):.2%}")
-    print(f"Warnings: {len(validation.get('warnings', []))}")
-    print(f"Errors: {len(validation.get('errors', []))}")
-    
-    if validation.get('warnings'):
-        print("\nWarnings:")
-        for warning in validation['warnings'][:3]:
-            print(f"  - {warning}")
-    
-    # API Usage
-    print_section("API USAGE STATS")
-    
-    api_usage = result.get("api_usage", {})
-    if api_usage:
-        for api_name, stats in api_usage.items():
-            print(f"\n{api_name.upper()}:")
-            print(f"  Calls (last minute): {stats.get('calls_last_minute', 0)}/{stats.get('minute_limit', 0)}")
-            print(f"  Calls (last hour): {stats.get('calls_last_hour', 0)}/{stats.get('hour_limit', 0)}")
-    
-    # Cache Stats
-    print_section("CACHE STATISTICS")
-    
-    agent_status = agent.get_agent_status()
-    cache_stats = agent_status.get("cache_stats", {})
-    print(f"\nTotal Cached Items: {cache_stats.get('total_items', 0)}")
-    print(f"Fresh Items: {cache_stats.get('fresh_items', 0)}")
-    print(f"Cache Duration: {cache_stats.get('cache_duration_minutes', 0)} minutes")
     
     # Test cached retrieval
     print_section("CACHE TEST")
@@ -140,9 +94,7 @@ def test_data_agent():
     print(f"  - Data Agent: WORKING")
     print(f"  - Stocks: {len(asset_classes.get('stocks', {}))} fetched")
     print(f"  - Crypto: {len(asset_classes.get('crypto', {}))} fetched")
-    print(f"  - Gold: {'LIVE API' if gold.get('source') == 'exchangerate.host' else 'FALLBACK'}")
     print(f"  - Fixed Income: {len(asset_classes.get('fixed_income', {}))} instruments")
-    print(f"  - Validation: {'PASSED' if validation.get('is_valid') else 'FAILED'}")
     
     return True
 

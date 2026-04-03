@@ -9,14 +9,13 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
-import time
 import json
-import hashlib
-from dataclasses import dataclass
-import logging
-from abc import ABC, abstractmethod
+import time
 import os
-import re
+import logging
+from dataclasses import dataclass
+from abc import ABC, abstractmethod
+from utils.universe_manager import UniverseManager
 
 try:
     from dotenv import load_dotenv
@@ -48,13 +47,13 @@ class MarketDataFetcher(BaseTool):
     """Tool for fetching market data from various APIs"""
     
     def __init__(self):
-        self.indian_stocks = [
-            "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", 
-            "ICICIBANK.NS", "HINDUNILVR.NS", "SBIN.NS", "BHARTIARTL.NS"
-        ]
-        self.crypto_symbols = ["bitcoin", "ethereum", "binancecoin", "cardano", "solana"]
+        self.universe_manager = UniverseManager()
+        self.crypto_fallback_list = ["bitcoin", "ethereum", "ripple", "litecoin", "binancecoin", "cardano", "tron", "dogecoin", "solana", "tether"]
+        self.price_cache_path = os.path.join(self.universe_manager.CACHE_DIR, "price_cache.json")
+        self.crypto_universe_path = os.path.join(self.universe_manager.CACHE_DIR, "crypto_universe.json")
+        self.price_ttl_hours = 1
         
-    def execute(self, data_types: List[str] = None) -> MarketDataResponse:
+    def execute(self, data_types: List[str] = None, sector_pattern: str = None) -> MarketDataResponse:
         """
         Fetch market data for specified data types
         """
@@ -65,7 +64,7 @@ class MarketDataFetcher(BaseTool):
             market_data = {}
             
             if 'stocks' in data_types:
-                market_data['stocks'] = self.fetch_stock_data()
+                market_data['stocks'] = self.fetch_stock_data(sector_pattern=sector_pattern)
             
             if 'crypto' in data_types:
                 market_data['crypto'] = self.fetch_crypto_data()
@@ -99,58 +98,142 @@ class MarketDataFetcher(BaseTool):
                 error_message=str(e)
             )
     
-    def fetch_stock_data(self) -> Dict[str, Any]:
-        """Fetch Indian stock data using yfinance"""
+    def fetch_stock_data(self, sector_pattern: str = None) -> Dict[str, Any]:
+        """Fetch Indian stock data using batch yfinance calls with caching"""
+        # 1. Check Cache first
+        cache_key = f"stocks_{sector_pattern or 'all'}"
+        if self._is_price_cache_valid(cache_key):
+            try:
+                with open(self.price_cache_path, 'r') as f:
+                    cache = json.load(f)
+                    logger.info(f"Using cached stock data for {cache_key}")
+                    return cache[cache_key]['data']
+            except Exception:
+                pass
+
+        # 2. Get Universe
+        symbols = self.universe_manager.get_symbols(sector_pattern=sector_pattern)
+        if not symbols:
+            return self._get_fallback_stock_data()
+
         stock_data = {}
         try:
-            for symbol in self.indian_stocks:
+            logger.info(f"Batch fetching data for {len(symbols)} symbols from yfinance...")
+            # yfinance supports download(list_of_symbols)
+            tickers = yf.download(symbols, period="1mo", interval="1d", group_by='ticker', threads=True, progress=False, timeout=20)
+            
+            for symbol in symbols:
                 try:
-                    ticker = yf.Ticker(symbol)
-                    hist = ticker.history(period="1mo", interval="1d", timeout=10)
+                    # Handle both single ticker and multi-ticker DataFrame structures
+                    hist = tickers[symbol] if len(symbols) > 1 else tickers
                     
-                    if not hist.empty:
-                        returns = hist['Close'].pct_change().dropna()
+                    if not hist.empty and 'Close' in hist.columns:
+                        valid_close = hist['Close'].dropna()
+                        if len(valid_close) < 2: continue
+                        
+                        returns = valid_close.pct_change().dropna()
                         stock_data[symbol] = {
                             "symbol": symbol,
-                            "current_price": float(hist['Close'].iloc[-1]),
-                            "previous_close": float(hist['Close'].iloc[-2]) if len(hist) > 1 else float(hist['Close'].iloc[-1]),
+                            "current_price": float(valid_close.iloc[-1]),
+                            "previous_close": float(valid_close.iloc[-2]),
                             "daily_change": float(returns.iloc[-1]) if len(returns) > 0 else 0.0,
                             "volatility": float(returns.std()) if len(returns) > 1 else 0.1,
                             "mean_return": float(returns.mean()) if len(returns) > 0 else 0.0,
                             "volume": int(hist['Volume'].iloc[-1]) if 'Volume' in hist.columns else 0,
                             "high_52w": float(hist['High'].max()),
                             "low_52w": float(hist['Low'].min()),
-                            "data_points": len(hist),
+                            "data_points": len(valid_close),
                             "last_updated": datetime.now().isoformat()
                         }
-                except Exception as e:
-                    logger.warning(f"Failed to fetch data for {symbol}: {str(e)}")
+                except Exception:
                     continue
         except Exception as e:
-            logger.error(f"Error in stock data fetching: {str(e)}")
+            logger.error(f"Error in batch stock data fetching: {str(e)}")
             
         if not stock_data:
-            logger.info("Providing fallback stock data due to yfinance failures")
+            logger.info("Providing fallback stock data")
             stock_data = self._get_fallback_stock_data()
+        else:
+            self._save_to_price_cache(cache_key, stock_data)
             
         return stock_data
-    
-    def _get_fallback_stock_data(self) -> Dict[str, Any]:
-        """Fallback stock data"""
-        return {
-            "RELIANCE.NS": {"symbol": "RELIANCE.NS", "current_price": 2563.40, "mean_return": 0.08, "volatility": 0.133, "last_updated": datetime.now().isoformat()},
-            "TCS.NS": {"symbol": "TCS.NS", "current_price": 3136.60, "mean_return": 0.08, "volatility": 0.133, "last_updated": datetime.now().isoformat()},
-            "HDFCBANK.NS": {"symbol": "HDFCBANK.NS", "current_price": 1734.25, "mean_return": 0.08, "volatility": 0.133, "last_updated": datetime.now().isoformat()},
-            "INFY.NS": {"symbol": "INFY.NS", "current_price": 1566.40, "mean_return": 0.08, "volatility": 0.133, "last_updated": datetime.now().isoformat()}
+
+    def _is_price_cache_valid(self, key: str) -> bool:
+        if not os.path.exists(self.price_cache_path):
+            return False
+        try:
+            with open(self.price_cache_path, 'r') as f:
+                cache = json.load(f)
+                if key in cache:
+                    file_time = cache[key].get('timestamp', 0)
+                    return (time.time() - file_time) / 3600 < self.price_ttl_hours
+        except Exception:
+            pass
+        return False
+
+    def _save_to_price_cache(self, key: str, data: Dict[str, Any]):
+        cache = {}
+        if os.path.exists(self.price_cache_path):
+            try:
+                with open(self.price_cache_path, 'r') as f:
+                    cache = json.load(f)
+            except Exception:
+                pass
+        
+        cache[key] = {
+            "timestamp": time.time(),
+            "data": data
         }
+        try:
+            with open(self.price_cache_path, 'w') as f:
+                json.dump(cache, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to write price cache: {e}")
     
+    def fetch_crypto_universe(self, force_refresh: bool = False) -> List[str]:
+        """Fetch top 10 cryptocurrencies by market cap from CoinGecko with 24h cache"""
+        if not force_refresh and self._is_cache_valid(self.crypto_universe_path, 1): # 1 day TTL
+            try:
+                with open(self.crypto_universe_path, 'r') as f:
+                    data = json.load(f)
+                    logger.info("Loaded crypto universe from cache.")
+                    return data.get('ids', self.crypto_fallback_list)
+            except Exception:
+                pass
+
+        logger.info("Fetching top 10 cryptos by market cap from CoinGecko...")
+        try:
+            url = "https://api.coingecko.com/api/v3/coins/markets"
+            params = {
+                "vs_currency": "usd",
+                "order": "market_cap_desc",
+                "per_page": 10,
+                "page": 1,
+                "sparkline": "false"
+            }
+            response = requests.get(url, params=params, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                crypto_ids = [coin['id'] for coin in data]
+                
+                # Cache the results
+                with open(self.crypto_universe_path, 'w') as f:
+                    json.dump({"timestamp": time.time(), "ids": crypto_ids}, f)
+                
+                return crypto_ids
+        except Exception as e:
+            logger.warning(f"Failed to fetch crypto universe: {e}")
+        
+        return self.crypto_fallback_list
+
     def fetch_crypto_data(self) -> Dict[str, Any]:
-        """Fetch crypto data"""
+        """Fetch crypto data for the dynamically discovered top 10 list"""
+        crypto_ids = self.fetch_crypto_universe()
         crypto_data = {}
         try:
             url = "https://api.coingecko.com/api/v3/simple/price"
             params = {
-                "ids": ",".join(self.crypto_symbols),
+                "ids": ",".join(crypto_ids),
                 "vs_currencies": "inr,usd",
                 "include_market_cap": "true",
                 "include_24hr_vol": "true",
@@ -159,7 +242,7 @@ class MarketDataFetcher(BaseTool):
             response = requests.get(url, params=params, timeout=10)
             if response.status_code == 200:
                 data = response.json()
-                for symbol in self.crypto_symbols:
+                for symbol in crypto_ids:
                     if symbol in data:
                         d = data[symbol]
                         crypto_data[symbol] = {
@@ -173,11 +256,23 @@ class MarketDataFetcher(BaseTool):
                             "last_updated": datetime.now().isoformat()
                         }
         except Exception as e:
-            logger.warning(f"Crypto API failed: {e}")
+            logger.warning(f"Crypto data fetch failed: {e}")
             
         if not crypto_data:
             crypto_data = self._get_default_crypto_data()
         return crypto_data
+
+    def _is_cache_valid(self, path: str, ttl_days: int) -> bool:
+        if not os.path.exists(path):
+            return False
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+                file_time = data.get('timestamp', 0)
+                age_days = (time.time() - file_time) / (24 * 3600)
+                return age_days < ttl_days
+        except Exception:
+            return False
 
     def _get_default_crypto_data(self) -> Dict[str, Any]:
         return {
@@ -431,7 +526,10 @@ class DataAgent:
     
     def execute(self, user_profile: Dict[str, Any], force_refresh: bool = False) -> Dict[str, Any]:
         try:
-            market_response = self.market_data_fetcher.execute()
+            # Extract sector pattern for regex filtering if provided
+            sector_pattern = user_profile.get("constraints", {}).get("sector_filter")
+            
+            market_response = self.market_data_fetcher.execute(sector_pattern=sector_pattern)
             if not market_response.success:
                 return {"error": "Failed to fetch market data"}
             
