@@ -79,7 +79,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-export const FinancialProfileForm = () => {
+export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     const [step, setStep] = useState(1)
     const [totalSteps] = useState(6)
     const { optimizePortfolio, loading, currentRequest, error } = usePortfolioOptimizer()
@@ -143,27 +143,31 @@ export const FinancialProfileForm = () => {
 
     if (currentRequest?.status === "completed") {
         return (
-            <Card className="max-w-2xl mx-auto border-none shadow-2xl bg-gradient-to-br from-background/50 to-secondary/30 backdrop-blur-xl mt-10">
+            <Card className="border-none shadow-none bg-transparent">
                 <CardHeader className="text-center">
                     <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
                         <CheckCircle2 className="w-10 h-10 text-primary" />
                     </div>
-                    <CardTitle className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
-                        Strategy Unlocked!
-                    </CardTitle>
+                    <CardTitle className="text-2xl font-bold">Strategy Unlocked!</CardTitle>
                     <CardDescription>
-                        Our Multi-Agent system has finalized your 2026 investment roadmap.
+                        Our Multi-Agent system has finalized your investment roadmap.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
-                        <h4 className="font-semibold mb-2">Execution Protocol Ready</h4>
-                        <p className="text-sm text-muted-foreground">
-                            Your allocation involves {Object.keys(currentRequest.output?.macro_allocation || {}).length} asset classes and specific micro-picks.
+                        <h4 className="font-semibold mb-2 text-sm">Execution Protocol Ready</h4>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                            {currentRequest.output?.macro_allocation ?
+                                `Your allocation involves ${Object.keys(currentRequest.output.macro_allocation).length} asset classes.` :
+                                "Your personalized strategy is ready to view."
+                            }
                         </p>
                     </div>
-                    <Button className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20" onClick={() => window.location.href = '/dashboard'}>
-                        View Full Allocation
+                    <Button
+                        className="w-full h-10 text-sm font-bold shadow-lg shadow-primary/20"
+                        onClick={() => onSuccess?.()}
+                    >
+                        View Recommendations
                     </Button>
                 </CardContent>
             </Card>

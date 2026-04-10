@@ -214,6 +214,10 @@ export async function POST(request: NextRequest) {
         const symbol = investment.symbol
         const data = await fetchStockData(symbol)
 
+        const isDebt = ['bond', 'debt', 'mutual fund', 'fixed income', 'fd', 'ppf'].includes(investment.type?.toLowerCase() || '') ||
+          symbol.toLowerCase().includes('fd-') ||
+          symbol.toLowerCase().includes('ppf')
+
         if (data) {
           const quantity = investment.quantity || 0
           const investedAmount = investment.investedAmount || 0
@@ -229,8 +233,8 @@ export async function POST(request: NextRequest) {
             marketCap: data.marketCap,
             pe: data.pe,
             dividend: data.dividend,
-            riskLevel: data.beta && data.beta > 1.5 ? 'High' : data.beta && data.beta < 0.8 ? 'Low' : 'Medium',
-            recommendation: data.dayChangePercent > 2 ? 'Buy' : data.dayChangePercent < -2 ? 'Sell' : 'Hold',
+            riskLevel: data.beta && data.beta > 1.5 ? 'High' : (data.beta && data.beta < 0.8 ? 'Low' : 'Medium'),
+            recommendation: data.dayChangePercent > 2 ? 'Buy' : (data.dayChangePercent < -2 ? 'Sell' : 'Hold'),
             sector: data.sector,
             volatility: Math.random() * 30 + 10,
             currentValue: Math.round(currentValue * 100) / 100,
@@ -238,8 +242,41 @@ export async function POST(request: NextRequest) {
             gainPercent: Math.round(gainPercent * 100) / 100,
             lastUpdated: data.lastUpdated
           })
+        } else if (isDebt) {
+          // Handle FDs and Bonds that don't have ticker symbols
+          const investedAmount = Number(investment.investedAmount) || 0
+          const rate = Number(investment.rate) || 0.07 // Default 7%
+          const purchaseDateStr = investment.purchaseDate || investment.date || new Date().toISOString()
+          const purchaseDate = new Date(purchaseDateStr)
+          const now = new Date()
+
+          const diffTime = Math.max(0, now.getTime() - purchaseDate.getTime())
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+          // Simple accrued interest: P * r * (days/365)
+          const accruedInterest = investedAmount * rate * (diffDays / 365)
+          const currentValue = investedAmount + accruedInterest
+          const totalGain = accruedInterest
+
+          updatedPortfolio.push({
+            ...investment,
+            currentPrice: investment.currentPrice || (investedAmount / (Number(investment.quantity) || 1)),
+            dayChange: 0,
+            dayChangePercent: 0,
+            currentValue: Math.round(currentValue * 100) / 100,
+            totalGain: Math.round(totalGain * 100) / 100,
+            gainPercent: investedAmount > 0 ? Math.round((totalGain / investedAmount) * 10000) / 100 : 0,
+            lastUpdated: now.toISOString()
+          })
         } else {
-          updatedPortfolio.push(investment)
+          // If not debt and fetch failed, keep as is but ensure no NaNs
+          updatedPortfolio.push({
+            ...investment,
+            currentValue: investment.currentValue || investment.investedAmount || 0,
+            totalGain: investment.totalGain || 0,
+            dayChange: investment.dayChange || 0,
+            dayChangePercent: investment.dayChangePercent || 0
+          })
         }
       }
 

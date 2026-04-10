@@ -1,0 +1,374 @@
+{
+  "portfolio_recommendation": {
+    "meta_data": {
+      "user_id": "user_5388149974602197768",
+      "recommendation_id": "rec_20260410_130954",
+      "generated_timestamp": "2026-04-10T13:09:54.547244",
+      "model_version": "v1.0",
+      "risk_profile": "Moderate",
+      "total_investment": 1000000,
+      "currency": "INR"
+    },
+    "macro_allocation": {
+      "stocks": {
+        "percentage": 0.3,
+        "amount": 300000.0,
+        "rationale": "Growth potential with 30% equity exposure aligned with risk profile"
+      },
+      "mutual_funds": {
+        "percentage": 0.3,
+        "amount": 300000.0,
+        "rationale": "Professional management and diversification with 30% allocation"
+      },
+      "crypto": {
+        "percentage": 0.05,
+        "amount": 50000.0,
+        "rationale": "Small 5% allocation for high growth potential and portfolio diversification"
+      },
+      "commodities": {
+        "percentage": 0.15,
+        "amount": 150000.0,
+        "rationale": "15% allocation based on portfolio optimization"
+      },
+      "fd": {
+        "percentage": 0.1,
+        "amount": 100000.0,
+        "rationale": "10% allocation based on portfolio optimization"
+      },
+      "ppf": {
+        "percentage": 0.1,
+        "amount": 100000.0,
+        "rationale": "10% allocation based on portfolio optimization"
+      }
+    },
+    "micro_allocation": {
+      "stocks": [
+        {
+          "symbol": "TITAN",
+          "name": "TITAN.NS",
+          "asset_class": "stocks",
+          "amount": 8339.11,
+          "quantity": 1.844853232075285,
+          "current_price": 4520.2001953125,
+          "sector": "Unknown",
+          "rationale": "Risk-adjusted score: 14.19. Return: 0.06%, Volatility: 1.75%",
+          "score": 14.19,
+          "expected_return": 0.0005543224768404132,
+          "risk_score": 0.08748155380759581
+        },
+        {
+          "symbol": "ETERNAL",
+          "name": "ETERNAL.NS",
+          "asset_class": "stocks",
+          "amount": 6925.14,
+          "quantity": 28.63285338767764,
+          "current_price": 241.86000061035156,
+          "sector": "Unknown",
+          "rationale": "Risk-adjusted score: 11.79. Return: 0.06%, Volatility: 1.75%",
+          "score": 11.79,
+          "expected_return": 0.0005543224768404132,
+          "risk_score": 0.08748155380759581
+        },
+        {
+          "symbol": "TRENT",
+          "name": "TRENT.NS",
+          "asset_class": "stocks",
+          "amount": 5961.48,
+          "quantity": 1.512413603229603,
+          "current_price": 3941.699951171875,
+          "sector": "Unknown",
+          "rationale": "Risk-adjusted score: 10.15. Return: 0.06%, Volatility: 1.75%",
+          "score": 10.15,
+          "expected_return": 0.0005543224768404132,
+          "risk_score": 0.08748155380759581
+        },
+        {
+          "symbol": "ADANIENT",
+          "name": "ADANIENT.NS",
+          "asset_class": "stocks",
+          "amount": 4521.2,
+          "quantity": 2.1757449733522316,
+          "current_price": 2078.0,
+          "sector": "Unknown",
+          "rationale": "Risk-adjusted score: 7.69. Return: 0.06%, Volatility: 1.75%",
+          "score": 7.69,
+          "expected_return": 0.0005543224768404132,
+          "risk_score": 0.08748155380759581
+        },
+        {
+          "symbol": "ADANIPORTS",
+          "name": "ADANIPORTS.NS",
+          "asset_class": "stocks",
+          "amount": 4253.07,
+          "quantity": 2.8930504810788054,
+          "current_price": 1470.0999755859375,
+          "sector": "Unknown",
+          "rationale": "Risk-adjusted score: 7.24. Return: 0.06%, Volatility: 1.75%",
+          "score": 7.24,
+          "expected_return": 0.0005543224768404132,
+          "risk_score": 0.08748155380759581
+        }
+      ],
+      "crypto": [
+        {
+          "symbol": "ETHEREUM",
+          "name": "Ethereum",
+          "asset_class": "crypto",
+          "amount": 1834.16,
+          "quantity": 0.009044655298957805,
+          "current_price": 202789,
+          "rationale": "Dynamic Score: 871.3 (Vol: 0.01, Cap: \u20b92447493Cr)",
+          "score": 871.25,
+          "volatility": 0.005664382152820152,
+          "daily_change": 0.0011328764305640305
+        },
+        {
+          "symbol": "TETHER",
+          "name": "Tether",
+          "asset_class": "crypto",
+          "amount": 1810.09,
+          "quantity": 19.520003711406957,
+          "current_price": 92.73,
+          "rationale": "Dynamic Score: 859.8 (Vol: 0.00, Cap: \u20b91707206Cr)",
+          "score": 859.82,
+          "volatility": 0.001615069166516845,
+          "daily_change": -0.000323013833303369
+        },
+        {
+          "symbol": "BINANCECOIN",
+          "name": "Binancecoin",
+          "asset_class": "crypto",
+          "amount": 1355.75,
+          "quantity": 0.02432499241806546,
+          "current_price": 55735,
+          "rationale": "Dynamic Score: 644.0 (Vol: 0.00, Cap: \u20b9759978Cr)",
+          "score": 644.0,
+          "volatility": 0.00028078237965811537,
+          "daily_change": -5.615647593162307e-05
+        }
+      ],
+      "mutual_funds": [
+        {
+          "symbol": "ICICI Prudential Focused Equity Fund",
+          "name": "ICICI Prudential Focused Equity Fund",
+          "asset_class": "mutual_funds",
+          "amount": 10500.0,
+          "quantity": 93.62460989745875,
+          "current_price": 112.15,
+          "category": "Flexi Cap",
+          "rationale": "Best Flexi Cap fund based on returns (2380.0%). Allocation: 35%",
+          "score": 9.0,
+          "return_metric": 23.799999999999997
+        },
+        {
+          "symbol": "ICICI Prudential BHARAT 22 FOF Fund",
+          "name": "ICICI Prudential BHARAT 22 FOF Fund",
+          "asset_class": "mutual_funds",
+          "amount": 9000.0,
+          "quantity": 263.23486399532027,
+          "current_price": 34.19,
+          "category": "Large Cap",
+          "rationale": "Best Large Cap fund based on returns (2670.0%). Allocation: 30%",
+          "score": 9.0,
+          "return_metric": 26.7
+        },
+        {
+          "symbol": "Invesco India Mid Cap Fund",
+          "name": "Invesco India Mid Cap Fund",
+          "asset_class": "mutual_funds",
+          "amount": 6000.0,
+          "quantity": 26.456192953833945,
+          "current_price": 226.79,
+          "category": "Mid Cap",
+          "rationale": "Best Mid Cap fund based on returns (2930.0%). Allocation: 20%",
+          "score": 9.0,
+          "return_metric": 29.299999999999997
+        },
+        {
+          "symbol": "MF-AGGRESSIVE-HYBRID",
+          "name": "Generic Aggressive Hybrid Fund",
+          "asset_class": "mutual_funds",
+          "amount": 4500.0,
+          "quantity": 45.0,
+          "current_price": 100.0,
+          "category": "Aggressive Hybrid",
+          "rationale": "Recommended Aggressive Hybrid allocation (15%). (No specific fund data found)",
+          "score": 5.0
+        }
+      ],
+      "commodities": [
+        {
+          "symbol": "GOLDBEES",
+          "name": "Gold ETF",
+          "asset_class": "commodities",
+          "amount": 11250.0,
+          "quantity": 7.904305211571902,
+          "current_price": 1423.275,
+          "rationale": "Gold allocation (75%) for stability. Price: INR 14233/g",
+          "score": 9.0,
+          "sub_asset_class": "gold"
+        },
+        {
+          "symbol": "SILVERBEES",
+          "name": "Silver ETF",
+          "asset_class": "commodities",
+          "amount": 3750.0,
+          "quantity": 1.6629711751662972,
+          "current_price": 2255.0,
+          "rationale": "Silver allocation (25%) for growth. Price: INR 226/g",
+          "score": 8.5,
+          "sub_asset_class": "silver"
+        }
+      ],
+      "ppf": [
+        {
+          "symbol": "PPF",
+          "name": "Public Provident Fund",
+          "asset_class": "ppf",
+          "amount": 10000.0,
+          "quantity": 1,
+          "current_price": 10000.0,
+          "rate": 0.071,
+          "tenure": 15,
+          "rationale": "Tax-free long-term savings at 7.1% p.a.",
+          "score": 9.0,
+          "tax_benefit": "80C + Tax-free returns"
+        }
+      ],
+      "fd": [
+        {
+          "symbol": "FD-BANK-IDFC-FIRST-BANK",
+          "name": "IDFC FIRST Bank FD (Regular)",
+          "asset_class": "fd",
+          "amount": 3600.0,
+          "quantity": 1,
+          "current_price": 3600.0,
+          "rate": 0.07,
+          "tenure": 5,
+          "rationale": "Top Bank FD for Regular_5_10y at 7.0%",
+          "score": 8.0,
+          "bank": "IDFC FIRST Bank"
+        },
+        {
+          "symbol": "FD-BANK-YES-BANK",
+          "name": "YES Bank FD (Regular)",
+          "asset_class": "fd",
+          "amount": 2400.0,
+          "quantity": 1,
+          "current_price": 2400.0,
+          "rate": 0.0675,
+          "tenure": 5,
+          "rationale": "Top Bank FD for Regular_5_10y at 6.75%",
+          "score": 8.0,
+          "bank": "YES Bank"
+        },
+        {
+          "symbol": "FD-CORP-MUTHOOT-CAPITAL-SERVICES-LIMITED",
+          "name": "Muthoot Capital Services Limited FD (Regular)",
+          "asset_class": "fd",
+          "amount": 4000.0,
+          "quantity": 1,
+          "current_price": 4000.0,
+          "rate": 0.0895,
+          "tenure": 3,
+          "rationale": "Best Corporate FD for Corporate_3y at 8.95% (Rating: CRISIL-A+/Stable)",
+          "score": 7.5,
+          "company": "Muthoot Capital Services Limited"
+        }
+      ]
+    },
+    "risk_assessment": {
+      "risk_metrics": {
+        "expected_annual_return": 0.1195,
+        "estimated_volatility": 0.05899670356760409,
+        "sharpe_ratio": 1.0085309246442757,
+        "var_95": 0.022450422631291267,
+        "max_drawdown_estimate": 0.14749175891901023,
+        "beta": 0.645,
+        "correlation_with_nifty": 0.49,
+        "diversification_score": 0.9750000000000001,
+        "concentration_risk": "Low",
+        "liquidity_score": 0.645,
+        "stress_test_results": {
+          "market_crash_scenario": -0.178,
+          "inflation_shock": -0.03,
+          "interest_rate_rise": -0.0466
+        },
+        "overall_risk_level": "Low",
+        "risk_score": 0.47
+      },
+      "constraint_violations": [],
+      "compliance_result": {
+        "is_compliant": true,
+        "violations": [],
+        "warnings": [],
+        "compliance_score": 1.0
+      },
+      "stress_test_results": {
+        "market_crash": {
+          "scenario": "Market Crash (35% equity drop)",
+          "portfolio_impact": -0.1885,
+          "worst_case_loss": 0.1885,
+          "recovery_time_estimate": "12-24 months"
+        },
+        "inflation_spike": {
+          "scenario": "Inflation Spike (8% inflation)",
+          "real_return_impact": -0.0175,
+          "inflation_protection_score": 0.9825
+        },
+        "interest_rate_shock": {
+          "scenario": "Interest Rate Shock (+300 basis points)",
+          "portfolio_impact": -0.051000000000000004,
+          "duration_risk": "Moderate"
+        },
+        "liquidity_crisis": {
+          "scenario": "Liquidity Crisis",
+          "liquidity_impact": -0.039,
+          "time_to_liquidate": "7-14 days",
+          "liquidity_risk_level": 0.645
+        }
+      },
+      "needs_rebalancing": false,
+      "adjusted_allocation": null,
+      "overall_assessment": "APPROVED",
+      "risk_violations": [],
+      "overall_risk_level": "Low",
+      "expected_annual_return": 0.1195,
+      "sharpe_ratio": 1.0085309246442757,
+      "assessment_timestamp": "2026-04-10T13:09:34.435847"
+    },
+    "actionable_advice": {
+      "allocation_summary": "Portfolio explanation generated using fallback mode. API integration required for detailed analysis.",
+      "specific_recommendations": [],
+      "risk_assessment": "Portfolio explanation generated using fallback mode. API integration required for detailed analysis.",
+      "action_items": [],
+      "important_considerations": "Portfolio explanation generated using fallback mode. API integration required for detailed analysis.",
+      "immediate_actions": [],
+      "metadata": {
+        "generation_timestamp": "2026-04-10T13:09:54.545318",
+        "total_investment": 1000000,
+        "user_risk_profile": 0.6,
+        "model_used": "gemini-2.0-flash"
+      }
+    },
+    "workflow_summary": {},
+    "errors": [],
+    "compliance_and_disclaimers": {
+      "regulatory_compliance": [
+        "Recommendations comply with SEBI guidelines",
+        "Tax implications shown are estimates only",
+        "Past performance doesn't guarantee future results"
+      ],
+      "important_disclaimers": [
+        "This is AI-generated advice for educational purposes",
+        "Please consult a qualified financial advisor",
+        "Market risks apply to all investments"
+      ],
+      "data_sources": [
+        "NSE/BSE for stock prices",
+        "CoinGecko for cryptocurrency prices",
+        "RBI for fixed income rates"
+      ]
+    }
+  }
+}

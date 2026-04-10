@@ -18,11 +18,11 @@ interface PortfolioOverviewProps {
 }
 
 export function PortfolioOverview({
-  totalValue,
-  totalGain,
-  totalGainPercent,
-  dayChange,
-  dayChangePercent,
+  totalValue = 0,
+  totalGain = 0,
+  totalGainPercent = 0,
+  dayChange = 0,
+  dayChangePercent = 0,
   onRefresh,
   onRebalance,
   isLoading = false
@@ -45,8 +45,8 @@ export function PortfolioOverview({
           <div className="text-2xl font-bold text-foreground break-words">{formatINR(totalValue)}</div>
           <div className="flex items-center space-x-2 flex-wrap">
             <span className="text-xs text-muted-foreground">All time</span>
-            <Badge 
-              variant={isGain ? "default" : "destructive"} 
+            <Badge
+              variant={isGain ? "default" : "destructive"}
               className={`text-xs px-2 py-1 ${isGain ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}
             >
               {isGain ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
@@ -71,8 +71,8 @@ export function PortfolioOverview({
           </div>
           <div className="flex items-center space-x-2 flex-wrap">
             <span className="text-xs text-muted-foreground">Today</span>
-            <Badge 
-              variant={isDayGain ? "default" : "destructive"} 
+            <Badge
+              variant={isDayGain ? "default" : "destructive"}
               className={`text-xs px-2 py-1 ${isDayGain ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}
             >
               {isDayGain ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}

@@ -19,201 +19,54 @@ import { AddGoalModal } from "@/components/add-goal-modal"
 import { EditGoalModal } from "@/components/edit-goal-modal"
 import { SellInvestmentModal } from "@/components/sell-investment-modal"
 import { InvestmentRecommendations } from "@/components/investment-recommendations"
+import { InvestmentInsights } from "@/components/investment-insights"
 import { StockSearch } from "@/components/stock-search"
 import { useMarketData } from "@/hooks/use-market-data"
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Area, AreaChart } from "recharts"
 import { formatINR } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-import { Wifi, WifiOff, RefreshCw } from "lucide-react"
+import { Wifi, WifiOff, RefreshCw, Sparkles, PlusCircle } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription
+} from "@/components/ui/dialog"
+import { FinancialProfileForm } from "@/components/FinancialProfileForm"
+import { db, auth } from "@/lib/firebase"
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  limit,
+  addDoc,
+  deleteDoc,
+  updateDoc,
+  doc,
+  serverTimestamp
+} from "firebase/firestore"
+import { onAuthStateChanged } from "firebase/auth"
+import { useEffect } from "react"
 
 // Sample data - in a real app, this would come from your backend
 
-const realInvestments = [
-  {
-    id: "1",
-    symbol: "RELIANCE.NS",
-    name: "Reliance Industries Ltd",
-    type: "Stock" as const,
-    category: "Equity" as const,
-    currentPrice: 2450.50,
-    quantity: 150,
-    investedAmount: 350000,
-    currentValue: 367575,
-    totalGain: 17575,
-    gainPercent: 5.02,
-    dayChange: 25.30,
-    dayChangePercent: 1.04,
-    color: "#3B82F6",
-    sector: "Energy",
-    marketCap: "₹16.5L Cr",
-    pe: 12.5,
-    dividend: 2.1,
-    recommendation: "Hold" as const,
-    riskLevel: "Medium" as const
-  },
-  {
-    id: "2",
-    symbol: "TCS.NS",
-    name: "Tata Consultancy Services",
-    type: "Stock" as const,
-    category: "Equity" as const,
-    currentPrice: 3850.75,
-    quantity: 50,
-    investedAmount: 180000,
-    currentValue: 192537.50,
-    totalGain: 12537.50,
-    gainPercent: 6.97,
-    dayChange: -15.25,
-    dayChangePercent: -0.39,
-    color: "#10B981",
-    sector: "IT Services",
-    marketCap: "₹14L Cr",
-    pe: 28.2,
-    dividend: 1.8,
-    recommendation: "Buy" as const,
-    riskLevel: "Low" as const
-  },
-  {
-    id: "3",
-    symbol: "HDFCBANK.NS",
-    name: "HDFC Bank Ltd",
-    type: "Stock" as const,
-    category: "Equity" as const,
-    currentPrice: 1650.20,
-    quantity: 100,
-    investedAmount: 155000,
-    currentValue: 165020,
-    totalGain: 10020,
-    gainPercent: 6.46,
-    dayChange: 8.50,
-    dayChangePercent: 0.52,
-    color: "#F59E0B",
-    sector: "Banking",
-    marketCap: "₹12L Cr",
-    pe: 15.8,
-    dividend: 2.5,
-    recommendation: "Strong Buy" as const,
-    riskLevel: "Low" as const
-  },
-  {
-    id: "4",
-    symbol: "GOLD",
-    name: "Gold (24K) - Physical",
-    type: "Commodity" as const,
-    category: "Commodity" as const,
-    currentPrice: 6234,
-    quantity: 20,
-    investedAmount: 120000,
-    currentValue: 124680,
-    totalGain: 4680,
-    gainPercent: 3.9,
-    dayChange: -45.67,
-    dayChangePercent: -0.73,
-    color: "#F59E0B",
-    sector: "Precious Metals",
-    marketCap: "N/A",
-    pe: "N/A",
-    dividend: "N/A",
-    recommendation: "Hold" as const,
-    riskLevel: "Low" as const
-  },
-  {
-    id: "5",
-    symbol: "BTC",
-    name: "Bitcoin",
-    type: "Crypto" as const,
-    category: "Crypto" as const,
-    currentPrice: 4500000,
-    quantity: 0.1,
-    investedAmount: 400000,
-    currentValue: 450000,
-    totalGain: 50000,
-    gainPercent: 12.5,
-    dayChange: 125000,
-    dayChangePercent: 2.86,
-    color: "#8B5CF6",
-    sector: "Cryptocurrency",
-    marketCap: "₹85L Cr",
-    pe: "N/A",
-    dividend: "N/A",
-    recommendation: "Hold" as const,
-    riskLevel: "High" as const
-  },
-  {
-    id: "6",
-    symbol: "ETH",
-    name: "Ethereum",
-    type: "Crypto" as const,
-    category: "Crypto" as const,
-    currentPrice: 280000,
-    quantity: 0.5,
-    investedAmount: 120000,
-    currentValue: 140000,
-    totalGain: 20000,
-    gainPercent: 16.67,
-    dayChange: 8500,
-    dayChangePercent: 3.13,
-    color: "#6366F1",
-    sector: "Cryptocurrency",
-    marketCap: "₹33L Cr",
-    pe: "N/A",
-    dividend: "N/A",
-    recommendation: "Buy" as const,
-    riskLevel: "High" as const
-  },
-  {
-    id: "7",
-    symbol: "SBIN.NS",
-    name: "State Bank of India",
-    type: "Stock" as const,
-    category: "Equity" as const,
-    currentPrice: 580.25,
-    quantity: 200,
-    investedAmount: 110000,
-    currentValue: 116050,
-    totalGain: 6050,
-    gainPercent: 5.5,
-    dayChange: 12.50,
-    dayChangePercent: 2.2,
-    color: "#EF4444",
-    sector: "Banking",
-    marketCap: "₹5.2L Cr",
-    pe: 8.5,
-    dividend: 3.2,
-    recommendation: "Buy" as const,
-    riskLevel: "Medium" as const
-  },
-  {
-    id: "8",
-    symbol: "AXISBANK.NS",
-    name: "Axis Bank Ltd",
-    type: "Stock" as const,
-    category: "Equity" as const,
-    currentPrice: 1080.50,
-    quantity: 80,
-    investedAmount: 85000,
-    currentValue: 86440,
-    totalGain: 1440,
-    gainPercent: 1.69,
-    dayChange: -5.25,
-    dayChangePercent: -0.48,
-    color: "#06B6D4",
-    sector: "Banking",
-    marketCap: "₹3.2L Cr",
-    pe: 12.1,
-    dividend: 1.5,
-    recommendation: "Hold" as const,
-    riskLevel: "Medium" as const
-  }
-]
+// Initial empty portfolio
+const initialInvestments: any[] = []
 
 // Calculate real portfolio data from investments
 const calculatePortfolioData = (investments: any[]) => {
-  const totalValue = investments.reduce((sum, inv) => sum + inv.currentValue, 0)
-  const totalGain = investments.reduce((sum, inv) => sum + inv.totalGain, 0)
-  const totalGainPercent = (totalGain / (totalValue - totalGain)) * 100
-  const dayChange = investments.reduce((sum, inv) => sum + (inv.dayChange * inv.quantity), 0)
-  const dayChangePercent = (dayChange / totalValue) * 100
+  const totalValue = investments.reduce((sum, inv) => sum + (Number(inv.currentValue) || 0), 0)
+  const totalInvested = investments.reduce((sum, inv) => sum + (Number(inv.investedAmount) || 0), 0)
+  const totalGain = investments.reduce((sum, inv) => sum + (Number(inv.totalGain) || 0), 0)
+
+  const totalGainPercent = totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0
+
+  const dayChange = investments.reduce((sum, inv) => sum + ((Number(inv.dayChange) || 0) * (Number(inv.quantity) || 0)), 0)
+  const dayChangePercent = totalValue > 0 ? (dayChange / totalValue) * 100 : 0
 
   return {
     totalValue,
@@ -413,19 +266,131 @@ const performanceData = [
 
 export default function InvestmentsPage() {
   const { toast } = useToast()
+
+  // UI States
+  const [isOptimizerOpen, setIsOptimizerOpen] = useState(false)
   const [rebalanceOpen, setRebalanceOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [addTransactionOpen, setAddTransactionOpen] = useState(false)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
   const [editGoalOpen, setEditGoalOpen] = useState(false)
-  const [selectedGoal, setSelectedGoal] = useState(null)
   const [sellInvestmentOpen, setSellInvestmentOpen] = useState(false)
-  const [selectedInvestment, setSelectedInvestment] = useState(null)
-  const [transactions, setTransactions] = useState(sampleTransactions)
-  const [goals, setGoals] = useState(investmentGoals)
-  const [marketAssetsState, setMarketAssets] = useState(marketAssets)
-  const [selectedAsset, setSelectedAsset] = useState(null)
   const [isMarketDataLoading, setIsMarketDataLoading] = useState(false)
+
+  // Data States
+  const [investments, setInvestments] = useState<any[]>(initialInvestments)
+  const [latestRecommendation, setLatestRecommendation] = useState<any>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [selectedGoal, setSelectedGoal] = useState<any>(null)
+  const [selectedInvestment, setSelectedInvestment] = useState<any>(null)
+  const [selectedAsset, setSelectedAsset] = useState<any>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [goals, setGoals] = useState<any[]>([])
+  const [marketAssetsState, setMarketAssets] = useState<any[]>(marketAssets)
+
+  // Auth & Sync
+  useEffect(() => {
+    let unsubs: (() => void)[] = []
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      // Unsubscribe from previous listeners
+      unsubs.forEach(unsub => unsub())
+      unsubs = []
+
+      if (user) {
+        setUserId(user.uid)
+
+        // Subscribe to Portfolio
+        const portfolioRef = collection(db, "users", user.uid, "portfolio")
+        unsubs.push(onSnapshot(portfolioRef, (snapshot) => {
+          const portfolioData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          setInvestments(portfolioData)
+        }))
+
+        // Subscribe to Latest Recommendation
+        const requestsRef = collection(db, "users", user.uid, "portfolio_requests")
+        const qRecs = query(requestsRef, where("status", "==", "completed"), orderBy("created_at", "desc"), limit(1))
+        unsubs.push(onSnapshot(qRecs, (snapshot) => {
+          if (!snapshot.empty) {
+            const data = snapshot.docs[0].data()
+            setLatestRecommendation({
+              id: snapshot.docs[0].id,
+              ...data,
+              timestamp: data.created_at?.toDate() || new Date()
+            })
+          }
+        }))
+
+        // Subscribe to Transactions
+        const transactionsRef = collection(db, "users", user.uid, "transactions")
+        const qTransactions = query(transactionsRef, orderBy("date", "desc"))
+        unsubs.push(onSnapshot(qTransactions, (snapshot) => {
+          const transactionsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          setTransactions(transactionsData)
+        }))
+
+        // Subscribe to Goals
+        const goalsRef = collection(db, "users", user.uid, "goals")
+        unsubs.push(onSnapshot(goalsRef, (snapshot) => {
+          const goalsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          setGoals(goalsData)
+        }))
+
+        // Subscribe to Watchlist
+        const watchlistRef = collection(db, "users", user.uid, "watchlist")
+        unsubs.push(onSnapshot(watchlistRef, (snapshot) => {
+          const watchedSymbols = snapshot.docs.map(doc => doc.id)
+          setMarketAssets(prev => prev.map(asset => ({
+            ...asset,
+            isWatched: watchedSymbols.includes(asset.symbol)
+          })))
+        }))
+
+        // Trigger Portfolio Snapshot
+        const checkSnapshot = async () => {
+          const historyRef = collection(db, "users", user.uid, "portfolio_history")
+          const today = new Date().toISOString().split('T')[0]
+
+          // Use a simple getDoc-like query to check if today exists
+          const qHistory = query(historyRef, where("date", "==", today), limit(1))
+          unsubs.push(onSnapshot(qHistory, (snapshot) => {
+            if (snapshot.empty && investments.length >= 0) {
+              // We need to be careful with the dependency here. 
+              // Usually we'd use getDocs once, but onSnapshot works if we only add if empty.
+              addDoc(historyRef, {
+                date: today,
+                value: calculatePortfolioData(investments).totalValue,
+                invested: investments.reduce((sum, inv) => sum + (Number(inv.investedAmount) || 0), 0),
+                gain: calculatePortfolioData(investments).totalGain,
+                created_at: serverTimestamp()
+              })
+            }
+          }))
+        }
+        checkSnapshot()
+      } else {
+        setUserId(null)
+        setInvestments([])
+        setLatestRecommendation(null)
+        setTransactions([])
+        setGoals([])
+      }
+    })
+
+    return () => {
+      unsubscribeAuth()
+      unsubs.forEach(unsub => unsub())
+    }
+  }, [])
 
   // Use real-time market data
   const {
@@ -434,7 +399,7 @@ export default function InvestmentsPage() {
     error: marketDataError,
     lastUpdated,
     refreshData: refreshMarketData
-  } = useMarketData(realInvestments)
+  } = useMarketData(investments)
 
   // Calculate portfolio data from real-time investments
   const portfolioData = calculatePortfolioData(realTimeInvestments)
@@ -503,9 +468,28 @@ Recommendation: ${asset.recommendation}
     setAddTransactionOpen(true)
   }
 
-  const handleAddTransactionSubmit = (newTransaction: any) => {
-    setTransactions(prev => [newTransaction, ...prev])
-    setAddTransactionOpen(false)
+  const handleAddTransactionSubmit = async (newTransaction: any) => {
+    if (!userId) return
+
+    try {
+      const transactionsRef = collection(db, "users", userId, "transactions")
+      await addDoc(transactionsRef, {
+        ...newTransaction,
+        created_at: serverTimestamp()
+      })
+      setAddTransactionOpen(false)
+      toast({
+        title: "Transaction Added",
+        description: "Your transaction has been recorded successfully."
+      })
+    } catch (error) {
+      console.error("Error adding transaction:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save transaction.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleEditTransaction = (transactionId: string) => {
@@ -513,8 +497,24 @@ Recommendation: ${asset.recommendation}
     // TODO: Implement edit transaction functionality
   }
 
-  const handleDeleteTransaction = (transactionId: string) => {
-    setTransactions(prev => prev.filter(transaction => transaction.id !== transactionId))
+  const handleDeleteTransaction = async (transactionId: string) => {
+    if (!userId) return
+
+    try {
+      const docRef = doc(db, "users", userId, "transactions", transactionId)
+      await deleteDoc(docRef)
+      toast({
+        title: "Transaction Deleted",
+        description: "The transaction has been removed."
+      })
+    } catch (error) {
+      console.error("Error deleting transaction:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete transaction.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleExport = () => {
@@ -538,15 +538,28 @@ Recommendation: ${asset.recommendation}
     window.URL.revokeObjectURL(url)
   }
 
-  const handleToggleWatch = (symbol: string) => {
-    setMarketAssets(prev =>
-      prev.map(asset =>
-        asset.symbol === symbol
-          ? { ...asset, isWatched: !asset.isWatched }
-          : asset
-      )
-    )
-    console.log("Toggle watch:", symbol)
+  const handleToggleWatch = async (symbol: string) => {
+    if (!userId) return
+
+    const asset = marketAssetsState.find(a => a.symbol === symbol)
+    const isCurrentlyWatched = asset?.isWatched
+
+    try {
+      const docRef = doc(db, "users", userId, "watchlist", symbol)
+      if (isCurrentlyWatched) {
+        await deleteDoc(docRef)
+        toast({ title: "Removed from Watchlist", description: `${symbol} removed.` })
+      } else {
+        const { setDoc } = await import("firebase/firestore")
+        await setDoc(docRef, {
+          symbol,
+          added_at: serverTimestamp()
+        })
+        toast({ title: "Added to Watchlist", description: `${symbol} added.` })
+      }
+    } catch (error) {
+      console.error("Error toggling watch:", error)
+    }
   }
 
   const handleBuyAsset = (asset: any) => {
@@ -555,8 +568,8 @@ Recommendation: ${asset.recommendation}
       id: Date.now().toString(),
       symbol: asset.symbol,
       name: asset.name,
-      type: asset.category === 'Crypto' ? 'Crypto' : 'Stock' as const,
-      category: asset.category as const,
+      type: (asset.category === 'Crypto' ? 'Crypto' : 'Stock') as "Crypto" | "Stock",
+      category: asset.category as "Equity" | "Commodity" | "Crypto" | "Mutual Fund" | "Stable",
       currentPrice: asset.price,
       quantity: 0, // Will be set in the modal
       investedAmount: 0,
@@ -590,9 +603,29 @@ Recommendation: ${asset.recommendation}
     setAddGoalOpen(true)
   }
 
-  const handleAddGoalSubmit = (newGoal: any) => {
-    setGoals(prev => [newGoal, ...prev])
-    setAddGoalOpen(false)
+  const handleAddGoalSubmit = async (newGoal: any) => {
+    if (!userId) return
+
+    try {
+      const goalsRef = collection(db, "users", userId, "goals")
+      await addDoc(goalsRef, {
+        ...newGoal,
+        id: undefined, // Let Firestore generate ID
+        created_at: serverTimestamp()
+      })
+      setAddGoalOpen(false)
+      toast({
+        title: "Goal Created",
+        description: `${newGoal.name} has been added to your financial targets.`
+      })
+    } catch (error) {
+      console.error("Error adding goal:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create goal.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleEditGoal = (goal: any) => {
@@ -600,21 +633,116 @@ Recommendation: ${asset.recommendation}
     setEditGoalOpen(true)
   }
 
-  const handleUpdateGoal = (updatedGoal: any) => {
-    setGoals(prev => prev.map(goal => goal.id === updatedGoal.id ? updatedGoal : goal))
-    setEditGoalOpen(false)
-    setSelectedGoal(null)
+  const handleUpdateGoal = async (updatedGoal: any) => {
+    if (!userId) return
+
+    try {
+      const docRef = doc(db, "users", userId, "goals", updatedGoal.id)
+      await updateDoc(docRef, {
+        ...updatedGoal,
+        updated_at: serverTimestamp()
+      })
+      setEditGoalOpen(false)
+      setSelectedGoal(null)
+      toast({
+        title: "Goal Updated",
+        description: "Changes have been saved."
+      })
+    } catch (error) {
+      console.error("Error updating goal:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update goal.",
+        variant: "destructive"
+      })
+    }
   }
 
-  const handleDeleteGoal = (goalId: string) => {
-    setGoals(prev => prev.filter(goal => goal.id !== goalId))
+  const handleDeleteGoal = async (goalId: string) => {
+    if (!userId) return
+
+    try {
+      const docRef = doc(db, "users", userId, "goals", goalId)
+      await deleteDoc(docRef)
+      toast({
+        title: "Goal Deleted",
+        description: "The goal has been removed from your list."
+      })
+    } catch (error) {
+      console.error("Error deleting goal:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete goal.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handlePieSliceClick = (slice: any) => {
     console.log("Pie slice clicked:", slice)
     // Filter investments by category
-    const filteredInvestments = realInvestments.filter(inv => inv.category === slice.name)
+    const filteredInvestments = investments.filter((inv: any) => inv.category === slice.name)
     console.log("Filtered investments:", filteredInvestments)
+  }
+
+  const handleAIRecommendationAdd = async (recommendation: any) => {
+    if (!userId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to add investments to your portfolio.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      // Logic for limits (e.g., max 1 stock)
+      if (recommendation.asset_class === 'stocks') {
+        const existingStocks = investments.filter(inv => inv.type === 'Stock')
+        if (existingStocks.length >= 1) {
+          toast({
+            title: "Limit Reached",
+            description: "You can only have one stock in your portfolio. Please sell your existing stock first.",
+            variant: "destructive"
+          })
+          return
+        }
+      }
+
+      const portfolioRef = collection(db, "users", userId, "portfolio")
+      await addDoc(portfolioRef, {
+        symbol: recommendation.symbol || recommendation.name,
+        name: recommendation.name,
+        type: recommendation.asset_class === 'stocks' ? 'Stock' :
+          recommendation.asset_class === 'crypto' ? 'Crypto' :
+            recommendation.asset_class === 'mutual_funds' ? 'Mutual Fund' : 'Commodity',
+        category: recommendation.asset_class === 'stocks' ? 'Equity' :
+          recommendation.asset_class === 'crypto' ? 'Crypto' :
+            recommendation.asset_class === 'mutual_funds' ? 'Mutual Fund' : 'Commodity',
+        quantity: recommendation.quantity || 1,
+        investedAmount: recommendation.amount || 0,
+        currentPrice: recommendation.current_price || recommendation.price || 0,
+        created_at: serverTimestamp(),
+        color: "#3B82F6", // Default color
+        sector: recommendation.sector || "Unknown",
+        rationale: recommendation.rationale || "",
+        rate: recommendation.rate || (recommendation.current_price === "Stable" ? 0.07 : 0),
+        tenure: recommendation.term || recommendation.tenure || "N/A",
+        purchaseDate: new Date().toISOString()
+      })
+
+      toast({
+        title: "Success",
+        description: `${recommendation.name} added to your portfolio.`
+      })
+    } catch (error) {
+      console.error("Error adding to portfolio:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add investment to portfolio.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleSellInvestment = (investment: any) => {
@@ -622,24 +750,53 @@ Recommendation: ${asset.recommendation}
     setSellInvestmentOpen(true)
   }
 
-  const handleSellInvestmentSubmit = (sellData: any) => {
-    // Add sell transaction
-    const sellTransaction = {
-      id: Date.now().toString(),
-      date: sellData.date,
-      type: "Sell",
-      asset: sellData.symbol,
-      quantity: sellData.quantity,
-      price: sellData.price,
-      amount: sellData.amount,
-      status: "Completed",
-      category: "Equity", // This should be determined from the investment
-      notes: sellData.notes
-    }
+  const handleSellInvestmentSubmit = async (sellData: any) => {
+    if (!userId || !selectedInvestment) return
 
-    setTransactions(prev => [sellTransaction, ...prev])
-    setSellInvestmentOpen(false)
-    setSelectedInvestment(null)
+    try {
+      // 1. Add sell transaction
+      const transactionsRef = collection(db, "users", userId, "transactions")
+      await addDoc(transactionsRef, {
+        date: sellData.date,
+        type: "Sell",
+        asset: selectedInvestment.id, // Reference to original investment maybe? Or just symbol.
+        symbol: selectedInvestment.symbol,
+        quantity: sellData.quantity,
+        price: sellData.price,
+        amount: sellData.amount,
+        status: "Completed",
+        category: selectedInvestment.category,
+        notes: sellData.notes,
+        created_at: serverTimestamp()
+      })
+
+      // 2. Update portfolio
+      const investmentRef = doc(db, "users", userId, "portfolio", selectedInvestment.id)
+      const remainingQuantity = (Number(selectedInvestment.quantity) || 0) - (Number(sellData.quantity) || 0)
+
+      if (remainingQuantity <= 0.0001) {
+        await deleteDoc(investmentRef)
+      } else {
+        await updateDoc(investmentRef, {
+          quantity: remainingQuantity,
+          updated_at: serverTimestamp()
+        })
+      }
+
+      setSellInvestmentOpen(false)
+      setSelectedInvestment(null)
+      toast({
+        title: "Investment Sold",
+        description: `Successfully sold ${sellData.quantity} of ${selectedInvestment.symbol}.`
+      })
+    } catch (error) {
+      console.error("Error selling investment:", error)
+      toast({
+        title: "Error",
+        description: "Failed to process sale.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleRefreshRecommendations = () => {
@@ -713,6 +870,23 @@ Recommendation: ${asset.recommendation}
                 <p className="text-muted-foreground">Track your investments, analyze performance, and manage your financial goals</p>
               </div>
               <div className="flex items-center space-x-4">
+                <Dialog open={isOptimizerOpen} onOpenChange={setIsOptimizerOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="font-bold shadow-lg shadow-primary/20 bg-gradient-to-r from-primary to-blue-600 hover:opacity-90">
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      AI Optimizer
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-max min-w-[600px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>AI Portfolio Optimizer</DialogTitle>
+                      <DialogDescription>
+                        Fill out your financial profile to get personalized AI investment recommendations.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <FinancialProfileForm onSuccess={() => setIsOptimizerOpen(false)} />
+                  </DialogContent>
+                </Dialog>
                 {marketDataError && (
                   <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
                     <WifiOff className="h-4 w-4" />
@@ -809,7 +983,7 @@ Recommendation: ${asset.recommendation}
             </CardHeader>
             <CardContent>
               <PortfolioPie
-                data={portfolioAllocation}
+                data={portfolioAllocation as any[]}
                 onSliceClick={handlePieSliceClick}
               />
             </CardContent>
@@ -880,9 +1054,11 @@ Recommendation: ${asset.recommendation}
 
             <TabsContent value="recommendations" className="space-y-6 mt-6">
               <InvestmentRecommendations
-                investments={realTimeInvestments}
-                onRefreshRecommendations={handleRefreshRecommendations}
+                recommendation={latestRecommendation}
+                onAddInvestment={handleAIRecommendationAdd}
                 isLoading={isLoading || isMarketDataFetching}
+                onRunAgain={() => setIsOptimizerOpen(true)}
+                existingPortfolio={realTimeInvestments}
               />
             </TabsContent>
 
@@ -917,113 +1093,67 @@ Recommendation: ${asset.recommendation}
             </TabsContent>
 
             <TabsContent value="analysis" className="space-y-8 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
-                  <CardHeader className="pb-4">
-                    <div>
-                      <CardTitle className="text-xl font-semibold">Risk Analysis</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">Your portfolio risk assessment</p>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div className="flex justify-between items-center p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                        <div>
-                          <div className="font-medium">Portfolio Risk Score</div>
-                          <div className="text-sm text-muted-foreground">Based on asset allocation</div>
-                        </div>
-                        <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 px-3 py-1">
-                          Low Risk
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                        <div>
-                          <div className="font-medium">Diversification Score</div>
-                          <div className="text-sm text-muted-foreground">Asset class distribution</div>
-                        </div>
-                        <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1">
-                          Well Diversified
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-4 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800">
-                        <div>
-                          <div className="font-medium">Volatility</div>
-                          <div className="text-sm text-muted-foreground">Price fluctuation level</div>
-                        </div>
-                        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 px-3 py-1">
-                          Moderate
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="space-y-8">
+                {/* Main AI Insights */}
+                <InvestmentInsights recommendation={latestRecommendation} />
 
-                <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-xl font-semibold">AI Recommendations</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">Personalized investment suggestions</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleRefreshRecommendations}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Refresh
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div
-                        className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors"
-                        onClick={() => {
-                          const query = "Help me increase my equity allocation. What stocks should I consider?"
-                          window.location.href = `/advisor?q=${encodeURIComponent(query)}`
-                        }}
-                      >
-                        <div className="flex items-start space-x-3">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                          <div>
-                            <div className="font-medium text-sm">Consider increasing equity allocation</div>
-                            <div className="text-xs text-muted-foreground mt-1">Your current equity allocation is below recommended levels for your age.</div>
+                {/* Additional Guidance */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/10 dark:to-gray-950/10">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-xl font-semibold">AI Recommendations</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">Personalized investment suggestions</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div
+                          className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors"
+                          onClick={() => {
+                            const query = "Help me increase my equity allocation. What stocks should I consider?"
+                            window.location.href = `/advisor?q=${encodeURIComponent(query)}`
+                          }}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                            <div>
+                              <div className="font-medium text-sm">Consider increasing equity allocation</div>
+                              <div className="text-xs text-muted-foreground mt-1">Your current equity allocation is below recommended levels for your age.</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className="p-4 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
+                          onClick={() => {
+                            const query = "Help me add international diversification to my portfolio. What international funds should I consider?"
+                            window.location.href = `/advisor?q=${encodeURIComponent(query)}`
+                          }}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                            <div>
+                              <div className="font-medium text-sm">Add international diversification</div>
+                              <div className="text-xs text-muted-foreground mt-1">Consider adding international funds to reduce country-specific risk.</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className="p-4 border border-orange-200 dark:border-orange-800 rounded-lg bg-orange-50 dark:bg-orange-950/20 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/30 transition-colors"
+                          onClick={() => {
+                            setRebalanceOpen(true)
+                          }}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
+                            <div>
+                              <div className="font-medium text-sm">Rebalance quarterly</div>
+                              <div className="text-xs text-muted-foreground mt-1">Your portfolio has drifted from target allocation.</div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div
-                        className="p-4 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
-                        onClick={() => {
-                          const query = "Help me add international diversification to my portfolio. What international funds should I consider?"
-                          window.location.href = `/advisor?q=${encodeURIComponent(query)}`
-                        }}
-                      >
-                        <div className="flex items-start space-x-3">
-                          <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                          <div>
-                            <div className="font-medium text-sm">Add international diversification</div>
-                            <div className="text-xs text-muted-foreground mt-1">Consider adding international funds to reduce country-specific risk.</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div
-                        className="p-4 border border-orange-200 dark:border-orange-800 rounded-lg bg-orange-50 dark:bg-orange-950/20 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/30 transition-colors"
-                        onClick={() => {
-                          setRebalanceOpen(true)
-                        }}
-                      >
-                        <div className="flex items-start space-x-3">
-                          <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                          <div>
-                            <div className="font-medium text-sm">Rebalance quarterly</div>
-                            <div className="text-xs text-muted-foreground mt-1">Your portfolio has drifted from target allocation.</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </TabsContent>
           </Tabs>

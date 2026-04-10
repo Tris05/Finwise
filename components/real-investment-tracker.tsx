@@ -35,8 +35,11 @@ interface RealInvestment {
   marketCap: string
   pe: number | string
   dividend: number | string
+  riskLevel: 'Low' | 'Medium' | 'High' | 'Unknown'
   recommendation: 'Buy' | 'Hold' | 'Sell' | 'Strong Buy' | 'Strong Sell'
-  riskLevel: 'Low' | 'Medium' | 'High'
+  rate?: number
+  tenure?: number | string
+  rationale?: string
 }
 
 interface RealInvestmentTrackerProps {
@@ -46,11 +49,11 @@ interface RealInvestmentTrackerProps {
   onSellInvestment?: (investment: RealInvestment) => void
 }
 
-export function RealInvestmentTracker({ 
-  investments, 
-  onInvestmentClick, 
+export function RealInvestmentTracker({
+  investments,
+  onInvestmentClick,
   onAddInvestment,
-  onSellInvestment 
+  onSellInvestment
 }: RealInvestmentTrackerProps) {
   const [showValues, setShowValues] = useState(true)
   const [selectedInvestment, setSelectedInvestment] = useState<RealInvestment | null>(null)
@@ -60,10 +63,10 @@ export function RealInvestmentTracker({
 
   const filteredInvestments = investments.filter(investment => {
     const matchesSearch = investment.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         investment.name.toLowerCase().includes(searchTerm.toLowerCase())
+      investment.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === "all" || investment.type === filterType
     const matchesRecommendation = filterRecommendation === "all" || investment.recommendation === filterRecommendation
-    
+
     return matchesSearch && matchesType && matchesRecommendation
   })
 
@@ -99,9 +102,14 @@ export function RealInvestmentTracker({
     }
   }
 
-  const totalPortfolioValue = investments.reduce((sum, inv) => sum + inv.currentValue, 0)
-  const totalGain = investments.reduce((sum, inv) => sum + inv.totalGain, 0)
-  const totalGainPercent = (totalGain / (totalPortfolioValue - totalGain)) * 100
+  const totalPortfolioValue = (investments || []).reduce((sum, inv) => sum + (Number(inv.currentValue) || 0), 0)
+  const totalGain = (investments || []).reduce((sum, inv) => sum + (Number(inv.totalGain) || 0), 0)
+  const investedPrincipal = (investments || []).reduce((sum, inv) => sum + (Number(inv.investedAmount) || 0), 0)
+  const totalGainPercent = investedPrincipal !== 0 ? (totalGain / investedPrincipal) * 100 : 0
+
+  const bestPerformer = investments.length > 0
+    ? investments.reduce((best, inv) => (inv.gainPercent || 0) > (best.gainPercent || 0) ? inv : best)
+    : null
 
   return (
     <div className="space-y-8">
@@ -140,7 +148,7 @@ export function RealInvestmentTracker({
               {formatINR(totalGain)}
             </div>
             <div className="text-sm text-green-600 dark:text-green-400">
-              +{totalGainPercent.toFixed(2)}%
+              +{(totalGainPercent || 0).toFixed(2)}%
             </div>
           </CardContent>
         </Card>
@@ -157,14 +165,12 @@ export function RealInvestmentTracker({
               </div>
             </div>
             <div className="text-lg font-bold">
-              {investments.reduce((best, inv) => 
-                inv.gainPercent > best.gainPercent ? inv : best
-              ).symbol}
+              {bestPerformer ? bestPerformer.symbol : "N/A"}
             </div>
             <div className="text-sm text-green-600 dark:text-green-400">
-              +{investments.reduce((best, inv) => 
-                inv.gainPercent > best.gainPercent ? inv : best
-              ).gainPercent.toFixed(2)}%
+              {bestPerformer
+                ? `+${(bestPerformer.gainPercent || 0).toFixed(2)}%`
+                : "0.00%"}
             </div>
           </CardContent>
         </Card>
@@ -245,10 +251,17 @@ export function RealInvestmentTracker({
       {/* Investment Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredInvestments.map((investment) => {
-          const isGain = investment.totalGain >= 0
-          const isDayGain = investment.dayChange >= 0
+          const isDebt = ['bond', 'debt', 'fixed income', 'fd', 'ppf'].includes(investment.type?.toLowerCase() || '') ||
+            investment.symbol.toLowerCase().includes('fd-') ||
+            investment.symbol.toLowerCase().includes('ppf')
+          const isGain = (investment.totalGain || 0) >= 0
+          const isDayGain = isDebt ? true : (investment.dayChange || 0) >= 0
+          const displayDayChange = isDebt ? 0 : (investment.dayChange || 0)
+          const displayDayChangePercent = isDebt ? 0 : (investment.dayChangePercent || 0)
+          const currentValue = investment.currentValue || investment.investedAmount || 0
+
           return (
-            <Card 
+            <Card
               key={investment.id}
               className="border-0 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer group"
               onClick={() => {
@@ -273,6 +286,11 @@ export function RealInvestmentTracker({
                           {investment.riskLevel} Risk
                         </Badge>
                       </div>
+                      {investment.rationale && (
+                        <div className="mt-3 text-[11px] text-muted-foreground line-clamp-2 italic bg-muted/30 p-2 rounded border-l-2 border-primary/40">
+                          {investment.rationale}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <DropdownMenu>
@@ -290,7 +308,7 @@ export function RealInvestmentTracker({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -310,7 +328,7 @@ export function RealInvestmentTracker({
                     </div>
                     <div>
                       <div className="text-sm text-muted-foreground">Current Value</div>
-                      <div className="font-semibold">{formatINR(investment.currentValue)}</div>
+                      <div className="font-semibold">{formatINR(currentValue)}</div>
                     </div>
                   </div>
 
@@ -319,15 +337,15 @@ export function RealInvestmentTracker({
                       <span className="text-sm text-muted-foreground">Total Gain/Loss</span>
                       <div className={`flex items-center text-sm font-medium ${isGain ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {isGain ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                        {formatINR(Math.abs(investment.totalGain))} ({investment.gainPercent.toFixed(2)}%)
+                        {formatINR(Math.abs(investment.totalGain || 0))} ({(investment.gainPercent || 0).toFixed(2)}%)
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Today's Change</span>
                       <div className={`flex items-center text-sm font-medium ${isDayGain ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {isDayGain ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                        {formatINR(Math.abs(investment.dayChange))} ({investment.dayChangePercent.toFixed(2)}%)
+                        {isDebt ? null : (isDayGain ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />)}
+                        {isDebt ? "Stable" : `${formatINR(Math.abs(displayDayChange))} (${(displayDayChangePercent || 0).toFixed(2)}%)`}
                       </div>
                     </div>
                   </div>
@@ -337,13 +355,25 @@ export function RealInvestmentTracker({
                       <span className="text-muted-foreground">Sector</span>
                       <span className="font-medium">{investment.sector}</span>
                     </div>
-                    {investment.pe !== "N/A" && (
+                    {isDebt && (investment.rate || investment.tenure) && (
+                      <div className="flex items-center justify-between text-sm py-1 px-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold">Interest Rate</span>
+                          <span className="font-semibold text-blue-700 dark:text-blue-300">{((investment.rate || 0.07) * 100).toFixed(1)}% p.a.</span>
+                        </div>
+                        <div className="flex flex-col text-right">
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold">Duration</span>
+                          <span className="font-semibold text-blue-700 dark:text-blue-300">{investment.tenure || 'N/A'} Years</span>
+                        </div>
+                      </div>
+                    )}
+                    {!isDebt && investment.pe !== "N/A" && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">P/E Ratio</span>
                         <span className="font-medium">{investment.pe}</span>
                       </div>
                     )}
-                    {investment.dividend !== "N/A" && (
+                    {!isDebt && investment.dividend !== "N/A" && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Dividend Yield</span>
                         <span className="font-medium">{investment.dividend}%</span>
@@ -404,52 +434,69 @@ export function RealInvestmentTracker({
                 </div>
               </div>
             </div>
-            
+
+            {selectedInvestment.rationale && (
+              <div className="p-4 rounded-lg bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">Investment Rationale & Rating</h4>
+                <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 italic">
+                  "{selectedInvestment.rationale}"
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <h4 className="font-semibold">Performance Metrics</h4>
+                <h4 className="font-semibold text-sm text-primary uppercase tracking-wider">Performance Metrics</h4>
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Return</span>
-                    <span className={`font-medium ${selectedInvestment.gainPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {selectedInvestment.gainPercent >= 0 ? '+' : ''}{selectedInvestment.gainPercent.toFixed(2)}%
+                    <span className={`font-medium ${(selectedInvestment.gainPercent || 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {(selectedInvestment.gainPercent || 0) >= 0 ? '+' : ''}{(selectedInvestment.gainPercent || 0).toFixed(2)}%
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Day Change</span>
-                    <span className={`font-medium ${selectedInvestment.dayChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {selectedInvestment.dayChange >= 0 ? '+' : ''}{formatINR(selectedInvestment.dayChange)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Market Cap</span>
-                    <span className="font-medium">{selectedInvestment.marketCap}</span>
-                  </div>
+                  {!(selectedInvestment.type?.toLowerCase().includes('fd') || selectedInvestment.type?.toLowerCase().includes('ppf')) && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Day Change</span>
+                      <span className={`font-medium ${selectedInvestment.dayChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {selectedInvestment.dayChange >= 0 ? '+' : ''}{formatINR(selectedInvestment.dayChange)}
+                      </span>
+                    </div>
+                  )}
+                  {selectedInvestment.marketCap && selectedInvestment.marketCap !== "0" && selectedInvestment.marketCap !== "N/A" && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Market Cap</span>
+                      <span className="font-medium">{selectedInvestment.marketCap}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              
+
               <div className="space-y-4">
-                <h4 className="font-semibold">Investment Analysis</h4>
+                <h4 className="font-semibold text-sm text-primary uppercase tracking-wider">Investment Analysis</h4>
                 <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Analyst Recommendation</span>
-                    <Badge variant="outline" className={getRecommendationColor(selectedInvestment.recommendation)}>
-                      {selectedInvestment.recommendation}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Risk Level</span>
-                    <Badge variant="outline" className={getRiskColor(selectedInvestment.riskLevel)}>
-                      {selectedInvestment.riskLevel}
-                    </Badge>
-                  </div>
-                  {selectedInvestment.pe !== "N/A" && (
+                  {selectedInvestment.recommendation && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Analyst Recommendation</span>
+                      <Badge variant="outline" className={getRecommendationColor(selectedInvestment.recommendation)}>
+                        {selectedInvestment.recommendation}
+                      </Badge>
+                    </div>
+                  )}
+                  {selectedInvestment.riskLevel && (selectedInvestment.riskLevel as string) !== "Unknown" && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Risk Level</span>
+                      <Badge variant="outline" className={getRiskColor(selectedInvestment.riskLevel)}>
+                        {selectedInvestment.riskLevel}
+                      </Badge>
+                    </div>
+                  )}
+                  {selectedInvestment.pe && selectedInvestment.pe !== "N/A" && selectedInvestment.pe !== 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">P/E Ratio</span>
                       <span className="font-medium">{selectedInvestment.pe}</span>
                     </div>
                   )}
-                  {selectedInvestment.dividend !== "N/A" && (
+                  {selectedInvestment.dividend && selectedInvestment.dividend !== "N/A" && selectedInvestment.dividend !== 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Dividend Yield</span>
                       <span className="font-medium">{selectedInvestment.dividend}%</span>
