@@ -8,9 +8,11 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
-import { Settings } from "lucide-react"
+import { Settings, Info } from "lucide-react"
 import { CustomBudgetCategories } from "./custom-budget-categories"
 import { loadUserPreferences, saveUserPreferences, getDefaultBudgetCategories, type UserPreferences } from "@/lib/user-preferences"
+import { useUserProfile } from "@/hooks/useUserProfile"
+import { Slider } from "@/components/ui/slider"
 
 interface BudgetCategory {
   id: string
@@ -33,10 +35,13 @@ interface BudgetBreakdown {
 }
 
 export function SalaryBudgetingTool() {
+  const { annualIncome } = useUserProfile()
   const [monthlySalary, setMonthlySalary] = useState(100000)
+  const [rules, setRules] = useState({ needs: 50, wants: 30, savings: 20 })
   const [budgetAllocation, setBudgetAllocation] = useState<BudgetAllocation | null>(null)
   const [budgetBreakdown, setBudgetBreakdown] = useState<BudgetBreakdown | null>(null)
   const [showCustomization, setShowCustomization] = useState(false)
+
   const [customCategories, setCustomCategories] = useState<{
     needs: BudgetCategory[]
     wants: BudgetCategory[]
@@ -51,10 +56,19 @@ export function SalaryBudgetingTool() {
     }
   })
 
+  // Sync with profile income
+  useEffect(() => {
+    if (annualIncome) {
+      // Estimate monthly take-home if not already set or as a better default
+      // Using a rough 0.8 factor if they haven't run the calculator yet
+      setMonthlySalary(Math.round((annualIncome * 0.8) / 12))
+    }
+  }, [annualIncome])
+
   const calculateBudget = () => {
-    const needs = monthlySalary * 0.5 // 50% for needs
-    const wants = monthlySalary * 0.3 // 30% for wants
-    const savings = monthlySalary * 0.2 // 20% for savings
+    const needs = (monthlySalary * rules.needs) / 100
+    const wants = (monthlySalary * rules.wants) / 100
+    const savings = (monthlySalary * rules.savings) / 100
 
     setBudgetAllocation({ needs, wants, savings, total: monthlySalary })
 
@@ -63,7 +77,6 @@ export function SalaryBudgetingTool() {
     const wantsBreakdown: Record<string, number> = {}
     const savingsBreakdown: Record<string, number> = {}
 
-    // Add null checks to prevent errors
     if (customCategories?.needs) {
       customCategories.needs.forEach(category => {
         needsBreakdown[category.name] = (needs * category.percentage) / 100
@@ -90,29 +103,19 @@ export function SalaryBudgetingTool() {
   }
 
   useEffect(() => {
-    if (customCategories?.needs && customCategories?.wants && customCategories?.savings) {
-      calculateBudget()
-    }
-  }, [monthlySalary, customCategories])
-
-  const handleCategoriesUpdate = (newCategories: typeof customCategories) => {
-    setCustomCategories(newCategories)
-    // Save to localStorage
-    const preferences = loadUserPreferences() || { budgetCategories: getDefaultBudgetCategories(), careerGoals: [] }
-    preferences.budgetCategories = newCategories
-    saveUserPreferences(preferences)
-  }
+    calculateBudget()
+  }, [monthlySalary, customCategories, rules])
 
   if (showCustomization) {
     return (
       <div className="space-y-6 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Customize Budget Categories</h2>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setShowCustomization(false)}
           >
-            Back to Budget
+            Back to Budget Rules
           </Button>
         </div>
         <CustomBudgetCategories />
@@ -122,137 +125,185 @@ export function SalaryBudgetingTool() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>50/30/20 Budget Rule</CardTitle>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowCustomization(true)}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Customize Categories
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="monthly-salary">Monthly Take-Home Salary (₹)</Label>
-            <Input
-              id="monthly-salary"
-              type="number"
-              value={monthlySalary}
-              onChange={(e) => setMonthlySalary(Number(e.target.value))}
-              placeholder="100000"
-            />
-          </div>
-          
-          {budgetAllocation && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">₹{budgetAllocation.needs.toLocaleString()}</div>
-                  <div className="text-sm text-muted-foreground">Needs (50%)</div>
-                  <Progress value={50} className="mt-2" />
+      <div className="grid md:grid-cols-3 gap-6">
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Budget Strategy</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCustomization(true)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Category Details
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="monthly-salary">Monthly Take-Home Salary (₹)</Label>
+              <Input
+                id="monthly-salary"
+                type="number"
+                value={monthlySalary}
+                onChange={(e) => setMonthlySalary(Number(e.target.value))}
+                placeholder="100000"
+              />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium">Needs (%)</Label>
+                  <Badge variant="destructive">{rules.needs}%</Badge>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">₹{budgetAllocation.wants.toLocaleString()}</div>
-                  <div className="text-sm text-muted-foreground">Wants (30%)</div>
-                  <Progress value={30} className="mt-2" />
+                <Slider
+                  value={[rules.needs]}
+                  max={100}
+                  step={5}
+                  onValueChange={(val) => {
+                    const newNeeds = val[0]
+                    const remaining = 100 - newNeeds
+                    const ratio = rules.wants / (rules.wants + rules.savings || 1)
+                    setRules({
+                      needs: newNeeds,
+                      wants: Math.round(remaining * ratio),
+                      savings: 100 - newNeeds - Math.round(remaining * ratio)
+                    })
+                  }}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium">Wants (%)</Label>
+                  <Badge variant="default">{rules.wants}%</Badge>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">₹{budgetAllocation.savings.toLocaleString()}</div>
-                  <div className="text-sm text-muted-foreground">Savings (20%)</div>
-                  <Progress value={20} className="mt-2" />
+                <Slider
+                  value={[rules.wants]}
+                  max={100 - rules.needs}
+                  step={5}
+                  onValueChange={(val) => setRules(prev => ({
+                    ...prev,
+                    wants: val[0],
+                    savings: 100 - prev.needs - val[0]
+                  }))}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium">Savings / Investments (%)</Label>
+                  <Badge variant="secondary">{rules.savings}%</Badge>
                 </div>
+                <Slider
+                  value={[rules.savings]}
+                  disabled
+                  max={100}
+                />
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3" /> Auto-calculated to complete 100%
+                </p>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Strategy Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {budgetAllocation && (
+              <div className="space-y-8">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-red-600 font-medium">Needs</span>
+                    <span className="font-bold">₹{budgetAllocation.needs.toLocaleString()}</span>
+                  </div>
+                  <Progress value={rules.needs} className="h-2" />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-blue-600 font-medium">Wants</span>
+                    <span className="font-bold">₹{budgetAllocation.wants.toLocaleString()}</span>
+                  </div>
+                  <Progress value={rules.wants} className="h-2" />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 font-medium">Savings</span>
+                    <span className="font-bold">₹{budgetAllocation.savings.toLocaleString()}</span>
+                  </div>
+                  <Progress value={rules.savings} className="h-2" />
+                </div>
+
+                <div className="pt-4 border-t text-center">
+                  <div className="text-sm text-muted-foreground">Total Disposable Income</div>
+                  <div className="text-2xl font-black">₹{monthlySalary.toLocaleString()}</div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {budgetBreakdown && (
         <div className="grid md:grid-cols-3 gap-4">
-          {/* Needs Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-red-600">Needs (50%)</CardTitle>
+          <Card className="border-l-4 border-l-red-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-red-600 text-lg">Needs Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {customCategories?.needs?.map((category) => (
                 <div key={category.id} className="flex justify-between">
                   <span className="text-sm">{category.name}</span>
                   <span className="text-sm font-medium">
-                    ₹{budgetBreakdown?.needs?.[category.name]?.toLocaleString() || 0}
+                    ₹{Math.round(budgetBreakdown?.needs?.[category.name] || 0).toLocaleString()}
                   </span>
                 </div>
-              )) || []}
-              <Separator />
-              <div className="flex justify-between font-semibold">
-                <span>Total Needs</span>
-                <Badge variant="destructive">₹{budgetAllocation?.needs.toLocaleString()}</Badge>
-              </div>
+              ))}
             </CardContent>
           </Card>
 
-          {/* Wants Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-blue-600">Wants (30%)</CardTitle>
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-blue-600 text-lg">Wants Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {customCategories?.wants?.map((category) => (
                 <div key={category.id} className="flex justify-between">
                   <span className="text-sm">{category.name}</span>
                   <span className="text-sm font-medium">
-                    ₹{budgetBreakdown?.wants?.[category.name]?.toLocaleString() || 0}
+                    ₹{Math.round(budgetBreakdown?.wants?.[category.name] || 0).toLocaleString()}
                   </span>
                 </div>
-              )) || []}
-              <Separator />
-              <div className="flex justify-between font-semibold">
-                <span>Total Wants</span>
-                <Badge variant="default">₹{budgetAllocation?.wants.toLocaleString()}</Badge>
-              </div>
+              ))}
             </CardContent>
           </Card>
 
-          {/* Savings Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-green-600">Savings (20%)</CardTitle>
+          <Card className="border-l-4 border-l-green-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-green-600 text-lg">Savings Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {customCategories?.savings?.map((category) => (
                 <div key={category.id} className="flex justify-between">
                   <span className="text-sm">{category.name}</span>
                   <span className="text-sm font-medium">
-                    ₹{budgetBreakdown?.savings?.[category.name]?.toLocaleString() || 0}
+                    ₹{Math.round(budgetBreakdown?.savings?.[category.name] || 0).toLocaleString()}
                   </span>
                 </div>
-              )) || []}
-              <Separator />
-              <div className="flex justify-between font-semibold">
-                <span>Total Savings</span>
-                <Badge variant="secondary">₹{budgetAllocation?.savings.toLocaleString()}</Badge>
-              </div>
+              ))}
             </CardContent>
           </Card>
         </div>
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Budget Tips</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <div>💡 <strong>Emergency Fund:</strong> Aim for 6 months of expenses in your emergency fund</div>
-          <div>💡 <strong>Investments:</strong> Consider SIPs, PPF, or ELSS for long-term growth</div>
-          <div>💡 <strong>Needs:</strong> Try to keep needs under 50% to have more flexibility</div>
-          <div>💡 <strong>Wants:</strong> Track your wants spending to avoid lifestyle inflation</div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

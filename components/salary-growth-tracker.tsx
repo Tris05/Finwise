@@ -11,6 +11,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend } f
 import { Settings, Target } from "lucide-react"
 import { CustomCareerGoals } from "./custom-career-goals"
 import { loadUserPreferences, saveUserPreferences, getDefaultCareerGoals, type UserPreferences } from "@/lib/user-preferences"
+import { useUserProfile } from "@/hooks/useUserProfile"
 
 interface SalaryGrowth {
   year: number
@@ -32,6 +33,7 @@ interface CareerMilestone {
 }
 
 export function SalaryGrowthTracker() {
+  const { annualIncome, age } = useUserProfile()
   const [currentSalary, setCurrentSalary] = useState(1200000)
   const [experience, setExperience] = useState(3)
   const [annualGrowthRate, setAnnualGrowthRate] = useState(10)
@@ -52,15 +54,21 @@ export function SalaryGrowthTracker() {
     return preferences?.careerGoals || getDefaultCareerGoals()
   })
 
+  // Sync with profile
+  useEffect(() => {
+    if (annualIncome) {
+      setCurrentSalary(annualIncome)
+    }
+  }, [annualIncome])
+
   const calculateProjections = () => {
     const projections: SalaryGrowth[] = []
     const currentYear = new Date().getFullYear()
-    
+
     for (let i = 0; i <= 10; i++) {
       const year = currentYear + i
-      const yearsFromNow = i
-      const projectedSalary = currentSalary * Math.pow(1 + annualGrowthRate / 100, yearsFromNow)
-      
+      const projectedSalary = currentSalary * Math.pow(1 + annualGrowthRate / 100, i)
+
       projections.push({
         year,
         currentSalary: i === 0 ? currentSalary : currentSalary * Math.pow(1 + annualGrowthRate / 100, i - 1),
@@ -68,12 +76,11 @@ export function SalaryGrowthTracker() {
         growthRate: annualGrowthRate
       })
     }
-    
+
     setSalaryProjections(projections)
   }
 
   const getCareerMilestones = () => {
-    // Use the first user goal as the primary career path
     if (userGoals.length > 0) {
       setMilestones(userGoals[0].milestones)
     }
@@ -91,23 +98,17 @@ export function SalaryGrowthTracker() {
   }))
 
   const nextMilestone = milestones.find(m => m.salary && m.salary > currentSalary)
-  const progressToNext = nextMilestone && nextMilestone.salary ? 
-    ((currentSalary - milestones[milestones.indexOf(nextMilestone) - 1]?.salary || 0) / 
-     (nextMilestone.salary - milestones[milestones.indexOf(nextMilestone) - 1]?.salary || 1)) * 100 : 100
-
-  const saveGoalsToStorage = (goals: typeof userGoals) => {
-    const preferences = loadUserPreferences() || { budgetCategories: [], careerGoals: [] }
-    preferences.careerGoals = goals
-    saveUserPreferences(preferences)
-  }
+  const progressToNext = nextMilestone && nextMilestone.salary ?
+    ((currentSalary - (milestones[milestones.indexOf(nextMilestone) - 1]?.salary || 0)) /
+      (nextMilestone.salary - (milestones[milestones.indexOf(nextMilestone) - 1]?.salary || 0) || 1)) * 100 : 100
 
   if (showCustomization) {
     return (
       <div className="space-y-6 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Customize Your Career Goals</h2>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setShowCustomization(false)}
           >
             Back to Growth Tracker
@@ -124,9 +125,9 @@ export function SalaryGrowthTracker() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Salary Growth Inputs</CardTitle>
-              <Button 
-                variant="outline" 
+              <CardTitle>Growth Projections</CardTitle>
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => setShowCustomization(true)}
               >
@@ -137,7 +138,12 @@ export function SalaryGrowthTracker() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="current-salary">Current Annual Salary (₹)</Label>
+              <div className="flex justify-between">
+                <Label htmlFor="current-salary">Current Annual Salary (₹)</Label>
+                {annualIncome && (
+                  <Badge variant="outline" className="text-[10px] h-5">Synced</Badge>
+                )}
+              </div>
               <Input
                 id="current-salary"
                 type="number"
@@ -146,7 +152,7 @@ export function SalaryGrowthTracker() {
                 placeholder="1200000"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="experience">Years of Experience</Label>
               <Input
@@ -157,7 +163,7 @@ export function SalaryGrowthTracker() {
                 placeholder="3"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="growth-rate">Expected Annual Growth Rate (%)</Label>
               <Input
@@ -168,35 +174,22 @@ export function SalaryGrowthTracker() {
                 placeholder="10"
               />
             </div>
-            
-            {userGoals.length > 0 && (
-              <div className="space-y-2">
-                <Label>Current Career Goal</Label>
-                <div className="p-3 border rounded-lg">
-                  <div className="font-medium">{userGoals[0].title}</div>
-                  <div className="text-sm text-muted-foreground">{userGoals[0].description}</div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    Target: ₹{userGoals[0].targetSalary.toLocaleString()} by {new Date(userGoals[0].targetDate).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Career Progress</CardTitle>
+            <CardTitle>Milestone Progress</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {nextMilestone && nextMilestone.salary ? (
               <div className="space-y-3">
                 <div className="text-center">
-                  <div className="text-lg font-semibold">Next Milestone</div>
+                  <div className="text-lg font-semibold">Next Career Level</div>
                   <div className="text-2xl font-bold text-blue-600">{nextMilestone.milestone}</div>
                   <div className="text-sm text-muted-foreground">{nextMilestone.description}</div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Target Salary</span>
@@ -215,7 +208,7 @@ export function SalaryGrowthTracker() {
                   <div className="text-2xl font-bold text-blue-600">{userGoals[0].title}</div>
                   <div className="text-sm text-muted-foreground">{userGoals[0].description}</div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Target Salary</span>
@@ -228,14 +221,14 @@ export function SalaryGrowthTracker() {
                 </div>
               </div>
             ) : null}
-            
-            <div className="space-y-2">
-              <div className="text-sm font-medium">5-Year Projection</div>
+
+            <div className="pt-4 border-t">
+              <div className="text-sm font-medium">5-Year Projected Salary</div>
               <div className="text-2xl font-bold text-green-600">
-                ₹{salaryProjections[5]?.projectedSalary.toLocaleString() || 0}
+                ₹{Math.round(salaryProjections[5]?.projectedSalary || 0).toLocaleString()}
               </div>
-              <div className="text-sm text-muted-foreground">
-                {((salaryProjections[5]?.projectedSalary || 0) / currentSalary - 1) * 100}% growth
+              <div className="text-xs text-muted-foreground">
+                {(((salaryProjections[5]?.projectedSalary || 1) / (currentSalary || 1)) - 1).toLocaleString(undefined, { style: 'percent' })} total growth
               </div>
             </div>
           </CardContent>
@@ -247,25 +240,22 @@ export function SalaryGrowthTracker() {
           <CardTitle>Salary Growth Projection</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-80">
+          <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <XAxis dataKey="year" />
-                <YAxis />
-                <Tooltip formatter={(value) => [`₹${Number(value).toLocaleString()}`, '']} />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="current" 
-                  stroke="#8884d8" 
-                  strokeWidth={2}
-                  name="Current Salary"
+                <YAxis hide />
+                <Tooltip
+                  formatter={(value) => [`₹${Number(value).toLocaleString()}`, '']}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="projected" 
-                  stroke="#82ca9d" 
-                  strokeWidth={2}
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="projected"
+                  stroke="#10b981"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
                   name="Projected Salary"
                 />
               </LineChart>
@@ -273,66 +263,6 @@ export function SalaryGrowthTracker() {
           </div>
         </CardContent>
       </Card>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Career Milestones</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {milestones.map((milestone, index) => (
-              <div key={milestone.id || index} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <div className="font-medium">{milestone.milestone || milestone.title}</div>
-                  <div className="text-sm text-muted-foreground">{milestone.description}</div>
-                </div>
-                <div className="text-right">
-                  {milestone.salary && (
-                    <div className="font-semibold">₹{milestone.salary.toLocaleString()}</div>
-                  )}
-                  {milestone.targetDate && (
-                    <div className="text-sm text-muted-foreground">
-                      Target: {new Date(milestone.targetDate).toLocaleDateString()}
-                    </div>
-                  )}
-                  {milestone.year && (
-                    <div className="text-sm text-muted-foreground">{milestone.year} years</div>
-                  )}
-                  {milestone.completed !== undefined && (
-                    <div className="text-sm text-muted-foreground">
-                      {milestone.completed ? '✅ Completed' : '⏳ Pending'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Growth Tips</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-start space-x-2">
-              <span className="text-blue-500">💡</span>
-              <span><strong>Skill Development:</strong> Invest in learning new technologies and certifications</span>
-            </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-green-500">💡</span>
-              <span><strong>Performance:</strong> Exceed expectations and take on additional responsibilities</span>
-            </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-purple-500">💡</span>
-              <span><strong>Networking:</strong> Build professional relationships and industry connections</span>
-            </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-orange-500">💡</span>
-              <span><strong>Negotiation:</strong> Research market rates and negotiate during reviews</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   )
 }
