@@ -22,6 +22,7 @@ import {
   type PrepaymentImpact,
   type BankOffer
 } from "@/lib/loan-calculator"
+import { useLoans } from "@/hooks/useLoans"
 
 type AssessResponse = {
   emi: number
@@ -62,6 +63,16 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
   const [showSchedule, setShowSchedule] = useState(false)
   const [showPrepayment, setShowPrepayment] = useState(false)
   const [showComparison, setShowComparison] = useState(false)
+  const { loanProfile, saveLoanProfile } = useLoans()
+
+  // Prepopulate if exists
+  useEffect(() => {
+    if (loanProfile && loanProfile.type === loanType) {
+      setAmount(loanProfile.amount)
+      setRate(loanProfile.rate)
+      setTenure(loanProfile.tenure)
+    }
+  }, [loanProfile, loanType])
 
   // Update values when loan type changes
   useEffect(() => {
@@ -102,6 +113,9 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
 
   const assess = useMutation({
     mutationFn: async (): Promise<AssessResponse> => {
+      // Save to profile when assessing
+      await saveLoanProfile({ amount, rate, tenure, type: loanType })
+
       const res = await fetch("/api/loan/assess", {
         method: "POST",
         body: JSON.stringify({ amount, rate, tenure, loanType }),

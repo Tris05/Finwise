@@ -33,7 +33,7 @@ export function SecurityTimeline() {
         <CardTitle>Recent Activity</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {(data ?? []).map((l) => (
+        {Array.isArray(data) && data.map((l) => (
           <div key={l.id} className="flex items-center justify-between rounded-md border px-3 py-2">
             <div className="text-sm">
               <div>

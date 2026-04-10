@@ -1,0 +1,77 @@
+import { useState, useEffect } from 'react';
+import {
+    collection,
+    onSnapshot,
+    query,
+    orderBy,
+    addDoc,
+    deleteDoc,
+    doc,
+    updateDoc,
+    serverTimestamp
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/components/providers/auth-provider';
+
+export type GoalType = "Emergency Fund" | "Home Purchase" | "Car Purchase" | "Education" | "Retirement" | "Vacation" | "Other";
+
+export interface FinancialGoal {
+    id: string;
+    type: GoalType;
+    name: string;
+    targetAmount: number;
+    currentAmount: number;
+    targetDate: string;
+    priority: "High" | "Medium" | "Low";
+}
+
+export const useFinancialGoals = () => {
+    const { user } = useAuth();
+    const [goals, setGoals] = useState<FinancialGoal[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) {
+            setGoals([]);
+            setLoading(false);
+            return;
+        }
+
+        const goalsRef = collection(db, 'users', user.uid, 'goals');
+        const q = query(goalsRef, orderBy('created_at', 'desc'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const goalsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as FinancialGoal));
+            setGoals(goalsData);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    const addGoal = async (goal: Omit<FinancialGoal, 'id'>) => {
+        if (!user) return;
+        const goalsRef = collection(db, 'users', user.uid, 'goals');
+        await addDoc(goalsRef, {
+            ...goal,
+            created_at: serverTimestamp()
+        });
+    };
+
+    const updateGoal = async (id: string, updates: Partial<FinancialGoal>) => {
+        if (!user) return;
+        const goalRef = doc(db, 'users', user.uid, 'goals', id);
+        await updateDoc(goalRef, updates);
+    };
+
+    const deleteGoal = async (id: string) => {
+        if (!user) return;
+        const goalRef = doc(db, 'users', user.uid, 'goals', id);
+        await deleteDoc(goalRef);
+    };
+
+    return { goals, loading, addGoal, updateGoal, deleteGoal };
+};

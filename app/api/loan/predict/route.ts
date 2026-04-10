@@ -188,9 +188,6 @@ export async function POST(req: Request) {
         note: modelsUsed
           ? "Using actual .pkl ML models"
           : modelStatus.modelsLoaded
-        note: modelsUsed
-          ? "Using actual .pkl ML models"
-          : modelStatus.modelsLoaded
             ? "Models found but Python execution failed - using simulation"
             : "Model files not found - using simulation"
       },

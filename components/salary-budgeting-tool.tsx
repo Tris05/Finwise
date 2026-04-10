@@ -141,14 +141,27 @@ export function SalaryBudgetingTool({ syncedMonthlySalary }: SalaryBudgetingTool
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="monthly-salary">Monthly Disposable Income (₹)</Label>
-                <Badge variant="secondary" className="text-[10px] h-5 flex gap-1 items-center font-medium bg-blue-50 text-blue-700 border-blue-100">
-                  <RefreshCw className="h-2 w-2" /> Synced from Calculator
-                </Badge>
+                <div className="flex gap-2">
+                  <Badge variant="secondary" className="text-[10px] h-5 flex gap-1 items-center font-medium bg-blue-50 text-blue-700 border-blue-100">
+                    <RefreshCw className="h-2 w-2" /> Synced from Calculator
+                  </Badge>
+                  {monthlySalary !== syncedMonthlySalary && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 text-blue-600"
+                      onClick={() => setMonthlySalary(syncedMonthlySalary)}
+                      title="Reset to synced value"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
               <Input
                 id="monthly-salary"
                 type="number"
-                value={monthlySalary}
+                value={monthlySalary || ""}
                 onChange={(e) => setMonthlySalary(Number(e.target.value))}
                 placeholder="100000"
                 className="font-mono"

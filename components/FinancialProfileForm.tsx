@@ -31,6 +31,13 @@ import { Badge } from "@/components/ui/badge"
 import { usePortfolioOptimizer } from "@/hooks/usePortfolioOptimizer"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useUserProfile } from "@/hooks/useUserProfile"
+import { useInvestments } from "@/hooks/useInvestments"
+import { useFinancialGoals, FinancialGoal, GoalType } from "@/hooks/useFinancialGoals"
+import { useLoans } from "@/hooks/useLoans"
+import { db, auth } from "@/lib/firebase"
+import { doc, setDoc } from "firebase/firestore"
+import { useEffect } from "react"
 
 const formSchema = z.object({
     user_profile: z.object({
@@ -55,9 +62,10 @@ const formSchema = z.object({
         existing_investments: z.object({
             stocks: z.number().default(0),
             mutual_funds: z.number().default(0),
-            fd_ppf: z.number().default(0),
+            fd: z.number().default(0),
+            ppf: z.number().default(0),
             crypto: z.number().default(0),
-            gold: z.number().default(0)
+            commodities: z.number().default(0)
         }),
         debts: z.object({
             loans: z.number().optional().default(0),
@@ -79,10 +87,16 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
+const round = (val: number) => Math.round((val + Number.EPSILON) * 100) / 100
+
 export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     const [step, setStep] = useState(1)
     const [totalSteps] = useState(6)
-    const { optimizePortfolio, loading, currentRequest, error } = usePortfolioOptimizer()
+    const { optimizePortfolio, loading, currentRequest, error: optimizerError } = usePortfolioOptimizer()
+    const { annualIncome, age, riskProfile } = useUserProfile()
+    const { investments, totalValue } = useInvestments()
+    const { goals: savedGoals, addGoal, loading: goalsLoading } = useFinancialGoals()
+    const { loanProfile } = useLoans()
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -109,9 +123,10 @@ export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) 
                 existing_investments: {
                     stocks: 0,
                     mutual_funds: 0,
-                    fd_ppf: 0,
+                    fd: 0,
+                    ppf: 0,
                     crypto: 0,
-                    gold: 0
+                    commodities: 0
                 },
                 debts: {
                     loans: 0,
@@ -134,8 +149,90 @@ export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) 
         name: "goals"
     })
 
+    // Prepopulate form data
+    useEffect(() => {
+        if (!annualIncome && !age && investments.length === 0) return
+
+        const riskScoreMap: Record<string, number> = {
+            "Conservative": 0.3,
+            "Moderate": 0.6,
+            "Aggressive": 0.9
+        }
+
+        const holdings = {
+            stocks: round(investments.filter(i => /stocks?|equity/i.test((i.category as string) || "") || /stocks?|equity/i.test((i.type as string) || "")).reduce((sum, i) => sum + (Number(i.currentValue) || 0), 0)),
+            mutual_funds: round(investments.filter(i => /mutual\s*funds?|mf|sip/i.test((i.type as string) || "") || /mutual\s*funds?|mf/i.test(i.name || "")).reduce((sum, i) => sum + (Number(i.currentValue) || 0), 0)),
+            crypto: round(investments.filter(i => /crypto|bitcoin|eth|sol/i.test((i.category as string) || "") || /crypto/i.test((i.type as string) || "")).reduce((sum, i) => sum + (Number(i.currentValue) || 0), 0)),
+            fd: round(investments.filter(i => /fd|fixed\s*deposit|term\s*deposit/i.test((i.type as string) || "") || /fd|fixed\s*deposit|term\s*deposit/i.test(i.name || "")).reduce((sum, i) => sum + (Number(i.currentValue) || 0), 0)),
+            ppf: round(investments.filter(i => /ppf|provident\s*fund/i.test((i.type as string) || "") || /ppf|provident\s*fund/i.test(i.name || "")).reduce((sum, i) => sum + (Number(i.currentValue) || 0), 0)),
+            commodities: round(investments.filter(i => /commodit|gold|silver|metal/i.test((i.category as string) || "") || /gold|silver/i.test(i.symbol || "")).reduce((sum, i) => sum + (Number(i.currentValue) || 0), 0))
+        }
+
+        form.reset({
+            ...form.getValues(),
+            user_profile: {
+                ...form.getValues().user_profile,
+                annual_income: annualIncome || form.getValues().user_profile.annual_income,
+                age: age || form.getValues().user_profile.age,
+                risk_score: riskProfile ? riskScoreMap[riskProfile] || 0.5 : 0.5,
+                constraints: {
+                    ...form.getValues().user_profile.constraints,
+                    investment_style: (riskProfile?.toLowerCase() as any) || "moderate"
+                }
+            },
+            financial_details: {
+                ...form.getValues().financial_details,
+                total_assets: round(totalValue || form.getValues().financial_details.total_assets),
+                existing_investments: holdings,
+                debts: {
+                    ...form.getValues().financial_details.debts,
+                    loans: round(loanProfile?.amount || form.getValues().financial_details.debts.loans)
+                }
+            },
+            goals: savedGoals.length > 0 ? savedGoals.map(g => ({
+                name: g.name,
+                target_amount: g.targetAmount,
+                time_horizon: Math.ceil((new Date(g.targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 365)) || 1,
+                priority: (g.priority.toLowerCase() as any) || "medium"
+            })) : form.getValues().goals
+        })
+    }, [annualIncome, age, riskProfile, investments, totalValue, savedGoals, loanProfile])
+
     const onSubmit = async (values: FormValues) => {
-        await optimizePortfolio(values)
+        const user = auth.currentUser
+        if (!user) return
+
+        try {
+            // 1. Save updated profile info
+            const userRef = doc(db, "users", user.uid)
+            await setDoc(userRef, {
+                profile: {
+                    annual_income: values.user_profile.annual_income,
+                    age: values.user_profile.age,
+                }
+            }, { merge: true })
+
+            // 2. Save/Sync Goals
+            // For simplicity, we add new goals that don't exist by name
+            for (const goal of values.goals) {
+                const exists = savedGoals.find(g => g.name.toLowerCase() === goal.name.toLowerCase())
+                if (!exists) {
+                    await addGoal({
+                        name: goal.name,
+                        targetAmount: goal.target_amount,
+                        currentAmount: 0,
+                        targetDate: new Date(new Date().getFullYear() + goal.time_horizon, 0, 1).toISOString(),
+                        priority: (goal.priority.charAt(0).toUpperCase() + goal.priority.slice(1)) as any,
+                        type: "Other"
+                    })
+                }
+            }
+
+            // 3. Run Optimization
+            await optimizePortfolio(values)
+        } catch (err) {
+            console.error("Error saving form data:", err)
+        }
     }
 
     const nextStep = () => setStep(s => Math.min(s + 1, totalSteps))
@@ -384,16 +481,24 @@ export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) 
                                             <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.stocks", { valueAsNumber: true })} />
                                         </div>
                                         <div className="space-y-2">
+                                            <Label className="text-xs">Crypto (₹)</Label>
+                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.crypto", { valueAsNumber: true })} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">FD (₹)</Label>
+                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.fd", { valueAsNumber: true })} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">PPF (₹)</Label>
+                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.ppf", { valueAsNumber: true })} />
+                                        </div>
+                                        <div className="space-y-2">
                                             <Label className="text-xs">Mutual Funds (₹)</Label>
                                             <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.mutual_funds", { valueAsNumber: true })} />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-xs">FD / PPF (₹)</Label>
-                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.fd_ppf", { valueAsNumber: true })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs">Crypto (₹)</Label>
-                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.crypto", { valueAsNumber: true })} />
+                                            <Label className="text-xs">Commodities (₹)</Label>
+                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.commodities", { valueAsNumber: true })} />
                                         </div>
                                     </div>
 
@@ -571,10 +676,10 @@ export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) 
                                         />
                                     </div>
 
-                                    {error && (
+                                    {optimizerError && (
                                         <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-xl flex gap-2 items-center">
                                             <AlertTriangle className="w-4 h-4 shrink-0" />
-                                            {error}
+                                            {optimizerError}
                                         </div>
                                     )}
                                 </CardContent>

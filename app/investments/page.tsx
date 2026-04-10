@@ -1,7 +1,6 @@
 "use client"
 
 import { AppShell } from "@/components/app-shell"
-import { QueryProvider } from "@/components/providers/query-provider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -525,7 +524,6 @@ Recommendation: ${asset.recommendation}
     const csvContent = [
       "Date,Type,Asset,Quantity,Price,Amount,Status,Category",
       ...transactions.map(t =>
-      ...transactions.map(t =>
         `${t.date},${t.type},${t.asset},${t.quantity},${t.price},${t.amount},${t.status},${t.category}`
       )
     ].join('\n')
@@ -824,20 +822,17 @@ Recommendation: ${asset.recommendation}
     setMarketAssets(prev =>
       prev.map(asset =>
         asset.symbol === stock.symbol
-    setMarketAssets(prev =>
-          prev.map(asset =>
-            asset.symbol === stock.symbol
-              ? { ...asset, isWatched: true }
-              : asset
-          )
-        )
+          ? { ...asset, isWatched: true }
+          : asset
+      )
+    )
 
 
     // Show success toast
     toast({
-          title: "Added to Watchlist",
-          description: `${stock.symbol} has been added to your watchlist`,
-        })
+      title: "Added to Watchlist",
+      description: `${stock.symbol} has been added to your watchlist`,
+    })
   }
 
   const handleAddToPortfolio = (stock: any) => {
@@ -871,360 +866,328 @@ Recommendation: ${asset.recommendation}
   }
 
   return (
-    <QueryProvider>
-      <AppShell>
-        <div className="space-y-8 p-6">
-          {/* Page Header */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Investment Portfolio</h1>
-                <p className="text-muted-foreground">Track your investments, analyze performance, and manage your financial goals</p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Dialog open={isOptimizerOpen} onOpenChange={setIsOptimizerOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="font-bold shadow-lg shadow-primary/20 bg-gradient-to-r from-primary to-blue-600 hover:opacity-90">
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      AI Optimizer
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-max min-w-[600px] max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>AI Portfolio Optimizer</DialogTitle>
-                      <DialogDescription>
-                        Fill out your financial profile to get personalized AI investment recommendations.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <FinancialProfileForm onSuccess={() => setIsOptimizerOpen(false)} />
-                  </DialogContent>
-                </Dialog>
-                {marketDataError && (
-                  <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
-                    <WifiOff className="h-4 w-4" />
-                    <span className="text-sm">Data Error</span>
-                  </div>
-                )}
-                {!marketDataError && lastUpdated && (
-                  <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
-                    <Wifi className="h-4 w-4" />
-                    <span className="text-sm">Live Data</span>
-                  </div>
-                )}
-                {lastUpdated && (
-                  <div className="text-xs text-muted-foreground">
-                    Updated: {new Date(lastUpdated).toLocaleTimeString()}
-                  </div>
-                )}
-              </div>
+    <AppShell>
+      <div className="space-y-8 p-6">
+        {/* Page Header */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Investment Portfolio</h1>
+              <p className="text-muted-foreground">Track your investments, analyze performance, and manage your financial goals</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Dialog open={isOptimizerOpen} onOpenChange={setIsOptimizerOpen}>
+                <DialogTrigger asChild>
+                  <Button className="font-bold shadow-lg shadow-primary/20 bg-gradient-to-r from-primary to-blue-600 hover:opacity-90">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    AI Optimizer
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-max min-w-[600px] max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>AI Portfolio Optimizer</DialogTitle>
+                    <DialogDescription>
+                      Fill out your financial profile to get personalized AI investment recommendations.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <FinancialProfileForm onSuccess={() => setIsOptimizerOpen(false)} />
+                </DialogContent>
+              </Dialog>
+              {marketDataError && (
+                <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+                  <WifiOff className="h-4 w-4" />
+                  <span className="text-sm">Data Error</span>
+                </div>
+              )}
+              {!marketDataError && lastUpdated && (
+                <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                  <Wifi className="h-4 w-4" />
+                  <span className="text-sm">Live Data</span>
+                </div>
+              )}
+              {lastUpdated && (
+                <div className="text-xs text-muted-foreground">
+                  Updated: {new Date(lastUpdated).toLocaleTimeString()}
+                </div>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Portfolio Overview */}
-          <PortfolioOverview
-            totalValue={portfolioData.totalValue}
-            totalGain={portfolioData.totalGain}
-            totalGainPercent={portfolioData.totalGainPercent}
-            dayChange={portfolioData.dayChange}
-            dayChangePercent={portfolioData.dayChangePercent}
-            onRefresh={handleRefresh}
-            onRebalance={handleRebalance}
-            isLoading={isLoading || isMarketDataFetching}
-          />
+        {/* Portfolio Overview */}
+        <PortfolioOverview
+          totalValue={portfolioData.totalValue}
+          totalGain={portfolioData.totalGain}
+          totalGainPercent={portfolioData.totalGainPercent}
+          dayChange={portfolioData.dayChange}
+          dayChangePercent={portfolioData.dayChangePercent}
+          onRefresh={handleRefresh}
+          onRebalance={handleRebalance}
+          isLoading={isLoading || isMarketDataFetching}
+        />
 
-          {/* Performance Chart */}
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
-            <CardHeader className="pb-4">
-              <div>
-                <CardTitle className="text-xl font-semibold">Portfolio Performance</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">Your portfolio vs benchmark over time</p>
-              </div>
-            </CardHeader>
-            <CardContent className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={performanceData}>
-                  <XAxis
-                    dataKey="month"
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    className="text-xs text-muted-foreground"
-                  />
-                  <YAxis
-                    <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    className="text-xs text-muted-foreground"
-                  />
-                  <Tooltip
-                    <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3B82F6"
-                    fill="#3B82F6"
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3B82F6"
-                    fill="#3B82F6"
-                    fillOpacity={0.1}
-                    strokeWidth={2}
-                    name="Your Portfolio"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="benchmark"
-                    stroke="#10B981"
-                    fill="#10B981"
-                  <Area
-                    type="monotone"
-                    dataKey="benchmark"
-                    stroke="#10B981"
-                    fill="#10B981"
-                    fillOpacity={0.1}
-                    strokeWidth={2}
-                    name="Benchmark"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        {/* Performance Chart */}
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
+          <CardHeader className="pb-4">
+            <div>
+              <CardTitle className="text-xl font-semibold">Portfolio Performance</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Your portfolio vs benchmark over time</p>
+            </div>
+          </CardHeader>
+          <CardContent className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={performanceData}>
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  className="text-xs text-muted-foreground"
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  className="text-xs text-muted-foreground"
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#3B82F6"
+                  fill="#3B82F6"
+                  fillOpacity={0.1}
+                  strokeWidth={2}
+                  name="Your Portfolio"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="benchmark"
+                  stroke="#10B981"
+                  fill="#10B981"
+                  fillOpacity={0.1}
+                  strokeWidth={2}
+                  name="Benchmark"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-          {/* Portfolio Allocation Chart */}
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
-            <CardHeader className="pb-4">
-              <div>
-                <CardTitle className="text-xl font-semibold">Portfolio Allocation</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">Click on any slice to view investments in that category</p>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <PortfolioPie
-                data={portfolioAllocation as any[]}
-                onSliceClick={handlePieSliceClick}
-              />
-            </CardContent>
-          </Card>
+        {/* Portfolio Allocation Chart */}
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
+          <CardHeader className="pb-4">
+            <div>
+              <CardTitle className="text-xl font-semibold">Portfolio Allocation</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Click on any slice to view investments in that category</p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <PortfolioPie
+              data={portfolioAllocation as any[]}
+              onSliceClick={handlePieSliceClick}
+            />
+          </CardContent>
+        </Card>
 
-          {/* Main Content Tabs */}
-          <Tabs defaultValue="portfolio" className="w-full">
-            <TabsList className="grid w-full grid-cols-7 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
-              <TabsTrigger
-                value="portfolio"
-              <TabsTrigger
-                value="portfolio"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-              >
-                Portfolio
-              </TabsTrigger>
-              <TabsTrigger
-                <TabsTrigger
-                value="search"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-              >
-                Search Stocks
-              </TabsTrigger>
-              <TabsTrigger
-                <TabsTrigger
-                value="recommendations"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-              >
-                AI Recommendations
-              </TabsTrigger>
-              <TabsTrigger
-                <TabsTrigger
-                value="transactions"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-              >
-                Transactions
-              </TabsTrigger>
-              <TabsTrigger
-                <TabsTrigger
-                value="market"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-              >
-                Market
-              </TabsTrigger>
-              <TabsTrigger
-                <TabsTrigger
-                value="goals"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-              >
-                Goals
-              </TabsTrigger>
-              <TabsTrigger
-                <TabsTrigger
-                value="analysis"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-              >
-                Analysis
-              </TabsTrigger>
-            </TabsList>
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="portfolio" className="w-full">
+          <TabsList className="grid w-full grid-cols-7 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
+            <TabsTrigger
+              value="portfolio"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+            >
+              Portfolio
+            </TabsTrigger>
+            <TabsTrigger
+              value="search"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+            >
+              Search Stocks
+            </TabsTrigger>
+            <TabsTrigger
+              value="recommendations"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+            >
+              AI Recommendations
+            </TabsTrigger>
+            <TabsTrigger
+              value="transactions"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+            >
+              Transactions
+            </TabsTrigger>
+            <TabsTrigger
+              value="market"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+            >
+              Market
+            </TabsTrigger>
+            <TabsTrigger
+              value="goals"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+            >
+              Goals
+            </TabsTrigger>
+            <TabsTrigger
+              value="analysis"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+            >
+              Analysis
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="portfolio" className="space-y-6 mt-6">
-              <RealInvestmentTracker
-                investments={realTimeInvestments}
-                onInvestmentClick={handleAssetClick}
-                onAddInvestment={() => setAddTransactionOpen(true)}
-                onSellInvestment={handleSellInvestment}
-              />
-            </TabsContent>
+          <TabsContent value="portfolio" className="space-y-6 mt-6">
+            <RealInvestmentTracker
+              investments={realTimeInvestments}
+              onInvestmentClick={handleAssetClick}
+              onAddInvestment={() => setAddTransactionOpen(true)}
+              onSellInvestment={handleSellInvestment}
+            />
+          </TabsContent>
 
-            <TabsContent value="search" className="space-y-6 mt-6">
-              <StockSearch
-                onAddToWatchlist={handleAddToWatchlist}
-                onAddToPortfolio={handleAddToPortfolio}
-              />
-            </TabsContent>
+          <TabsContent value="search" className="space-y-6 mt-6">
+            <StockSearch
+              onAddToWatchlist={handleAddToWatchlist}
+              onAddToPortfolio={handleAddToPortfolio}
+            />
+          </TabsContent>
 
-            <TabsContent value="recommendations" className="space-y-6 mt-6">
-              <InvestmentRecommendations
-                recommendation={latestRecommendation}
-                onAddInvestment={handleAIRecommendationAdd}
-                isLoading={isLoading || isMarketDataFetching}
-                onRunAgain={() => setIsOptimizerOpen(true)}
-                existingPortfolio={realTimeInvestments}
-              />
-            </TabsContent>
+          <TabsContent value="recommendations" className="space-y-6 mt-6">
+            <InvestmentRecommendations
+              recommendation={latestRecommendation}
+              onAddInvestment={handleAIRecommendationAdd}
+              isLoading={isLoading || isMarketDataFetching}
+              onRunAgain={() => setIsOptimizerOpen(true)}
+              existingPortfolio={realTimeInvestments}
+            />
+          </TabsContent>
 
-            <TabsContent value="transactions" className="space-y-6 mt-6">
-              <InvestmentTransactions
-                transactions={transactions}
-                onAddTransaction={handleAddTransaction}
-                onEditTransaction={handleEditTransaction}
-                onDeleteTransaction={handleDeleteTransaction}
-                onExport={handleExport}
-              />
-            </TabsContent>
+          <TabsContent value="transactions" className="space-y-6 mt-6">
+            <InvestmentTransactions
+              transactions={transactions}
+              onAddTransaction={handleAddTransaction}
+              onEditTransaction={handleEditTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
+              onExport={handleExport}
+            />
+          </TabsContent>
 
-            <TabsContent value="market" className="space-y-6 mt-6">
-              <MarketWatchlist
-                assets={marketAssetsState}
-                onToggleWatch={handleToggleWatch}
-                onBuyAsset={handleBuyAsset}
-                onViewDetails={handleViewDetails}
-                onRefresh={simulateMarketUpdate}
-                isLoading={isMarketDataLoading}
-              />
-            </TabsContent>
+          <TabsContent value="market" className="space-y-6 mt-6">
+            <MarketWatchlist
+              assets={marketAssetsState}
+              onToggleWatch={handleToggleWatch}
+              onBuyAsset={handleBuyAsset}
+              onViewDetails={handleViewDetails}
+              onRefresh={simulateMarketUpdate}
+              isLoading={isMarketDataLoading}
+            />
+          </TabsContent>
 
-            <TabsContent value="goals" className="space-y-6 mt-6">
-              <InvestmentGoals
-                goals={goals}
-                onAddGoal={handleAddGoal}
-                onEditGoal={handleEditGoal}
-                onDeleteGoal={handleDeleteGoal}
-              />
-            </TabsContent>
+          <TabsContent value="goals" className="space-y-6 mt-6">
+            <InvestmentGoals
+              goals={goals}
+              onAddGoal={handleAddGoal}
+              onEditGoal={handleEditGoal}
+              onDeleteGoal={handleDeleteGoal}
+            />
+          </TabsContent>
 
-            <TabsContent value="analysis" className="space-y-8 mt-6">
-              <div className="space-y-8">
-                {/* Main AI Insights */}
-                <InvestmentInsights recommendation={latestRecommendation} />
+          <TabsContent value="analysis" className="space-y-8 mt-6">
+            <div className="space-y-8">
+              {/* Main AI Insights */}
+              <InvestmentInsights recommendation={latestRecommendation} />
 
-                {/* Additional Guidance */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/10 dark:to-gray-950/10">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-xl font-semibold">AI Recommendations</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">Personalized investment suggestions</p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div
-                          className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors"
-                          onClick={() => {
-                            const query = "Help me increase my equity allocation. What stocks should I consider?"
-                            window.location.href = `/advisor?q=${encodeURIComponent(query)}`
-                          }}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                            <div>
-                              <div className="font-medium text-sm">Consider increasing equity allocation</div>
-                              <div className="text-xs text-muted-foreground mt-1">Your current equity allocation is below recommended levels for your age.</div>
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          className="p-4 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
-                          onClick={() => {
-                            const query = "Help me add international diversification to my portfolio. What international funds should I consider?"
-                            window.location.href = `/advisor?q=${encodeURIComponent(query)}`
-                          }}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                            <div>
-                              <div className="font-medium text-sm">Add international diversification</div>
-                              <div className="text-xs text-muted-foreground mt-1">Consider adding international funds to reduce country-specific risk.</div>
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          className="p-4 border border-orange-200 dark:border-orange-800 rounded-lg bg-orange-50 dark:bg-orange-950/20 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/30 transition-colors"
-                          onClick={() => {
-                            setRebalanceOpen(true)
-                          }}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                            <div>
-                              <div className="font-medium text-sm">Rebalance quarterly</div>
-                              <div className="text-xs text-muted-foreground mt-1">Your portfolio has drifted from target allocation.</div>
-                            </div>
+              {/* Additional Guidance */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/10 dark:to-gray-950/10">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-xl font-semibold">AI Recommendations</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">Personalized investment suggestions</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div
+                        className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors"
+                        onClick={() => {
+                          const query = "Help me increase my equity allocation. What stocks should I consider?"
+                          window.location.href = `/advisor?q=${encodeURIComponent(query)}`
+                        }}
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                          <div>
+                            <div className="font-medium text-sm">Consider increasing equity allocation</div>
+                            <div className="text-xs text-muted-foreground mt-1">Your current equity allocation is below recommended levels for your age.</div>
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      <div
+                        className="p-4 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
+                        onClick={() => {
+                          const query = "Help me add international diversification to my portfolio. What international funds should I consider?"
+                          window.location.href = `/advisor?q=${encodeURIComponent(query)}`
+                        }}
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                          <div>
+                            <div className="font-medium text-sm">Add international diversification</div>
+                            <div className="text-xs text-muted-foreground mt-1">Consider adding international funds to reduce country-specific risk.</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        className="p-4 border border-orange-200 dark:border-orange-800 rounded-lg bg-orange-50 dark:bg-orange-950/20 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/30 transition-colors"
+                        onClick={() => {
+                          setRebalanceOpen(true)
+                        }}
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
+                          <div>
+                            <div className="font-medium text-sm">Rebalance quarterly</div>
+                            <div className="text-xs text-muted-foreground mt-1">Your portfolio has drifted from target allocation.</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
 
-        <RebalanceModal open={rebalanceOpen} onOpenChange={setRebalanceOpen} />
-        <AddTransactionModal
-          open={addTransactionOpen}
-        <AddTransactionModal
-          open={addTransactionOpen}
-          onOpenChange={setAddTransactionOpen}
-          onAddTransaction={handleAddTransactionSubmit}
-        />
-        <AddGoalModal
-          open={addGoalOpen}
-        <AddGoalModal
-          open={addGoalOpen}
-          onOpenChange={setAddGoalOpen}
-          onAddGoal={handleAddGoalSubmit}
-        />
-        <EditGoalModal
-          open={editGoalOpen}
-        <EditGoalModal
-          open={editGoalOpen}
-          onOpenChange={setEditGoalOpen}
-          goal={selectedGoal}
-          onUpdateGoal={handleUpdateGoal}
-        />
-        <SellInvestmentModal
-          open={sellInvestmentOpen}
-        <SellInvestmentModal
-          open={sellInvestmentOpen}
-          onOpenChange={setSellInvestmentOpen}
-          investment={selectedInvestment}
-          onSellInvestment={handleSellInvestmentSubmit}
-        />
-      </AppShell>
-    </QueryProvider>
+      <RebalanceModal open={rebalanceOpen} onOpenChange={setRebalanceOpen} />
+      <AddTransactionModal
+        open={addTransactionOpen}
+        onOpenChange={setAddTransactionOpen}
+        onAddTransaction={handleAddTransactionSubmit}
+      />
+      <AddGoalModal
+        open={addGoalOpen}
+        onOpenChange={setAddGoalOpen}
+        onAddGoal={handleAddGoalSubmit}
+      />
+      <EditGoalModal
+        open={editGoalOpen}
+        onOpenChange={setEditGoalOpen}
+        goal={selectedGoal}
+        onUpdateGoal={handleUpdateGoal}
+      />
+      <SellInvestmentModal
+        open={sellInvestmentOpen}
+        onOpenChange={setSellInvestmentOpen}
+        investment={selectedInvestment}
+        onSellInvestment={handleSellInvestmentSubmit}
+      />
+    </AppShell>
   )
 }

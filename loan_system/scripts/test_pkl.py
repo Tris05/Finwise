@@ -33,8 +33,8 @@ def test_pkl_files():
                 results[file_name] = "FILE NOT FOUND"
                 print(f"FAILED {file_name}: FILE NOT FOUND at {full_path}")
         except Exception as e:
-            results[file] = f"ERROR: {str(e)}"
-            print(f"FAILED {file}: ERROR - {str(e)}")
+            results[file_name] = f"ERROR: {str(e)}"
+            print(f"FAILED {file_name}: ERROR - {str(e)}")
     
     return results
 

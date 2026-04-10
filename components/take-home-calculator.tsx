@@ -133,6 +133,31 @@ export function TakeHomeCalculator({
     onMonthlyTakeHomeUpdate(Math.round(takeHome / 12))
   }
 
+  const handleGrossChange = (val: string) => {
+    const num = val === "" ? 0 : Number(val)
+    onGrossChange(Math.max(0, num))
+  }
+
+  const handleHraChange = (val: string) => {
+    const num = val === "" ? 0 : Number(val)
+    setHraPercentage(Math.max(0, Math.min(100, num)))
+  }
+
+  const handleBasicChange = (val: string) => {
+    const num = val === "" ? 0 : Number(val)
+    setBasicPercentage(Math.max(0, Math.min(100, num)))
+  }
+
+  const handleRentChange = (val: string) => {
+    const num = val === "" ? 0 : Number(val)
+    setMonthlyRent(Math.max(0, num))
+  }
+
+  const handleOtherDeductionsChange = (val: string) => {
+    const num = val === "" ? 0 : Number(val)
+    setOtherAllowances(Math.max(0, num))
+  }
+
   useEffect(() => {
     calculateTakeHome()
   }, [initialGross, basicPercentage, hraPercentage, monthlyRent, taxRegime, otherAllowances])
@@ -157,8 +182,9 @@ export function TakeHomeCalculator({
             <Input
               id="gross-salary"
               type="number"
-              value={initialGross}
-              onChange={(e) => onGrossChange(Number(e.target.value))}
+              value={initialGross || ""}
+              onChange={(e) => handleGrossChange(e.target.value)}
+              placeholder="e.g. 1200000"
             />
           </div>
 
@@ -168,8 +194,8 @@ export function TakeHomeCalculator({
               <Input
                 id="basic-percentage"
                 type="number"
-                value={basicPercentage}
-                onChange={(e) => setBasicPercentage(Number(e.target.value))}
+                value={basicPercentage || ""}
+                onChange={(e) => handleBasicChange(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -177,8 +203,8 @@ export function TakeHomeCalculator({
               <Input
                 id="hra-percentage"
                 type="number"
-                value={hraPercentage}
-                onChange={(e) => setHraPercentage(Number(e.target.value))}
+                value={hraPercentage || ""}
+                onChange={(e) => handleHraChange(e.target.value)}
               />
             </div>
           </div>
@@ -189,8 +215,8 @@ export function TakeHomeCalculator({
               <Input
                 id="monthly-rent"
                 type="number"
-                value={monthlyRent}
-                onChange={(e) => setMonthlyRent(Number(e.target.value))}
+                value={monthlyRent || ""}
+                onChange={(e) => handleRentChange(e.target.value)}
               />
               <p className="text-[10px] text-muted-foreground">Required for HRA exemption in Old Regime</p>
             </div>
@@ -201,8 +227,8 @@ export function TakeHomeCalculator({
             <Input
               id="other-allowances"
               type="number"
-              value={otherAllowances}
-              onChange={(e) => setOtherAllowances(Number(e.target.value))}
+              value={otherAllowances || ""}
+              onChange={(e) => handleOtherDeductionsChange(e.target.value)}
             />
           </div>
 
@@ -234,6 +260,11 @@ export function TakeHomeCalculator({
               <div className="flex justify-between text-xs text-muted-foreground italic">
                 <span>- Basic Component</span>
                 <span>₹{breakdown.basicSalary.toLocaleString()}</span>
+              </div>
+
+              <div className="flex justify-between text-xs text-muted-foreground italic">
+                <span>- HRA Component ({hraPercentage}%)</span>
+                <span>₹{breakdown.hra.toLocaleString()}</span>
               </div>
 
               {breakdown.hraExemption > 0 && (
