@@ -13,7 +13,7 @@ from extractor import extract_from_text
 from scorer import score_financial_fields
 
 app = Flask(__name__, static_folder="static")
-CORS(app)  # allow cross-origin requests from frontend
+CORS(app, resources={r"/*": {"origins": "*"}}) 
 
 POPPLER_PATH = None  # set if needed on Windows
 layout_model = LayoutModel(device="cpu")  # change to "cuda" if you have GPU and torch GPU available
@@ -22,8 +22,10 @@ layout_model = LayoutModel(device="cpu")  # change to "cuda" if you have GPU and
 def index():
     return jsonify({"ok": True, "message": "FinWise backend running"})
 
-@app.route("/analyze", methods=["POST"])
+@app.route("/analyze", methods=["POST", "OPTIONS"])
 def analyze():
+    if request.method == "OPTIONS":
+        return "", 200
     if "file" not in request.files:
         return jsonify({"error": "no file part 'file'"}), 400
 
