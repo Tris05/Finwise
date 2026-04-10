@@ -8,14 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
-import { 
-  Star, 
-  CreditCard, 
-  Gift, 
-  Plane, 
-  Car, 
-  ShoppingBag, 
-  Utensils, 
+import {
+  Star,
+  CreditCard,
+  Gift,
+  Plane,
+  Car,
+  ShoppingBag,
+  Utensils,
   Fuel,
   TrendingUp,
   Shield,
@@ -39,6 +39,22 @@ import { motion, AnimatePresence } from "framer-motion"
 import { CreditCardComparison } from "./credit-card-comparison"
 import creditCardsData from "@/data/credit-cards-detailed.json"
 import { processCSVFiles, ParsedCreditCard } from "@/lib/csv-parser"
+import { db, auth } from "@/lib/firebase"
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  limit,
+  doc,
+  setDoc,
+  deleteDoc,
+  addDoc,
+  serverTimestamp
+} from "firebase/firestore"
+import { onAuthStateChanged } from "firebase/auth"
+import { toast } from "sonner"
 
 interface CreditCard {
   id: string
@@ -127,9 +143,53 @@ export function CreditCardRecommendations() {
     preferences: [],
     experience: "beginner"
   })
+  const [userId, setUserId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
+  const [filterBank, setFilterBank] = useState("all")
   const [sortBy, setSortBy] = useState("rating")
+  const [loading, setLoading] = useState(true)
+
+  // Auth and Firestore Listeners
+  useEffect(() => {
+    let unsubs: (() => void)[] = []
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      unsubs.forEach(unsub => unsub())
+      unsubs = []
+
+      if (user) {
+        setUserId(user.uid)
+
+        // 1. Sync User Profile from latest completed portfolio_request or a dedicated doc
+        // For now, let's check for a 'financial_profile' document first
+        const profileRef = doc(db, "users", user.uid, "financial_profile", "current")
+        unsubs.push(onSnapshot(profileRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data() as UserProfile
+            setUserProfile(prev => ({
+              ...prev,
+              ...data
+            }))
+          }
+        }))
+
+        // 2. Sync Saved/Selected Cards
+        const savedCardsRef = collection(db, "users", user.uid, "saved_cards")
+        unsubs.push(onSnapshot(savedCardsRef, (snapshot) => {
+          const savedIds = snapshot.docs.map(doc => doc.id)
+          setSelectedCards(savedIds)
+        }))
+      } else {
+        setUserId(null)
+      }
+    })
+
+    return () => {
+      unsubscribeAuth()
+      unsubs.forEach(unsub => unsub())
+    }
+  }, [])
 
   // Load credit card data
   useEffect(() => {
@@ -139,7 +199,7 @@ export function CreditCardRecommendations() {
         // Load CSV data first
         const csvCards = await processCSVFiles()
         console.log('CSV Cards loaded:', csvCards.length)
-        
+
         // Convert CSV cards to match interface
         const convertedCards: CreditCard[] = csvCards.map(card => ({
           ...card,
@@ -153,13 +213,25 @@ export function CreditCardRecommendations() {
           notFor: card.notFor || [],
           cibilScore: card.cibilScore || { min: 700, description: '700+' }
         }))
-        
+
         console.log('Converted cards:', convertedCards.length)
         console.log('Sample converted card:', convertedCards[0])
-        
+
         // Fallback to JSON data if CSV loading fails
-        const fallbackCards = csvCards.length === 0 ? creditCardsData.creditCards : []
-        
+        const fallbackCards: CreditCard[] = csvCards.length === 0
+          ? (creditCardsData.creditCards as any[]).map(card => ({
+            ...card,
+            features: card.features || [],
+            benefits: card.benefits || [],
+            keyBenefits: card.keyBenefits || [],
+            pros: card.pros || [],
+            cons: card.cons || [],
+            bestFor: card.bestFor || [],
+            notFor: card.notFor || [],
+            cibilScore: card.cibilScore || { min: 700, description: '700+' }
+          }))
+          : []
+
         const allCards = [...convertedCards, ...fallbackCards]
         console.log('Total cards to set:', allCards.length)
         setCreditCards(allCards)
@@ -167,11 +239,22 @@ export function CreditCardRecommendations() {
       } catch (error) {
         console.error('Error loading credit cards:', error)
         // Fallback to JSON data
-    setCreditCards(creditCardsData.creditCards)
-    setFilteredCards(creditCardsData.creditCards)
+        const fallback = (creditCardsData.creditCards as any[]).map(card => ({
+          ...card,
+          features: card.features || [],
+          benefits: card.benefits || [],
+          keyBenefits: card.keyBenefits || [],
+          pros: card.pros || [],
+          cons: card.cons || [],
+          bestFor: card.bestFor || [],
+          notFor: card.notFor || [],
+          cibilScore: card.cibilScore || { min: 700, description: '700+' }
+        }))
+        setCreditCards(fallback)
+        setFilteredCards(fallback)
       }
     }
-    
+
     loadCreditCards()
   }, [])
 
@@ -179,14 +262,15 @@ export function CreditCardRecommendations() {
   useEffect(() => {
     let filtered = creditCards.filter(card => {
       const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           card.issuer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           card.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (card.keyBenefits || []).some(benefit => 
-                             benefit.toLowerCase().includes(searchTerm.toLowerCase())
-                           )
-      
+        card.issuer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (card.keyBenefits || []).some(benefit =>
+          benefit.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+
       const matchesCibilScore = !card.cibilScore || userProfile.cibilScore >= card.cibilScore.min
-      
+      const matchesIncome = !card.eligibility?.minIncome || (userProfile.monthlyIncome * 12) >= card.eligibility.minIncome
+
       // Handle advanced filters
       let matchesFilter = true
       if (filterCategory === "free") {
@@ -202,8 +286,13 @@ export function CreditCardRecommendations() {
       } else if (filterCategory !== "all") {
         matchesFilter = card.category === filterCategory
       }
-      
-      return matchesSearch && matchesCibilScore && matchesFilter
+
+      let matchesBank = true
+      if (filterBank !== "all") {
+        matchesBank = card.issuer === filterBank
+      }
+
+      return matchesSearch && matchesCibilScore && matchesIncome && matchesFilter && matchesBank
     })
 
     // Sort cards
@@ -214,11 +303,17 @@ export function CreditCardRecommendations() {
         case "annualFee":
           return a.annualFee - b.annualFee
         case "rewardsRate":
-          return parseFloat(b.rewardsRate) - parseFloat(a.rewardsRate)
+          const parseRate = (rate: string) => {
+            const matches = rate.match(/(\d+(\.\d+)?)/)
+            return matches ? parseFloat(matches[0]) : 0
+          }
+          return parseRate(b.rewardsRate) - parseRate(a.rewardsRate)
+        case "savings":
+          return getEstimatedSavings(b) - getEstimatedSavings(a)
         case "popularity":
           const popularityOrder = { "Very High": 4, "High": 3, "Medium": 2, "Low": 1 }
-          return popularityOrder[b.popularity as keyof typeof popularityOrder] - 
-                 popularityOrder[a.popularity as keyof typeof popularityOrder]
+          return popularityOrder[b.popularity as keyof typeof popularityOrder] -
+            popularityOrder[a.popularity as keyof typeof popularityOrder]
         case "cibilScore":
           const aScore = a.cibilScore?.min || 999
           const bScore = b.cibilScore?.min || 999
@@ -229,14 +324,69 @@ export function CreditCardRecommendations() {
     })
 
     setFilteredCards(filtered)
-  }, [creditCards, searchTerm, filterCategory, sortBy, userProfile.cibilScore])
+  }, [creditCards, searchTerm, filterCategory, filterBank, sortBy, userProfile.cibilScore, userProfile.monthlyIncome, userProfile.monthlySpending])
 
-  const handleCardSelect = (cardId: string) => {
-    setSelectedCards(prev => 
-      prev.includes(cardId) 
-        ? prev.filter(id => id !== cardId)
-        : [...prev, cardId]
-    )
+  const handleCardSelect = async (cardId: string) => {
+    if (!userId) {
+      toast.error("Please login to save cards")
+      return
+    }
+
+    const isSelected = selectedCards.includes(cardId)
+    const cardDocRef = doc(db, "users", userId, "saved_cards", cardId)
+
+    try {
+      if (isSelected) {
+        await deleteDoc(cardDocRef)
+        toast.success("Card removed from selection")
+      } else {
+        const cardData = creditCards.find(c => c.id === cardId)
+        await setDoc(cardDocRef, {
+          addedAt: serverTimestamp(),
+          name: cardData?.name,
+          issuer: cardData?.issuer
+        })
+        toast.success("Card saved for comparison")
+      }
+    } catch (error) {
+      console.error("Error updating saved cards:", error)
+      toast.error("Failed to update selection")
+    }
+  }
+
+  const handleProfileUpdate = async (field: keyof UserProfile, value: any) => {
+    const updatedProfile = { ...userProfile, [field]: value }
+    setUserProfile(updatedProfile)
+
+    if (userId) {
+      try {
+        const profileRef = doc(db, "users", userId, "financial_profile", "current")
+        await setDoc(profileRef, updatedProfile, { merge: true })
+      } catch (error) {
+        console.error("Error saving profile:", error)
+      }
+    }
+  }
+
+  const getEstimatedSavings = (card: CreditCard) => {
+    const parseRate = (rate: string) => {
+      if (!rate) return 0
+      const matches = rate.match(/(\d+(\.\d+)?)/)
+      return matches ? parseFloat(matches[0]) : 1 // Assume at least 1% if mentioned but not parsed
+    }
+
+    const rewards = card.rewards || { dining: "0", travel: "0", shopping: "0", fuel: "0", groceries: "0", entertainment: "0" }
+
+    const annualRewards = (
+      (userProfile.monthlySpending * (userProfile.spendingCategories.dining / 100) * parseRate(rewards.dining)) +
+      (userProfile.monthlySpending * (userProfile.spendingCategories.travel / 100) * parseRate(rewards.travel)) +
+      (userProfile.monthlySpending * (userProfile.spendingCategories.shopping / 100) * parseRate(rewards.shopping)) +
+      (userProfile.monthlySpending * (userProfile.spendingCategories.fuel / 100) * parseRate(rewards.fuel)) +
+      (userProfile.monthlySpending * (userProfile.spendingCategories.groceries / 100) * parseRate(rewards.groceries)) +
+      (userProfile.monthlySpending * (userProfile.spendingCategories.entertainment / 100) * parseRate(rewards.entertainment))
+    ) * 12 / 100
+
+    return annualRewards - card.annualFee
   }
 
   const getCategoryIcon = (category: string) => {
@@ -305,7 +455,7 @@ export function CreditCardRecommendations() {
               <Input
                 type="number"
                 value={userProfile.monthlyIncome}
-                onChange={(e) => setUserProfile(prev => ({ ...prev, monthlyIncome: Number(e.target.value) }))}
+                onChange={(e) => handleProfileUpdate('monthlyIncome', Number(e.target.value))}
                 placeholder="50000"
               />
             </div>
@@ -314,7 +464,7 @@ export function CreditCardRecommendations() {
               <Input
                 type="number"
                 value={userProfile.monthlySpending}
-                onChange={(e) => setUserProfile(prev => ({ ...prev, monthlySpending: Number(e.target.value) }))}
+                onChange={(e) => handleProfileUpdate('monthlySpending', Number(e.target.value))}
                 placeholder="30000"
               />
             </div>
@@ -323,7 +473,7 @@ export function CreditCardRecommendations() {
               <Input
                 type="number"
                 value={userProfile.cibilScore}
-                onChange={(e) => setUserProfile(prev => ({ ...prev, cibilScore: Number(e.target.value) }))}
+                onChange={(e) => handleProfileUpdate('cibilScore', Number(e.target.value))}
                 placeholder="750"
                 min="300"
                 max="900"
@@ -333,7 +483,7 @@ export function CreditCardRecommendations() {
               <label className="text-sm font-medium">Primary Goal</label>
               <Select
                 value={userProfile.goals[0] || ""}
-                onValueChange={(value) => setUserProfile(prev => ({ ...prev, goals: [value] }))}
+                onValueChange={(value) => handleProfileUpdate('goals', [value])}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select your goal" />
@@ -396,7 +546,14 @@ export function CreditCardRecommendations() {
               <Filter className="h-5 w-5" />
               Filters
             </div>
-            <Button variant="outline" size="sm" onClick={() => setFilterCategory("all")}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setFilterCategory("all")
+                setFilterBank("all")
+              }}
+            >
               Clear All
             </Button>
           </CardTitle>
@@ -407,42 +564,42 @@ export function CreditCardRecommendations() {
             <div>
               <h4 className="font-medium mb-3">Card Type</h4>
               <div className="flex flex-wrap gap-2">
-                <Button 
+                <Button
                   variant={filterCategory === "all" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilterCategory("all")}
                 >
                   All Cards
                 </Button>
-                <Button 
+                <Button
                   variant={filterCategory === "Travel" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilterCategory("Travel")}
                 >
                   Travel
                 </Button>
-                <Button 
+                <Button
                   variant={filterCategory === "Cashback" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilterCategory("Cashback")}
                 >
                   Cashback
                 </Button>
-                <Button 
+                <Button
                   variant={filterCategory === "Premium" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilterCategory("Premium")}
                 >
                   Premium
                 </Button>
-                <Button 
+                <Button
                   variant={filterCategory === "Secured" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilterCategory("Secured")}
                 >
                   Secured
                 </Button>
-                <Button 
+                <Button
                   variant={filterCategory === "free" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilterCategory("free")}
@@ -457,13 +614,11 @@ export function CreditCardRecommendations() {
               <h4 className="font-medium mb-3">Banks</h4>
               <div className="flex flex-wrap gap-2">
                 {Array.from(new Set(creditCards.map(card => card.issuer))).slice(0, 6).map(bank => (
-                  <Button 
+                  <Button
                     key={bank}
-                    variant="outline"
+                    variant={filterBank === bank ? "default" : "outline"}
                     size="sm"
-                    onClick={() => {
-                      // Filter by bank logic would go here
-                    }}
+                    onClick={() => setFilterBank(prev => prev === bank ? "all" : bank)}
                   >
                     {bank}
                   </Button>
@@ -495,6 +650,7 @@ export function CreditCardRecommendations() {
                   <SelectItem value="rating">RPC Rating</SelectItem>
                   <SelectItem value="annualFee">Annual Fee</SelectItem>
                   <SelectItem value="rewardsRate">Rewards Rate</SelectItem>
+                  <SelectItem value="savings">Savings Potential</SelectItem>
                   <SelectItem value="popularity">Popularity</SelectItem>
                 </SelectContent>
               </Select>
@@ -503,143 +659,7 @@ export function CreditCardRecommendations() {
         </CardContent>
       </Card>
 
-      {/* Results Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">
-            {filteredCards.length} Cards
-            {filterCategory !== "all" && ` • ${filterCategory}`}
-          </h2>
-          <p className="text-muted-foreground">Curated For You</p>
-        </div>
-      </div>
-
-      {/* Credit Cards Grid */}
-      <div className="space-y-6">
-        <AnimatePresence>
-          {filteredCards.map((card) => {
-            const CategoryIcon = getCategoryIcon(card.category)
-            const isSelected = selectedCards.includes(card.id)
-            
-            return (
-              <motion.div
-                key={card.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card className={`transition-all duration-200 hover:shadow-lg ${
-                  isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                }`}>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row gap-6">
-                      {/* Left Side - Card Info */}
-                      <div className="flex-1 space-y-4">
-                        {/* Card Header */}
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className={getCategoryColor(card.category)}>
-                                {card.category}
-                              </Badge>
-                              {card.annualFee === 0 && (
-                                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                  LIFETIME FREE
-                                </Badge>
-                              )}
-                            </div>
-                            <h3 className="text-xl font-bold">{card.name}</h3>
-                            <p className="text-sm text-muted-foreground">{card.issuer}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-yellow-600">{card.rating}</div>
-                            <div className="text-sm text-muted-foreground">out of 5</div>
-                            <div className="text-xs text-muted-foreground">RPC Rating</div>
-                          </div>
-                        </div>
-
-                        {/* Best For */}
-                        <div>
-                          <h4 className="font-medium text-sm text-muted-foreground mb-1">Best for</h4>
-                          <p className="text-sm">
-                            {card.bestFor.length > 0 
-                              ? card.bestFor[0] 
-                              : `Frequent ${card.category.toLowerCase()} users seeking ${card.category.toLowerCase()} benefits`
-                            }
-                          </p>
-                        </div>
-
-                        {/* Key Details */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <h4 className="font-medium text-sm text-muted-foreground mb-1">Annual Fee</h4>
-                            <p className="text-sm font-medium">
-                              {card.annualFee === 0 ? '₹0 (Lifetime Free)' : `${formatINR(card.annualFee)} + GST`}
-                            </p>
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-sm text-muted-foreground mb-1">Joining Benefit</h4>
-                            <p className="text-sm font-medium">
-                              {card.joiningFee === 0 ? 'No joining fee' : `${formatINR(card.joiningFee)} joining fee`}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Key Hack */}
-                        <div className="bg-muted p-3 rounded-lg">
-                          <h4 className="font-medium text-sm mb-1">1 Hack</h4>
-                          <p className="text-sm">
-                            {card.keyBenefits.length > 0 
-                              ? card.keyBenefits[0]
-                              : `${card.rewardsRate} rewards on all purchases`
-                            }
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Right Side - Actions */}
-                      <div className="lg:w-48 space-y-4">
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            variant={isSelected ? "default" : "outline"}
-                            size="sm"
-                            className="w-full"
-                            onClick={() => handleCardSelect(card.id)}
-                          >
-                            {isSelected ? "Selected" : "Apply Now"}
-                          </Button>
-                          <Button variant="ghost" size="sm" className="w-full">
-                            Know More
-                          </Button>
-                        </div>
-                        
-                        {/* Quick Stats */}
-                        <div className="space-y-2 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">CIBIL Required:</span>
-                            <span className="font-medium">{card.cibilScore?.description || 'Not specified'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Rewards Rate:</span>
-                            <span className="font-medium">{card.rewardsRate}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Credit Limit:</span>
-                            <span className="font-medium">{card.creditLimit}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )
-          })}
-        </AnimatePresence>
-      </div>
-
-      {/* Smart Recommendations Based on Profile */}
+      {/* Smart Recommendations Moved Up */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -659,7 +679,7 @@ export function CreditCardRecommendations() {
                   .slice(0, 3)
                   .map((card, index) => (
                     <div key={card.id} className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                         onClick={() => handleCardSelect(card.id)}>
+                      onClick={() => handleCardSelect(card.id)}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-medium text-sm">{card.name}</div>
@@ -684,14 +704,14 @@ export function CreditCardRecommendations() {
                 {creditCards
                   .filter(card => {
                     const incomeThreshold = userProfile.monthlyIncome * 12
-                    return card.eligibility.minIncome <= incomeThreshold && 
-                           (!card.cibilScore || userProfile.cibilScore >= card.cibilScore.min)
+                    return card.eligibility.minIncome <= incomeThreshold &&
+                      (!card.cibilScore || userProfile.cibilScore >= card.cibilScore.min)
                   })
                   .sort((a, b) => b.rating - a.rating)
                   .slice(0, 3)
                   .map((card, index) => (
                     <div key={card.id} className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                         onClick={() => handleCardSelect(card.id)}>
+                      onClick={() => handleCardSelect(card.id)}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-medium text-sm">{card.name}</div>
@@ -723,7 +743,7 @@ export function CreditCardRecommendations() {
                   .slice(0, 3)
                   .map((card, index) => (
                     <div key={card.id} className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                         onClick={() => handleCardSelect(card.id)}>
+                      onClick={() => handleCardSelect(card.id)}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-medium text-sm">{card.name}</div>
@@ -744,9 +764,156 @@ export function CreditCardRecommendations() {
         </CardContent>
       </Card>
 
+      {/* Results Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">
+            {filteredCards.length} Cards
+            {filterCategory !== "all" && ` • ${filterCategory}`}
+          </h2>
+          <p className="text-muted-foreground">Curated For You</p>
+        </div>
+      </div>
+
+      {/* Credit Cards Grid */}
+      <div className="space-y-6">
+        <AnimatePresence>
+          {filteredCards.map((card) => {
+            const CategoryIcon = getCategoryIcon(card.category)
+            const isSelected = selectedCards.includes(card.id)
+            const netSavings = getEstimatedSavings(card)
+
+            return (
+              <motion.div
+                key={card.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className={`transition-all duration-200 hover:shadow-lg ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                  }`}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row gap-6">
+                      {/* Left Side - Card Info */}
+                      <div className="flex-1 space-y-4">
+                        {/* Card Header */}
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={getCategoryColor(card.category)}>
+                                {card.category}
+                              </Badge>
+                              {card.annualFee === 0 && (
+                                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                  LIFETIME FREE
+                                </Badge>
+                              )}
+                              {netSavings > 5000 && (
+                                <Badge className="bg-blue-600 text-white animate-pulse">
+                                  BEST VALUE FOR YOU
+                                </Badge>
+                              )}
+                              {netSavings > 0 && netSavings <= 5000 && (
+                                <Badge variant="outline" className="border-green-600 text-green-600">
+                                  PROFITABLE ({formatINR(Math.round(netSavings))}/yr)
+                                </Badge>
+                              )}
+                            </div>
+                            <h3 className="text-xl font-bold">{card.name}</h3>
+                            <p className="text-sm text-muted-foreground">{card.issuer}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-yellow-600">{card.rating}</div>
+                            <div className="text-sm text-muted-foreground">out of 5</div>
+                            <div className="text-xs text-muted-foreground">RPC Rating</div>
+                          </div>
+                        </div>
+
+                        {/* Best For */}
+                        <div>
+                          <h4 className="font-medium text-sm text-muted-foreground mb-1">Best for</h4>
+                          <p className="text-sm">
+                            {card.bestFor.length > 0
+                              ? card.bestFor[0]
+                              : `Frequent ${card.category.toLowerCase()} users seeking ${card.category.toLowerCase()} benefits`
+                            }
+                          </p>
+                        </div>
+
+                        {/* Key Details */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium text-sm text-muted-foreground mb-1">Annual Fee</h4>
+                            <p className="text-sm font-medium">
+                              {card.annualFee === 0 ? '₹0 (Lifetime Free)' : `${formatINR(card.annualFee)} + GST`}
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-sm text-muted-foreground mb-1">Joining Benefit</h4>
+                            <p className="text-sm font-medium">
+                              {card.joiningFee === 0 ? 'No joining fee' : `${formatINR(card.joiningFee)} joining fee`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Key Hack */}
+                        <div className="bg-muted p-3 rounded-lg">
+                          <h4 className="font-medium text-sm mb-1">1 Hack</h4>
+                          <p className="text-sm">
+                            {card.keyBenefits.length > 0
+                              ? card.keyBenefits[0]
+                              : `${card.rewardsRate} rewards on all purchases`
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right Side - Actions */}
+                      <div className="lg:w-48 space-y-4">
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleCardSelect(card.id)}
+                          >
+                            {isSelected ? "Selected" : "Apply Now"}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="w-full">
+                            Know More
+                          </Button>
+                        </div>
+
+                        {/* Quick Stats */}
+                        <div className="space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">CIBIL Required:</span>
+                            <span className="font-medium">{card.cibilScore?.description || 'Not specified'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Rewards Rate:</span>
+                            <span className="font-medium">{card.rewardsRate}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Credit Limit:</span>
+                            <span className="font-medium">{card.creditLimit}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
+      </div>
+
+
       {/* Comparison Section */}
       {selectedCards.length > 0 && (
-        <CreditCardComparison 
+        <CreditCardComparison
           selectedCards={selectedCards.map(cardId => creditCards.find(c => c.id === cardId)).filter(Boolean) as CreditCard[]}
           userProfile={userProfile}
         />
