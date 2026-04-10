@@ -20,6 +20,8 @@ yarn-error.log*
 # env files
 .env*
 env
+serviceAccountKey.json
+agentic_ai/agentic_backend/serviceAccountKey.json
 # vercel
 .vercel
 env/

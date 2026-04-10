@@ -27,6 +27,9 @@ except Exception:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Base directory for data files (agentic_ai/)
+BASE_DATA_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 @dataclass
 class MarketDataResponse:
     """Standard response format for market data"""
@@ -357,12 +360,13 @@ class MarketDataFetcher(BaseTool):
         }
         
         try:
-            if os.path.exists("fd.json"):
-                with open("fd.json", "r") as f:
+            fd_path = os.path.join(BASE_DATA_DIR, "fd.json")
+            if os.path.exists(fd_path):
+                with open(fd_path, "r", encoding="utf-8") as f:
                     fd_json = json.load(f)
                     fi_data["fd_rates"] = fd_json # Store the whole structure
             else:
-                logger.warning("fd.json not found")
+                logger.warning(f"fd.json not found at {fd_path}")
         except Exception as e:
             logger.error(f"Error fetching FD data: {e}")
             
@@ -372,8 +376,9 @@ class MarketDataFetcher(BaseTool):
         """Fetch Mutual Funds data from JSON"""
         mf_data = {}
         try:
-            if os.path.exists("mutual_funds.json"):
-                with open("mutual_funds.json", "r") as f:
+            mf_path = os.path.join(BASE_DATA_DIR, "mutual_funds.json")
+            if os.path.exists(mf_path):
+                with open(mf_path, "r", encoding="utf-8") as f:
                     mf_json = json.load(f)
                     
                 # Flatten the JSON structure for easier access by ID/Name

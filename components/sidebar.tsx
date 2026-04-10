@@ -14,6 +14,7 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePathname } from "next/navigation"
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils"
 
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
+  { href: "/portfolio-optimizer", label: "AI Optimizer", icon: Sparkles },
   { href: "/investments", label: "Investments", icon: Wallet },
   { href: "/credit-cards", label: "Credit Cards", icon: CreditCard },
   { href: "/advisor", label: "Advisor", icon: Bot },
@@ -52,7 +54,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             className={cn(
               "relative flex items-center gap-3 rounded-md px-3 py-2 mb-1 text-sm hover:bg-gradient-to-r hover:from-[var(--color-accent)]/30 hover:to-transparent",
               pathname.startsWith(href) &&
-                "bg-accent text-accent-foreground border-l-4 border-l-[var(--color-primary)]",
+              "bg-accent text-accent-foreground border-l-4 border-l-[var(--color-primary)]",
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />

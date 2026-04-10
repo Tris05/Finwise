@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getAnalytics } from 'firebase/analytics'
+import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBd3AjTg6SP-G4-N67GctDfsh7_vJzPNwY",
@@ -20,6 +21,9 @@ export const auth = getAuth(app)
 
 // Initialize Google Auth Provider
 export const googleProvider = new GoogleAuthProvider()
+
+// Initialize Firestore
+export const db = getFirestore(app)
 
 // Initialize Analytics (optional) - only on client side
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null

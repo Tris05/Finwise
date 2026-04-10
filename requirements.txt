@@ -1,0 +1,25 @@
+# Core Dependencies
+langgraph
+langchain
+langchain-openai
+openai
+google-genai
+google-search-results  # for serp api tools
+
+# Data and Finance
+yfinance
+pandas
+numpy
+scipy
+requests
+beautifulsoup4
+
+# Backend Integration
+firebase-admin
+
+# ML and Optimization
+scikit-learn
+xgboost
+joblib
+matplotlib
+seaborn

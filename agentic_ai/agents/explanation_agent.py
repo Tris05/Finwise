@@ -1,6 +1,7 @@
 
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
     HAS_GENAI = True
 except ImportError:
     HAS_GENAI = False
@@ -49,7 +50,7 @@ class GeminiLLMInterface(BaseTool):
     
     def __init__(self, api_key: str = None):
         """
-        Initialize Gemini API interface
+        Initialize Gemini API interface using google-genai
         
         Args:
             api_key: Gemini API key (can also be set via GEMINI_API_KEY environment variable)
@@ -57,7 +58,7 @@ class GeminiLLMInterface(BaseTool):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         
         if not HAS_GENAI:
-            logger.warning("google.generativeai library not found. Using fallback mode.")
+            logger.warning("google-genai library not found. Using fallback mode.")
             self.use_fallback = True
             return
 
@@ -66,17 +67,17 @@ class GeminiLLMInterface(BaseTool):
             self.use_fallback = True
         else:
             try:
-                genai.configure(api_key=self.api_key)
-                self.model = genai.GenerativeModel('gemini-2.0-flash')
+                self.client = genai.Client(api_key=self.api_key)
+                self.model_id = 'gemini-2.0-flash'
                 self.use_fallback = False
-                logger.info("Gemini API initialized successfully")
+                logger.info("google-genai Client initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize Gemini API: {str(e)}")
                 self.use_fallback = True
     
     def execute(self, prompt: str, max_retries: int = 3) -> Dict[str, Any]:
         """
-        Generate response using Gemini API
+        Generate response using google-genai Client
         
         Args:
             prompt: Input prompt for the model
@@ -87,20 +88,21 @@ class GeminiLLMInterface(BaseTool):
         
         for attempt in range(max_retries):
             try:
-                # Generate content using Gemini
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config={
-                        "temperature": 0.7,
-                        "top_p": 0.9,
-                        "max_output_tokens": 2048,
-                    }
+                # Generate content using the new Client
+                response = self.client.models.generate_content(
+                    model=self.model_id,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.7,
+                        top_p=0.9,
+                        max_output_tokens=2048,
+                    )
                 )
                 
                 return {
                     "content": response.text,
                     "success": True,
-                    "model": "gemini-2.0-flash",
+                    "model": self.model_id,
                     "attempt": attempt + 1
                 }
                 

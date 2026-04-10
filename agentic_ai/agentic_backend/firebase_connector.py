@@ -1,5 +1,6 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 import json
 import time
 import sys
@@ -84,7 +85,7 @@ def start_listener():
 
     # Collection reference
     # Recommendation: Query for status == 'pending' if you don't want to listen to everything
-    requests_query = db.collection_group("portfolio_requests").where("status", "==", "pending")
+    requests_query = db.collection_group("portfolio_requests").where(filter=FieldFilter("status", "==", "pending"))
 
     def on_snapshot(col_snapshot, changes, read_time):
         for change in changes:
