@@ -4,6 +4,7 @@ import { Poppins, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from "@/components/providers/auth-provider"
 import "./globals.css"
 
 const poppins = Poppins({
@@ -32,9 +33,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${poppins.variable} ${inter.variable} antialiased`}>
       <body className={`font-sans ${inter.variable}`}>
-        <Suspense fallback={null}>{children}</Suspense>
-        <Toaster />
-        <Analytics />
+        <Suspense fallback={null}>
+          <AuthProvider>
+            {children}
+            <Toaster />
+            <Analytics />
+          </AuthProvider>
+        </Suspense>
       </body>
     </html>
   )

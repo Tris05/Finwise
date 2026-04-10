@@ -88,6 +88,7 @@ const calculatePortfolioAllocation = (investments: any[]) => {
     return acc
   }, {} as Record<string, { name: string; value: number; color: string }>)
 
+
   return Object.values(allocation)
 }
 
@@ -426,6 +427,7 @@ export default function InvestmentsPage() {
         const change = newPrice - asset.price
         const changePercent = (change / asset.price) * 100
 
+
         return {
           ...asset,
           price: newPrice,
@@ -452,6 +454,7 @@ Dividend Yield: ${asset.dividend}%
 Risk Level: ${asset.riskLevel}
 Recommendation: ${asset.recommendation}
     `
+
 
     toast({
       title: `${asset.symbol} Details`,
@@ -522,9 +525,11 @@ Recommendation: ${asset.recommendation}
     const csvContent = [
       "Date,Type,Asset,Quantity,Price,Amount,Status,Category",
       ...transactions.map(t =>
+      ...transactions.map(t =>
         `${t.date},${t.type},${t.asset},${t.quantity},${t.price},${t.amount},${t.status},${t.category}`
       )
     ].join('\n')
+
 
     // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv' })
@@ -586,6 +591,7 @@ Recommendation: ${asset.recommendation}
       recommendation: "Buy" as const,
       riskLevel: "Medium" as const
     }
+
 
     // Open add transaction modal with this asset
     setSelectedAsset(newInvestment)
@@ -802,6 +808,7 @@ Recommendation: ${asset.recommendation}
   const handleRefreshRecommendations = () => {
     setIsLoading(true)
 
+
     // Simulate API call
     setTimeout(() => {
       toast({
@@ -817,16 +824,20 @@ Recommendation: ${asset.recommendation}
     setMarketAssets(prev =>
       prev.map(asset =>
         asset.symbol === stock.symbol
-          ? { ...asset, isWatched: true }
-          : asset
-      )
-    )
+    setMarketAssets(prev =>
+          prev.map(asset =>
+            asset.symbol === stock.symbol
+              ? { ...asset, isWatched: true }
+              : asset
+          )
+        )
+
 
     // Show success toast
     toast({
-      title: "Added to Watchlist",
-      description: `${stock.symbol} has been added to your watchlist`,
-    })
+          title: "Added to Watchlist",
+          description: `${stock.symbol} has been added to your watchlist`,
+        })
   }
 
   const handleAddToPortfolio = (stock: any) => {
@@ -853,6 +864,7 @@ Recommendation: ${asset.recommendation}
       recommendation: "Buy" as const,
       riskLevel: "Medium" as const
     }
+
 
     setSelectedAsset(newInvestment)
     setAddTransactionOpen(true)
@@ -933,16 +945,20 @@ Recommendation: ${asset.recommendation}
                 <AreaChart data={performanceData}>
                   <XAxis
                     dataKey="month"
+                  <XAxis
+                    dataKey="month"
                     axisLine={false}
                     tickLine={false}
                     className="text-xs text-muted-foreground"
                   />
                   <YAxis
+                    <YAxis
                     axisLine={false}
                     tickLine={false}
                     className="text-xs text-muted-foreground"
                   />
                   <Tooltip
+                    <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
@@ -955,10 +971,20 @@ Recommendation: ${asset.recommendation}
                     dataKey="value"
                     stroke="#3B82F6"
                     fill="#3B82F6"
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#3B82F6"
+                    fill="#3B82F6"
                     fillOpacity={0.1}
                     strokeWidth={2}
                     name="Your Portfolio"
                   />
+                  <Area
+                    type="monotone"
+                    dataKey="benchmark"
+                    stroke="#10B981"
+                    fill="#10B981"
                   <Area
                     type="monotone"
                     dataKey="benchmark"
@@ -994,41 +1020,49 @@ Recommendation: ${asset.recommendation}
             <TabsList className="grid w-full grid-cols-7 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
               <TabsTrigger
                 value="portfolio"
+              <TabsTrigger
+                value="portfolio"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Portfolio
               </TabsTrigger>
               <TabsTrigger
+                <TabsTrigger
                 value="search"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Search Stocks
               </TabsTrigger>
               <TabsTrigger
+                <TabsTrigger
                 value="recommendations"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 AI Recommendations
               </TabsTrigger>
               <TabsTrigger
+                <TabsTrigger
                 value="transactions"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Transactions
               </TabsTrigger>
               <TabsTrigger
+                <TabsTrigger
                 value="market"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Market
               </TabsTrigger>
               <TabsTrigger
+                <TabsTrigger
                 value="goals"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
                 Goals
               </TabsTrigger>
               <TabsTrigger
+                <TabsTrigger
                 value="analysis"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
               >
@@ -1162,9 +1196,13 @@ Recommendation: ${asset.recommendation}
         <RebalanceModal open={rebalanceOpen} onOpenChange={setRebalanceOpen} />
         <AddTransactionModal
           open={addTransactionOpen}
+        <AddTransactionModal
+          open={addTransactionOpen}
           onOpenChange={setAddTransactionOpen}
           onAddTransaction={handleAddTransactionSubmit}
         />
+        <AddGoalModal
+          open={addGoalOpen}
         <AddGoalModal
           open={addGoalOpen}
           onOpenChange={setAddGoalOpen}
@@ -1172,10 +1210,14 @@ Recommendation: ${asset.recommendation}
         />
         <EditGoalModal
           open={editGoalOpen}
+        <EditGoalModal
+          open={editGoalOpen}
           onOpenChange={setEditGoalOpen}
           goal={selectedGoal}
           onUpdateGoal={handleUpdateGoal}
         />
+        <SellInvestmentModal
+          open={sellInvestmentOpen}
         <SellInvestmentModal
           open={sellInvestmentOpen}
           onOpenChange={setSellInvestmentOpen}
