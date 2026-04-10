@@ -8,10 +8,9 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
-import { Settings, Info } from "lucide-react"
+import { Settings, Info, RefreshCw } from "lucide-react"
 import { CustomBudgetCategories } from "./custom-budget-categories"
-import { loadUserPreferences, saveUserPreferences, getDefaultBudgetCategories, type UserPreferences } from "@/lib/user-preferences"
-import { useUserProfile } from "@/hooks/useUserProfile"
+import { loadUserPreferences, getDefaultBudgetCategories } from "@/lib/user-preferences"
 import { Slider } from "@/components/ui/slider"
 
 interface BudgetCategory {
@@ -34,15 +33,18 @@ interface BudgetBreakdown {
   savings: Record<string, number>
 }
 
-export function SalaryBudgetingTool() {
-  const { annualIncome } = useUserProfile()
-  const [monthlySalary, setMonthlySalary] = useState(100000)
+interface SalaryBudgetingToolProps {
+  syncedMonthlySalary: number
+}
+
+export function SalaryBudgetingTool({ syncedMonthlySalary }: SalaryBudgetingToolProps) {
+  const [monthlySalary, setMonthlySalary] = useState(syncedMonthlySalary)
   const [rules, setRules] = useState({ needs: 50, wants: 30, savings: 20 })
   const [budgetAllocation, setBudgetAllocation] = useState<BudgetAllocation | null>(null)
   const [budgetBreakdown, setBudgetBreakdown] = useState<BudgetBreakdown | null>(null)
   const [showCustomization, setShowCustomization] = useState(false)
 
-  const [customCategories, setCustomCategories] = useState<{
+  const [customCategories] = useState<{
     needs: BudgetCategory[]
     wants: BudgetCategory[]
     savings: BudgetCategory[]
@@ -56,14 +58,10 @@ export function SalaryBudgetingTool() {
     }
   })
 
-  // Sync with profile income
+  // Sync with prop from parent (TakeHomeCalculator)
   useEffect(() => {
-    if (annualIncome) {
-      // Estimate monthly take-home if not already set or as a better default
-      // Using a rough 0.8 factor if they haven't run the calculator yet
-      setMonthlySalary(Math.round((annualIncome * 0.8) / 12))
-    }
-  }, [annualIncome])
+    setMonthlySalary(syncedMonthlySalary)
+  }, [syncedMonthlySalary])
 
   const calculateBudget = () => {
     const needs = (monthlySalary * rules.needs) / 100
@@ -72,7 +70,6 @@ export function SalaryBudgetingTool() {
 
     setBudgetAllocation({ needs, wants, savings, total: monthlySalary })
 
-    // Calculate breakdown using custom categories
     const needsBreakdown: Record<string, number> = {}
     const wantsBreakdown: Record<string, number> = {}
     const savingsBreakdown: Record<string, number> = {}
@@ -110,7 +107,7 @@ export function SalaryBudgetingTool() {
     return (
       <div className="space-y-6 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Customize Budget Categories</h2>
+          <h2 className="text-2xl font-bold font-heading text-destructive">Customize Budget Categories</h2>
           <Button
             variant="outline"
             onClick={() => setShowCustomization(false)}
@@ -126,10 +123,10 @@ export function SalaryBudgetingTool() {
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 shadow-sm border-muted">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Budget Strategy</CardTitle>
+              <CardTitle className="font-heading">Budget Strategy</CardTitle>
               <Button
                 variant="outline"
                 size="sm"
@@ -142,13 +139,19 @@ export function SalaryBudgetingTool() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="monthly-salary">Monthly Take-Home Salary (₹)</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="monthly-salary">Monthly Disposable Income (₹)</Label>
+                <Badge variant="secondary" className="text-[10px] h-5 flex gap-1 items-center font-medium bg-blue-50 text-blue-700 border-blue-100">
+                  <RefreshCw className="h-2 w-2" /> Synced from Calculator
+                </Badge>
+              </div>
               <Input
                 id="monthly-salary"
                 type="number"
                 value={monthlySalary}
                 onChange={(e) => setMonthlySalary(Number(e.target.value))}
                 placeholder="100000"
+                className="font-mono"
               />
             </div>
 
@@ -158,7 +161,7 @@ export function SalaryBudgetingTool() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <Label className="text-sm font-medium">Needs (%)</Label>
-                  <Badge variant="destructive">{rules.needs}%</Badge>
+                  <Badge variant="destructive" className="font-bold">{rules.needs}%</Badge>
                 </div>
                 <Slider
                   value={[rules.needs]}
@@ -180,7 +183,7 @@ export function SalaryBudgetingTool() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <Label className="text-sm font-medium">Wants (%)</Label>
-                  <Badge variant="default">{rules.wants}%</Badge>
+                  <Badge variant="default" className="font-bold bg-blue-600">{rules.wants}%</Badge>
                 </div>
                 <Slider
                   value={[rules.wants]}
@@ -197,7 +200,7 @@ export function SalaryBudgetingTool() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <Label className="text-sm font-medium">Savings / Investments (%)</Label>
-                  <Badge variant="secondary">{rules.savings}%</Badge>
+                  <Badge variant="secondary" className="font-bold bg-green-100 text-green-700">{rules.savings}%</Badge>
                 </div>
                 <Slider
                   value={[rules.savings]}
@@ -212,40 +215,40 @@ export function SalaryBudgetingTool() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-primary/[0.02] border-primary/10 shadow-sm">
           <CardHeader>
-            <CardTitle>Strategy Overview</CardTitle>
+            <CardTitle className="font-heading">Strategy Overview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {budgetAllocation && (
               <div className="space-y-8">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-red-600 font-medium">Needs</span>
+                    <span className="text-red-600 font-semibold">Needs</span>
                     <span className="font-bold">₹{budgetAllocation.needs.toLocaleString()}</span>
                   </div>
-                  <Progress value={rules.needs} className="h-2" />
+                  <Progress value={rules.needs} className="h-2 bg-red-100" />
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-blue-600 font-medium">Wants</span>
+                    <span className="text-blue-600 font-semibold">Wants</span>
                     <span className="font-bold">₹{budgetAllocation.wants.toLocaleString()}</span>
                   </div>
-                  <Progress value={rules.wants} className="h-2" />
+                  <Progress value={rules.wants} className="h-2 bg-blue-100" />
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-green-600 font-medium">Savings</span>
+                    <span className="text-green-600 font-semibold">Savings</span>
                     <span className="font-bold">₹{budgetAllocation.savings.toLocaleString()}</span>
                   </div>
-                  <Progress value={rules.savings} className="h-2" />
+                  <Progress value={rules.savings} className="h-2 bg-green-100" />
                 </div>
 
-                <div className="pt-4 border-t text-center">
-                  <div className="text-sm text-muted-foreground">Total Disposable Income</div>
-                  <div className="text-2xl font-black">₹{monthlySalary.toLocaleString()}</div>
+                <div className="pt-6 border-t text-center">
+                  <div className="text-xs text-muted-foreground uppercase mb-1 font-bold tracking-wider">Estimated Monthly Credit</div>
+                  <div className="text-3xl font-black text-primary">₹{monthlySalary.toLocaleString()}</div>
                 </div>
               </div>
             )}
@@ -255,15 +258,15 @@ export function SalaryBudgetingTool() {
 
       {budgetBreakdown && (
         <div className="grid md:grid-cols-3 gap-4">
-          <Card className="border-l-4 border-l-red-500">
+          <Card className="border-l-4 border-l-red-500 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-red-600 text-lg">Needs Breakdown</CardTitle>
+              <CardTitle className="text-red-700 text-lg font-heading">Needs Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {customCategories?.needs?.map((category) => (
-                <div key={category.id} className="flex justify-between">
-                  <span className="text-sm">{category.name}</span>
-                  <span className="text-sm font-medium">
+                <div key={category.id} className="flex justify-between group">
+                  <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{category.name}</span>
+                  <span className="text-sm font-semibold">
                     ₹{Math.round(budgetBreakdown?.needs?.[category.name] || 0).toLocaleString()}
                   </span>
                 </div>
@@ -271,15 +274,15 @@ export function SalaryBudgetingTool() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-blue-500">
+          <Card className="border-l-4 border-l-blue-500 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-blue-600 text-lg">Wants Breakdown</CardTitle>
+              <CardTitle className="text-blue-700 text-lg font-heading">Wants Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {customCategories?.wants?.map((category) => (
-                <div key={category.id} className="flex justify-between">
-                  <span className="text-sm">{category.name}</span>
-                  <span className="text-sm font-medium">
+                <div key={category.id} className="flex justify-between group">
+                  <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{category.name}</span>
+                  <span className="text-sm font-semibold">
                     ₹{Math.round(budgetBreakdown?.wants?.[category.name] || 0).toLocaleString()}
                   </span>
                 </div>
@@ -287,15 +290,15 @@ export function SalaryBudgetingTool() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-500">
+          <Card className="border-l-4 border-l-green-500 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-green-600 text-lg">Savings Breakdown</CardTitle>
+              <CardTitle className="text-green-700 text-lg font-heading">Savings Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {customCategories?.savings?.map((category) => (
-                <div key={category.id} className="flex justify-between">
-                  <span className="text-sm">{category.name}</span>
-                  <span className="text-sm font-medium">
+                <div key={category.id} className="flex justify-between group">
+                  <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{category.name}</span>
+                  <span className="text-sm font-semibold">
                     ₹{Math.round(budgetBreakdown?.savings?.[category.name] || 0).toLocaleString()}
                   </span>
                 </div>

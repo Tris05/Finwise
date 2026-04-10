@@ -7,9 +7,10 @@ import { useMutation } from "@tanstack/react-query"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts"
 import { Badge } from "@/components/ui/badge"
-import { 
-  calculateEMI, 
-  generateAmortizationSchedule, 
+import { Loader2 } from "lucide-react"
+import {
+  calculateEMI,
+  generateAmortizationSchedule,
   calculatePrepaymentImpact,
   getBankOffers,
   createLoanPredictionInput,
@@ -133,29 +134,29 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Loan Amount (₹)</label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
+              <Input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
                 placeholder="Enter loan amount"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Interest Rate (%)</label>
-              <Input 
-                type="number" 
-                value={rate} 
-                onChange={(e) => setRate(Number(e.target.value))} 
+              <Input
+                type="number"
+                value={rate}
+                onChange={(e) => setRate(Number(e.target.value))}
                 placeholder="Enter interest rate"
                 step="0.1"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Loan Tenure (months)</label>
-            <Input
-              type="number"
-              value={tenure}
-              onChange={(e) => setTenure(Number(e.target.value))}
+              <Input
+                type="number"
+                value={tenure}
+                onChange={(e) => setTenure(Number(e.target.value))}
                 placeholder="Enter tenure in months"
               />
             </div>
@@ -169,7 +170,7 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
               />
             </div>
           </div>
-          
+
           {inputErrors.length > 0 && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">
               <h4 className="text-sm font-medium text-red-800 mb-2">Please fix the following errors:</h4>
@@ -182,15 +183,38 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
           )}
 
           <div className="flex gap-2">
-            <Button onClick={() => assess.mutate()}>Assess Loan</Button>
-            <Button onClick={() => predictLoan.mutate()} variant="outline">Predict Approval</Button>
+            <Button
+              onClick={() => assess.mutate()}
+              disabled={assess.isPending}
+              className="min-w-[120px]"
+            >
+              {assess.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Calculating...
+                </>
+              ) : "Assess Loan"}
+            </Button>
+            <Button
+              onClick={() => predictLoan.mutate()}
+              variant="outline"
+              disabled={predictLoan.isPending}
+              className="min-w-[140px]"
+            >
+              {predictLoan.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Predicting...
+                </>
+              ) : "Predict Approval"}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Navigation Buttons */}
       <div className="flex gap-2 mb-4">
-        <Button 
+        <Button
           variant={!showSchedule && !showPrepayment && !showComparison ? "default" : "outline"}
           onClick={() => {
             setShowSchedule(false)
@@ -200,7 +224,7 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
         >
           EMI Details
         </Button>
-        <Button 
+        <Button
           variant={showSchedule ? "default" : "outline"}
           onClick={() => {
             setShowSchedule(true)
@@ -210,7 +234,7 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
         >
           Amortization
         </Button>
-        <Button 
+        <Button
           variant={showPrepayment ? "default" : "outline"}
           onClick={() => {
             setShowSchedule(false)
@@ -220,7 +244,7 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
         >
           Prepayment
         </Button>
-        <Button 
+        <Button
           variant={showComparison ? "default" : "outline"}
           onClick={() => {
             setShowSchedule(false)
@@ -325,16 +349,16 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Amortization Schedule</CardTitle>
               <div className="flex gap-2">
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => setMonthsShown(Math.min(monthsShown + 12, tenure))}
                   disabled={monthsShown >= tenure}
                 >
                   Show More
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => setMonthsShown(12)}
                 >

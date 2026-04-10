@@ -5,10 +5,13 @@ import { QueryProvider } from "@/components/providers/query-provider"
 import { LoanCalculator } from "@/components/loan-calculator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ResponsiveContainer, RadialBarChart, RadialBar } from "recharts"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { useUserProfile } from "@/hooks/useUserProfile"
+import { calculateEMI } from "@/lib/loan-calculator"
 
-// Security configuration updated from Bangalore to Mumbai
+// Security configuration
 const SECURITY_CONFIG = {
   location: 'Mumbai',
   timezone: 'Asia/Kolkata',
@@ -18,75 +21,67 @@ const SECURITY_CONFIG = {
   encryptionEnabled: true
 }
 
-// Dynamic EMI stress calculation based on loan type and amount
-const calculateEMIStress = (loanType: LoanType, amount: number, rate: number, tenure: number) => {
-  // Calculate EMI
-  const monthlyRate = rate / 100 / 12
-  const emi = (amount * monthlyRate * Math.pow(1 + monthlyRate, tenure)) / (Math.pow(1 + monthlyRate, tenure) - 1)
-  
-  // Calculate stress based on loan type and amount
-  let stressPercentage = 0
-  
-  if (loanType === "house") {
-    // For home loans, stress is based on EMI vs typical income ratios
-    const typicalIncome = 50000 // Monthly income assumption
-    const emiRatio = (emi / typicalIncome) * 100
-    stressPercentage = Math.min(100, Math.max(0, emiRatio * 1.2)) // Scale up for visual impact
-  } else if (loanType === "car") {
-    // For car loans, stress is based on EMI vs typical income ratios
-    const typicalIncome = 50000
-    const emiRatio = (emi / typicalIncome) * 100
-    stressPercentage = Math.min(100, Math.max(0, emiRatio * 1.5)) // Car loans are typically shorter term
-  } else if (loanType === "student") {
-    // For student loans, stress is typically lower due to moratorium period
-    const typicalIncome = 30000 // Lower income assumption for students
-    const emiRatio = (emi / typicalIncome) * 100
-    stressPercentage = Math.min(100, Math.max(0, emiRatio * 0.8)) // Lower stress for education loans
-  }
-  
-  return Math.round(stressPercentage)
-}
-
-// Enhanced Indian bank comparison data for different loan types
-const bankComparison = {
+// Enhanced Indian bank comparison data
+const BANK_RATES = {
   house: [
-    { bank: "SBI", rate: "8.25%", emi: "₹20,500", features: "Lowest rate, Govt bank", processingFee: "0.35%" },
-    { bank: "HDFC", rate: "8.5%", emi: "₹20,800", features: "Quick approval", processingFee: "0.5%" },
-    { bank: "ICICI", rate: "8.75%", emi: "₹21,100", features: "Flexible tenure", processingFee: "1.0%" },
-    { bank: "Axis", rate: "9.0%", emi: "₹21,400", features: "Online process", processingFee: "1.5%" },
-    { bank: "Kotak", rate: "8.9%", emi: "₹21,700", features: "Pre-approved offers", processingFee: "1.0%" }
+    { bank: "SBI", rate: 8.25, features: "Lowest rate, Govt bank", processingFee: "0.35%" },
+    { bank: "HDFC", rate: 8.5, features: "Quick approval", processingFee: "0.5%" },
+    { bank: "ICICI", rate: 8.75, features: "Flexible tenure", processingFee: "1.0%" },
+    { bank: "Axis", rate: 9.0, features: "Online process", processingFee: "1.5%" },
+    { bank: "Kotak", rate: 8.9, features: "Pre-approved offers", processingFee: "1.0%" }
   ],
   car: [
-    { bank: "HDFC", rate: "9.2%", emi: "₹18,500", features: "Quick processing", processingFee: "0.5%" },
-    { bank: "ICICI", rate: "9.5%", emi: "₹18,800", features: "Low down payment", processingFee: "1.0%" },
-    { bank: "SBI", rate: "9.7%", emi: "₹19,100", features: "Govt bank security", processingFee: "0.35%" },
-    { bank: "Axis", rate: "10.1%", emi: "₹19,400", features: "Flexible EMI", processingFee: "1.5%" },
-    { bank: "Kotak", rate: "10.3%", emi: "₹19,700", features: "Online approval", processingFee: "1.0%" }
+    { bank: "HDFC", rate: 9.2, features: "Quick processing", processingFee: "0.5%" },
+    { bank: "ICICI", rate: 9.5, features: "Low down payment", processingFee: "1.0%" },
+    { bank: "SBI", rate: 9.7, features: "Govt bank security", processingFee: "0.35%" },
+    { bank: "Axis", rate: 10.1, features: "Flexible EMI", processingFee: "1.5%" },
+    { bank: "Kotak", rate: 10.3, features: "Online approval", processingFee: "1.0%" }
   ],
   student: [
-    { bank: "SBI", rate: "7.5%", emi: "₹15,200", features: "Lowest rate, Govt bank", processingFee: "0.35%" },
-    { bank: "HDFC", rate: "8.2%", emi: "₹15,800", features: "Moratorium period", processingFee: "0.5%" },
-    { bank: "ICICI", rate: "8.5%", emi: "₹16,100", features: "Flexible repayment", processingFee: "1.0%" },
-    { bank: "Axis", rate: "8.8%", emi: "₹16,400", features: "Career guidance", processingFee: "1.5%" },
-    { bank: "Kotak", rate: "9.1%", emi: "₹16,700", features: "Online application", processingFee: "1.0%" }
+    { bank: "SBI", rate: 7.5, features: "Lowest rate, Govt bank", processingFee: "0.35%" },
+    { bank: "HDFC", rate: 8.2, features: "Moratorium period", processingFee: "0.5%" },
+    { bank: "ICICI", rate: 8.5, features: "Flexible repayment", processingFee: "1.0%" },
+    { bank: "Axis", rate: 8.8, features: "Career guidance", processingFee: "1.5%" },
+    { bank: "Kotak", rate: 9.1, features: "Online application", processingFee: "1.0%" }
   ]
 }
 
 export default function LoanPage() {
+  const { annualIncome } = useUserProfile()
   const [loanType, setLoanType] = useState<"house" | "car" | "student">("house")
   const [modelStatus, setModelStatus] = useState<any>(null)
   const [loanValues, setLoanValues] = useState({ amount: 5000000, rate: 8.5, tenure: 240 })
-  const compare = bankComparison[loanType]
 
-  // Calculate dynamic EMI stress using current loan values
-  const emiStress = calculateEMIStress(loanType, loanValues.amount, loanValues.rate, loanValues.tenure)
-  
-  // Create gauge data with dynamic values
+  const monthlyIncome = annualIncome ? annualIncome / 12 : 100000 // Default to 1L if not synced
+
+  // Calculate dynamic EMI
+  const currentEMI = useMemo(() =>
+    calculateEMI(loanValues.amount, loanValues.rate, loanValues.tenure),
+    [loanValues]
+  )
+
+  // Calculate stress: EMI as % of Monthly Income
+  const emiStress = useMemo(() => {
+    const stress = (currentEMI / monthlyIncome) * 100
+    return Math.round(Math.min(100, stress))
+  }, [currentEMI, monthlyIncome])
+
+  // Dynamic bank comparison based on current loan amount and tenure
+  const compare = useMemo(() => {
+    return BANK_RATES[loanType].map(bank => {
+      const emi = calculateEMI(loanValues.amount, bank.rate, loanValues.tenure)
+      return {
+        ...bank,
+        rate: `${bank.rate}%`,
+        emi: `₹${Math.round(emi).toLocaleString()}`
+      }
+    })
+  }, [loanType, loanValues.amount, loanValues.tenure])
+
   const gaugeData = [
-    { name: "EMI Stress", value: emiStress, fill: emiStress > 60 ? "#ef4444" : emiStress > 40 ? "#f59e0b" : "#10b981" }
+    { name: "EMI Stress", value: emiStress, fill: emiStress > 50 ? "#ef4444" : emiStress > 35 ? "#f59e0b" : "#10b981" }
   ]
 
-  // Check model status on component mount
   useEffect(() => {
     const checkModelStatus = async () => {
       try {
@@ -104,13 +99,15 @@ export default function LoanPage() {
     <QueryProvider>
       <AppShell>
         <div className="space-y-6">
-          {/* Security Configuration Alert */}
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="pt-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline">📍 {SECURITY_CONFIG.location}</Badge>
                 <Badge variant="outline">🔒 {SECURITY_CONFIG.securityLevel} Security</Badge>
                 <Badge variant="outline">💰 {SECURITY_CONFIG.currency}</Badge>
+                {annualIncome && (
+                  <Badge variant="secondary">👤 Profile Synced (₹{(annualIncome / 12).toLocaleString()}/mo)</Badge>
+                )}
                 {modelStatus && (
                   <Badge variant={modelStatus.modelsLoaded ? "default" : "secondary"}>
                     🤖 {modelStatus.modelsLoaded ? "ML Models Active" : "Simulation Mode"}
@@ -120,163 +117,119 @@ export default function LoanPage() {
             </CardContent>
           </Card>
 
-          {/* Loan Type Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>Loan Type Selection</CardTitle>
+              <CardTitle>Loan Category</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => setLoanType("house")}
-                  className={`p-3 rounded-lg border text-center transition-colors ${
-                    loanType === "house" 
-                      ? "bg-blue-50 border-blue-200 text-blue-700" 
-                      : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                  }`}
+                  className={`p-3 rounded-lg border text-center transition-colors ${loanType === "house"
+                    ? "bg-blue-50 border-blue-200 text-blue-700"
+                    : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                    }`}
                 >
                   <div className="font-medium">🏠 Home Loan</div>
-                  <div className="text-sm text-gray-600">8.25% - 9.0%</div>
+                  <div className="text-sm text-gray-600">Avg 8.5%</div>
                 </button>
                 <button
                   onClick={() => setLoanType("car")}
-                  className={`p-3 rounded-lg border text-center transition-colors ${
-                    loanType === "car" 
-                      ? "bg-blue-50 border-blue-200 text-blue-700" 
-                      : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                  }`}
+                  className={`p-3 rounded-lg border text-center transition-colors ${loanType === "car"
+                    ? "bg-blue-50 border-blue-200 text-blue-700"
+                    : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                    }`}
                 >
                   <div className="font-medium">🚗 Car Loan</div>
-                  <div className="text-sm text-gray-600">9.2% - 10.3%</div>
+                  <div className="text-sm text-gray-600">Avg 9.5%</div>
                 </button>
                 <button
                   onClick={() => setLoanType("student")}
-                  className={`p-3 rounded-lg border text-center transition-colors ${
-                    loanType === "student" 
-                      ? "bg-blue-50 border-blue-200 text-blue-700" 
-                      : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                  }`}
+                  className={`p-3 rounded-lg border text-center transition-colors ${loanType === "student"
+                    ? "bg-blue-50 border-blue-200 text-blue-700"
+                    : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                    }`}
                 >
-                  <div className="font-medium">🎓 Education Loan</div>
-                  <div className="text-sm text-gray-600">7.5% - 9.1%</div>
+                  <div className="font-medium">🎓 Student Loan</div>
+                  <div className="text-sm text-gray-600">Avg 8.0%</div>
                 </button>
               </div>
             </CardContent>
           </Card>
 
-          {/* Enhanced Loan Calculator */}
-          <LoanCalculator 
-            loanType={loanType} 
+          <LoanCalculator
+            loanType={loanType}
             onValuesChange={setLoanValues}
           />
 
-          {/* Enhanced EMI Stress Gauge */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle>EMI Stress Analysis</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-6">
-                {/* Visual Gauge */}
                 <div className="h-64 relative">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadialBarChart data={gaugeData} innerRadius="50%" outerRadius="90%" startAngle={180} endAngle={0}>
-                      <RadialBar 
-                        minAngle={15} 
-                        clockWise 
-                        dataKey="value" 
+                    <RadialBarChart data={gaugeData} innerRadius="70%" outerRadius="100%" startAngle={180} endAngle={0}>
+                      <RadialBar
+                        minAngle={15}
+                        background
+                        clockWise
+                        dataKey="value"
                         fill={gaugeData[0].fill}
-                        cornerRadius={8}
-                        stroke="#fff"
-                        strokeWidth={2}
+                        cornerRadius={10}
                       />
                     </RadialBarChart>
                   </ResponsiveContainer>
-                  
-                  {/* Center Content */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="text-3xl font-bold" style={{ color: gaugeData[0].fill }}>
+
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
+                    <div className="text-4xl font-black" style={{ color: gaugeData[0].fill }}>
                       {emiStress}%
                     </div>
-                    <div className="text-sm text-gray-600 font-medium">EMI Stress</div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-sm text-muted-foreground font-semibold">DTI Ratio</div>
+                    <Badge variant="outline" className="mt-2">
                       {emiStress <= 30 ? "🟢 Excellent" :
-                       emiStress <= 50 ? "🟡 Good" :
-                       emiStress <= 70 ? "🟠 Fair" :
-                       "🔴 Poor"}
-                    </div>
-                  </div>
-                  
-                  {/* Progress Indicators */}
-                  <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-400">
-                    <span>0%</span>
-                    <span>25%</span>
-                    <span>50%</span>
-                    <span>75%</span>
-                    <span>100%</span>
+                        emiStress <= 40 ? "🟡 Good" :
+                          emiStress <= 50 ? "🟠 Risky" :
+                            "🔴 High Debt"}
+                    </Badge>
                   </div>
                 </div>
 
-                {/* Analysis Details */}
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <h4 className="font-medium">Stress Level Analysis</h4>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: gaugeData[0].fill }}
-                      ></div>
-                      <span className="text-sm">
-                        {emiStress <= 30 ? "🟢 Low Stress - Excellent affordability" :
-                         emiStress <= 50 ? "🟡 Moderate Stress - Manageable" :
-                         emiStress <= 70 ? "🟠 High Stress - Requires attention" :
-                         "🔴 Critical Stress - High risk"}
-                      </span>
-                    </div>
+                    <h4 className="font-bold flex items-center gap-2">
+                      Financial Impact
+                      {!annualIncome && <Badge variant="outline" className="text-[10px]">Using Default Income</Badge>}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      This loan takes up <strong>{emiStress}%</strong> of your monthly take-home salary.
+                      {emiStress > 40 ? " This is above the recommended 40% threshold for financial stability." : " This is within a healthy range for your income level."}
+                    </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Quick Adjustments</h4>
-                    <div className="text-sm space-y-1">
-                      <div>• Increase tenure: Reduce EMI by ~₹{Math.round((loanValues.amount * loanValues.rate / 100 / 12) * 0.1)}</div>
-                      <div>• Increase down payment: Reduce loan amount</div>
-                      <div>• Compare rates: Save up to ₹{Math.round((loanValues.amount * loanValues.rate / 100 / 12) * 0.05)}/month</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-muted rounded-lg">
+                      <div className="text-xs text-muted-foreground uppercase">Interest Saved</div>
+                      <div className="text-xl font-bold text-green-600">₹{Math.round(currentEMI * 0.1).toLocaleString()}*</div>
+                      <div className="text-[10px] text-muted-foreground">*via 0.5% rate reduction</div>
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="font-medium">EMI Calculation</h4>
-                    <div className="text-sm space-y-1">
-                      <div className="flex justify-between">
-                        <span>Monthly EMI:</span>
-                        <span className="font-medium">₹{Math.round((loanValues.amount * loanValues.rate / 100 / 12 * Math.pow(1 + loanValues.rate / 100 / 12, loanValues.tenure)) / (Math.pow(1 + loanValues.rate / 100 / 12, loanValues.tenure) - 1)).toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total Interest:</span>
-                        <span className="font-medium">₹{Math.round(((loanValues.amount * loanValues.rate / 100 / 12 * Math.pow(1 + loanValues.rate / 100 / 12, loanValues.tenure)) / (Math.pow(1 + loanValues.rate / 100 / 12, loanValues.tenure) - 1)) * loanValues.tenure - loanValues.amount).toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total Payment:</span>
-                        <span className="font-medium">₹{Math.round(((loanValues.amount * loanValues.rate / 100 / 12 * Math.pow(1 + loanValues.rate / 100 / 12, loanValues.tenure)) / (Math.pow(1 + loanValues.rate / 100 / 12, loanValues.tenure) - 1)) * loanValues.tenure).toLocaleString()}</span>
+                    <div className="p-3 bg-muted rounded-lg">
+                      <div className="text-xs text-muted-foreground uppercase">Affordability</div>
+                      <div className="text-xl font-bold">
+                        {emiStress <= 35 ? "High" : emiStress <= 50 ? "Moderate" : "Low"}
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Target Guidelines</h4>
-                    <div className="text-sm space-y-1">
-                      <div className="flex justify-between">
-                        <span>Ideal EMI/Income:</span>
-                        <span className="font-medium">&lt; 30%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Acceptable EMI/Income:</span>
-                        <span className="font-medium">&lt; 40%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Current EMI/Income:</span>
-                        <span className="font-medium">{emiStress}%</span>
-                      </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Monthly EMI</span>
+                      <span className="font-bold">₹{Math.round(currentEMI).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Monthly Income</span>
+                      <span className="font-bold">₹{Math.round(monthlyIncome).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -284,64 +237,84 @@ export default function LoanPage() {
             </CardContent>
           </Card>
 
-          {/* Enhanced Bank Comparison */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Bank Comparison - {loanType.charAt(0).toUpperCase() + loanType.slice(1)} Loan</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm">
-              <div className="grid grid-cols-5 gap-2 font-medium mb-2">
-                <div>Bank</div>
-                <div>Rate</div>
-                <div>EMI</div>
-                <div>Processing Fee</div>
-                <div>Features</div>
+              <div className="flex justify-between items-center">
+                <CardTitle>Bank Comparison</CardTitle>
+                <div className="text-xs text-muted-foreground">Recalculated for ₹{loanValues.amount.toLocaleString()}</div>
               </div>
-              {compare.map((r, index) => (
-                <div key={r.bank} className={`grid grid-cols-5 gap-2 border-b py-2 ${index === 0 ? 'bg-green-50' : ''}`}>
-                  <div className="font-medium">{r.bank}</div>
-                  <div className="text-green-600">{r.rate}</div>
-                  <div>{r.emi}</div>
-                  <div className="text-xs text-gray-600">{r.processingFee}</div>
-                  <div className="text-xs text-gray-600">{r.features}</div>
-                </div>
-              ))}
-              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded text-xs">
-                💰 Best Offer: {compare[0].bank} - Lowest rate at {compare[0].rate}
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="text-left py-2 font-medium">Bank</th>
+                      <th className="text-left py-2 font-medium">Rate</th>
+                      <th className="text-left py-2 font-medium">EMI</th>
+                      <th className="text-left py-2 font-medium">Processing Fee</th>
+                      <th className="text-left py-2 font-medium">Top Feature</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compare.map((r, index) => (
+                      <tr key={r.bank} className={`border-b hover:bg-muted/50 transition-colors ${index === 0 ? 'bg-green-50/50' : ''}`}>
+                        <td className="py-3 font-semibold">{r.bank}</td>
+                        <td className="py-3 text-green-700 font-medium">{r.rate}</td>
+                        <td className="py-3 font-bold">{r.emi}</td>
+                        <td className="py-3 text-xs">{r.processingFee}</td>
+                        <td className="py-3 text-xs text-muted-foreground">{r.features}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm font-medium text-green-800 flex items-center gap-2">
+                <span>🎯</span>
+                Best Selection: {compare[0].bank} offers the most competitive interest rate of {compare[0].rate} for this loan profile.
               </div>
             </CardContent>
           </Card>
 
-          {/* Enhanced Tips */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>💡 Smart Loan Tips</CardTitle>
+              <CardTitle>💡 Smart Management Tips</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm">
-              {loanType === "house" && (
+            <CardContent className="text-sm space-y-4">
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <p><strong>SBI offers the lowest home loan rates (8.25%).</strong> Consider prepayment to save interest.</p>
-                  <p>• Maintain EMI below 40% of monthly income</p>
-                  <p>• Check for government subsidies if eligible</p>
-                  <p>• Compare processing fees across banks</p>
+                  <h4 className="font-bold text-primary">Prepayment Power</h4>
+                  <p className="text-muted-foreground">Paying just 1 extra EMI per year can reduce your 20-year loan tenure by approximately 3-4 years and save significant interest.</p>
                 </div>
-              )}
-              {loanType === "car" && (
                 <div className="space-y-2">
-                  <p><strong>HDFC provides quick car loan processing.</strong> Compare down payment options.</p>
-                  <p>• Consider shorter tenure (3-5 years) for cars</p>
-                  <p>• Check for manufacturer financing offers</p>
-                  <p>• Maintain good credit score for better rates</p>
+                  <h4 className="font-bold text-primary">Insurance Factor</h4>
+                  <p className="text-muted-foreground">Consider Loan Shield or Term Insurance for high-value loans to protect your family from debt in unforeseen circumstances.</p>
                 </div>
-              )}
-              {loanType === "student" && (
-                <div className="space-y-2">
-                  <p><strong>SBI education loans have lowest rates (7.5%).</strong> Moratorium period available during studies.</p>
-                  <p>• Interest subsidy available for certain courses</p>
-                  <p>• Consider government education loan schemes</p>
-                  <p>• Flexible repayment options available</p>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <h4 className="font-bold">Specific to {loanType.charAt(0).toUpperCase() + loanType.slice(1)} Loans:</h4>
+                <div className="grid md:grid-cols-2 gap-4 text-muted-foreground">
+                  {loanType === "house" && (
+                    <>
+                      <div>• Section 24(b): Deduction up to ₹2L on interest.</div>
+                      <div>• Section 80C: Deduction on principal repayment.</div>
+                    </>
+                  )}
+                  {loanType === "car" && (
+                    <>
+                      <div>• Typically diminishing asset; avoid long tenures.</div>
+                      <div>• Check for zero-depreciation insurance tie-ups.</div>
+                    </>
+                  )}
+                  {loanType === "student" && (
+                    <>
+                      <div>• Section 80E: Full interest deduction for 8 years.</div>
+                      <div>• Moratorium benefit usually ends 6-12 months post-job.</div>
+                    </>
+                  )}
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </div>

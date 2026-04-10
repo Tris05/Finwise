@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { useUserProfile } from "@/hooks/useUserProfile"
-import { Loader2 } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Info } from "lucide-react"
 
 interface SalaryBreakdown {
   grossSalary: number
@@ -22,80 +22,103 @@ interface SalaryBreakdown {
   takeHome: number
   standardDeduction: number
   taxableIncome: number
+  hraExemption: number
 }
 
-export function TakeHomeCalculator() {
-  const { annualIncome, loading } = useUserProfile()
-  const [grossSalary, setGrossSalary] = useState(1200000)
+interface TakeHomeCalculatorProps {
+  initialGross: number
+  onGrossChange: (val: number) => void
+  onMonthlyTakeHomeUpdate: (val: number) => void
+}
+
+export function TakeHomeCalculator({
+  initialGross,
+  onGrossChange,
+  onMonthlyTakeHomeUpdate
+}: TakeHomeCalculatorProps) {
   const [basicPercentage, setBasicPercentage] = useState(40)
   const [hraPercentage, setHraPercentage] = useState(40)
+  const [monthlyRent, setMonthlyRent] = useState(25000)
+  const [taxRegime, setTaxRegime] = useState<"new" | "old">("new")
   const [otherAllowances, setOtherAllowances] = useState(0)
   const [breakdown, setBreakdown] = useState<SalaryBreakdown | null>(null)
 
-  // Sync with profile income once loaded
-  useEffect(() => {
-    if (annualIncome) {
-      setGrossSalary(annualIncome)
-    }
-  }, [annualIncome])
-
   const calculateTakeHome = () => {
-    const basicSalary = (grossSalary * basicPercentage) / 100
-    const hra = (grossSalary * hraPercentage) / 100
+    const basicSalary = (initialGross * basicPercentage) / 100
+    const hraReceived = (initialGross * hraPercentage) / 100
+    const monthlyGross = initialGross / 12
 
-    const monthlyGross = grossSalary / 12
-
-    // PF calculation (12% of basic salary, max ₹1800/month by default if opting for minimum)
-    // Most private companies cap it at 1800 per month on basic of 15000.
-    // If we want to be "financially correct", we should mention this assumption or make it a toggle.
-    // Assuming standard cap of 1800/month for now.
+    // PF calculation (12% of basic salary, capped at ₹1800/month standard)
     const pf = Math.min(basicSalary * 0.12, 1800 * 12)
 
-    // ESI calculation: Only applicable if monthly gross <= 21,000
-    // Rate: 0.75% of gross salary
-    const esi = monthlyGross <= 21000 ? (grossSalary * 0.0075) : 0
+    // ESI calculation
+    const esi = monthlyGross <= 21000 ? (initialGross * 0.0075) : 0
 
-    // Professional Tax (Monthly usually ₹200-250, using ₹2500 annual as standard for mid-high earners)
-    const professionalTax = grossSalary > 120000 ? 2500 : 0
+    // Professional Tax
+    const professionalTax = initialGross > 120000 ? 2500 : 0
 
-    // Income Tax (FY 2025-26 New Regime)
-    const standardDeduction = 75000
-    const taxableSalary = Math.max(0, grossSalary - standardDeduction - professionalTax)
+    // Deductions & Exemptions
+    let standardDeduction = taxRegime === "new" ? 75000 : 50000
+    let hraExemption = 0
+
+    if (taxRegime === "old") {
+      // HRA Exemption (Simplistic calculation)
+      // 1. Actual HRA
+      // 2. 40% of Basic
+      // 3. Rent - 10% of Basic
+      const rentPaidAnnual = monthlyRent * 12
+      hraExemption = Math.max(0, Math.min(
+        hraReceived,
+        basicSalary * 0.4,
+        rentPaidAnnual - (basicSalary * 0.1)
+      ))
+    }
+
+    const taxableSalary = Math.max(0, initialGross - standardDeduction - professionalTax - hraExemption)
 
     let tax = 0
-    if (taxableSalary > 400000) {
-      if (taxableSalary <= 800000) {
-        tax = (taxableSalary - 400000) * 0.05
-      } else if (taxableSalary <= 1200000) {
-        tax = 20000 + (taxableSalary - 800000) * 0.10
-      } else if (taxableSalary <= 1600000) {
-        tax = 20000 + 40000 + (taxableSalary - 1200000) * 0.15
-      } else if (taxableSalary <= 2000000) {
-        tax = 20000 + 40000 + 60000 + (taxableSalary - 1600000) * 0.20
-      } else if (taxableSalary <= 2400000) {
-        tax = 20000 + 40000 + 60000 + 80000 + (taxableSalary - 2000000) * 0.25
-      } else {
-        tax = 20000 + 40000 + 60000 + 80000 + 100000 + (taxableSalary - 2400000) * 0.30
+    if (taxRegime === "new") {
+      // NEW REGIME FY 2025-26
+      if (taxableSalary > 400000) {
+        if (taxableSalary <= 800000) {
+          tax = (taxableSalary - 400000) * 0.05
+        } else if (taxableSalary <= 1200000) {
+          tax = 20000 + (taxableSalary - 800000) * 0.10
+        } else if (taxableSalary <= 1600000) {
+          tax = 60000 + (taxableSalary - 1200000) * 0.15
+        } else if (taxableSalary <= 2000000) {
+          tax = 120000 + (taxableSalary - 1600000) * 0.20
+        } else if (taxableSalary <= 2400000) {
+          tax = 200000 + (taxableSalary - 2000000) * 0.25
+        } else {
+          tax = 300000 + (taxableSalary - 2400000) * 0.30
+        }
       }
+      // 87A Rebate for New Regime (Up to 12L taxable is free)
+      if (taxableSalary <= 1200000) tax = 0
+    } else {
+      // OLD REGIME (Standard slabs)
+      if (taxableSalary > 250000) {
+        if (taxableSalary <= 500000) {
+          tax = (taxableSalary - 250000) * 0.05
+        } else if (taxableSalary <= 1000000) {
+          tax = 12500 + (taxableSalary - 500000) * 0.20
+        } else {
+          tax = 112500 + (taxableSalary - 1000000) * 0.30
+        }
+      }
+      // 87A Rebate for Old Regime (Up to 5L taxable is free)
+      if (taxableSalary <= 500000) tax = 0
     }
 
-    // Apply Section 87A Rebate for New Regime: Income up to 12L is tax-free
-    // Note: This applies to total income (taxable salary in our context)
-    if (taxableSalary <= 1200000) {
-      tax = 0
-    }
-
-    // Cess (4% of tax)
-    const cess = tax * 0.04
-    const totalTds = tax + cess
-
+    const totalTds = tax * 1.04 // Including 4% Cess
     const totalDeductions = pf + esi + totalTds + professionalTax + otherAllowances
-    const takeHome = grossSalary - totalDeductions
+    const takeHome = initialGross - totalDeductions
 
     setBreakdown({
-      grossSalary,
+      grossSalary: initialGross,
       basicSalary,
-      hra,
+      hra: hraReceived,
       pf,
       esi,
       tds: totalTds,
@@ -103,152 +126,156 @@ export function TakeHomeCalculator() {
       otherDeductions: otherAllowances,
       takeHome,
       standardDeduction,
-      taxableIncome: taxableSalary
+      taxableIncome: taxableSalary,
+      hraExemption
     })
+
+    onMonthlyTakeHomeUpdate(Math.round(takeHome / 12))
   }
 
   useEffect(() => {
     calculateTakeHome()
-  }, [grossSalary, basicPercentage, hraPercentage, otherAllowances])
-
-  if (loading && !annualIncome) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading profile data...</span>
-      </div>
-    )
-  }
+  }, [initialGross, basicPercentage, hraPercentage, monthlyRent, taxRegime, otherAllowances])
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Salary Inputs (FY 2025-26)</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle>Salary Configuration</CardTitle>
+            <Tabs value={taxRegime} onValueChange={(v) => setTaxRegime(v as "new" | "old")}>
+              <TabsList className="h-8">
+                <TabsTrigger value="new" className="text-xs">New Regime</TabsTrigger>
+                <TabsTrigger value="old" className="text-xs">Old Regime</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label htmlFor="gross-salary">Gross Annual Salary (₹)</Label>
-              {annualIncome && (
-                <Badge variant="outline" className="text-[10px] h-5">Synced from Profile</Badge>
-              )}
-            </div>
+            <Label htmlFor="gross-salary">Gross Annual Salary (₹)</Label>
             <Input
               id="gross-salary"
               type="number"
-              value={grossSalary}
-              onChange={(e) => setGrossSalary(Number(e.target.value))}
-              placeholder="1200000"
+              value={initialGross}
+              onChange={(e) => onGrossChange(Number(e.target.value))}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="basic-percentage">Basic Salary %</Label>
-            <Input
-              id="basic-percentage"
-              type="number"
-              value={basicPercentage}
-              onChange={(e) => setBasicPercentage(Number(e.target.value))}
-              placeholder="40"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="basic-percentage">Basic (%)</Label>
+              <Input
+                id="basic-percentage"
+                type="number"
+                value={basicPercentage}
+                onChange={(e) => setBasicPercentage(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hra-percentage">HRA (%)</Label>
+              <Input
+                id="hra-percentage"
+                type="number"
+                value={hraPercentage}
+                onChange={(e) => setHraPercentage(Number(e.target.value))}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="hra-percentage">HRA %</Label>
-            <Input
-              id="hra-percentage"
-              type="number"
-              value={hraPercentage}
-              onChange={(e) => setHraPercentage(Number(e.target.value))}
-              placeholder="40"
-            />
-          </div>
+          {taxRegime === "old" && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+              <Label htmlFor="monthly-rent">Monthly Rent Paid (₹)</Label>
+              <Input
+                id="monthly-rent"
+                type="number"
+                value={monthlyRent}
+                onChange={(e) => setMonthlyRent(Number(e.target.value))}
+              />
+              <p className="text-[10px] text-muted-foreground">Required for HRA exemption in Old Regime</p>
+            </div>
+          )}
 
           <div className="space-y-2">
-            <Label htmlFor="other-allowances">Other Deductions (Monthly Avg ₹)</Label>
+            <Label htmlFor="other-allowances">Other Monthly Deductions (₹)</Label>
             <Input
               id="other-allowances"
               type="number"
               value={otherAllowances}
               onChange={(e) => setOtherAllowances(Number(e.target.value))}
-              placeholder="0"
             />
+          </div>
+
+          <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+            <div className="text-[11px] text-blue-800 flex items-start gap-2">
+              <Info className="h-3 w-3 mt-0.5" />
+              <span>
+                {taxRegime === "new"
+                  ? "New Regime (FY 2025-26) offers lower rates but no HRA/80C exemptions. Standard deduction is ₹75k."
+                  : "Old Regime allows HRA, 80C, and other exemptions but at higher tax rates. Standard deduction is ₹50k."}
+              </span>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {breakdown && (
-        <Card>
+        <Card className="border-primary/20 bg-primary/[0.02]">
           <CardHeader>
-            <CardTitle>Calculated Take-Home Pay</CardTitle>
+            <CardTitle>Take-Home Breakdown</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span>Gross Annual Salary</span>
-                <span className="font-medium">₹{breakdown.grossSalary.toLocaleString()}</span>
+            <div className="space-y-2.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Annual Gross</span>
+                <span className="font-semibold">₹{breakdown.grossSalary.toLocaleString()}</span>
               </div>
 
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Taxable Income (after SD)</span>
-                <span>₹{breakdown.taxableIncome.toLocaleString()}</span>
+              <div className="flex justify-between text-xs text-muted-foreground italic">
+                <span>- Basic Component</span>
+                <span>₹{breakdown.basicSalary.toLocaleString()}</span>
               </div>
+
+              {breakdown.hraExemption > 0 && (
+                <div className="flex justify-between text-sm text-green-600 font-medium">
+                  <span>HRA Tax Exemption</span>
+                  <span>- ₹{breakdown.hraExemption.toLocaleString()}</span>
+                </div>
+              )}
 
               <Separator />
 
-              <div className="text-sm text-muted-foreground">Standard Deductions:</div>
               <div className="flex justify-between text-sm">
-                <span>Standard Deduction (New Regime)</span>
+                <span>Standard Deduction</span>
                 <span>- ₹{breakdown.standardDeduction.toLocaleString()}</span>
               </div>
 
-              <div className="text-sm text-muted-foreground mt-2">Deductions (Employee Share):</div>
-
               <div className="flex justify-between text-sm">
-                <span>Provident Fund (PF)</span>
-                <span>₹{breakdown.pf.toLocaleString()}</span>
+                <span>Taxable Income</span>
+                <span className="font-bold">₹{breakdown.taxableIncome.toLocaleString()}</span>
               </div>
-
-              {breakdown.esi > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>ESI</span>
-                  <span>₹{breakdown.esi.toLocaleString()}</span>
-                </div>
-              )}
-
-              <div className="flex justify-between text-sm">
-                <span>Professional Tax</span>
-                <span>₹{breakdown.professionalTax.toLocaleString()}</span>
-              </div>
-
-              <div className="flex justify-between text-sm">
-                <span>Income Tax (inc. 4% Cess)</span>
-                <span className={breakdown.tds === 0 ? "text-green-600 font-medium" : ""}>
-                  {breakdown.tds === 0 ? "₹0 (87A Rebate)" : `₹${breakdown.tds.toLocaleString()}`}
-                </span>
-              </div>
-
-              {breakdown.otherDeductions > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>Other Deductions</span>
-                  <span>₹{breakdown.otherDeductions.toLocaleString()}</span>
-                </div>
-              )}
 
               <Separator />
 
-              <div className="flex justify-between text-lg font-semibold">
-                <span>Take-Home Pay</span>
-                <Badge variant="secondary" className="text-lg">
-                  ₹{breakdown.takeHome.toLocaleString()}
-                </Badge>
+              <div className="text-xs font-bold text-muted-foreground uppercase pt-2">Monthly Deductions</div>
+
+              <div className="flex justify-between text-sm">
+                <span>PF Contribution</span>
+                <span>₹{Math.round(breakdown.pf / 12).toLocaleString()}</span>
               </div>
 
-              <div className="text-center p-3 bg-muted rounded-lg mt-4">
-                <div className="text-sm text-muted-foreground">Approx. Monthly Credit</div>
-                <div className="text-2xl font-bold text-primary">
-                  ₹{Math.round(breakdown.takeHome / 12).toLocaleString()}
+              <div className="flex justify-between text-sm">
+                <span>Income Tax (TDS)</span>
+                <span className={breakdown.tds === 0 ? "text-green-600 font-bold" : "text-red-500 font-medium"}>
+                  {breakdown.tds === 0 ? "₹0 (Rebate)" : `₹${Math.round(breakdown.tds / 12).toLocaleString()}`}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-sm font-bold pt-4 border-t">
+                <span className="text-lg">Take-Home Salary</span>
+                <div className="text-right">
+                  <div className="text-2xl text-primary font-black">₹{Math.round(breakdown.takeHome / 12).toLocaleString()}</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">Monthly Credit</div>
                 </div>
               </div>
             </div>

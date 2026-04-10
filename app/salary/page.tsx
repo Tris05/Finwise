@@ -7,26 +7,41 @@ import { SalaryBudgetingTool } from "@/components/salary-budgeting-tool"
 import { SalaryGrowthTracker } from "@/components/salary-growth-tracker"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useState, useEffect } from "react"
+import { useUserProfile } from "@/hooks/useUserProfile"
 
 export default function SalaryPage() {
+  const { annualIncome } = useUserProfile()
+  const [grossSalary, setGrossSalary] = useState(1200000)
+  const [monthlyTakeHome, setMonthlyTakeHome] = useState(100000)
+
+  // Sync with profile income once loaded
+  useEffect(() => {
+    if (annualIncome) {
+      setGrossSalary(annualIncome)
+      // Rough estimate until calculator runs
+      setMonthlyTakeHome(Math.round((annualIncome * 0.8) / 12))
+    }
+  }, [annualIncome])
+
   return (
     <QueryProvider>
       <AppShell>
         <div className="space-y-6">
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold">Salary Management</h1>
+            <h1 className="text-3xl font-bold font-heading">Salary Management</h1>
             <p className="text-muted-foreground">
               Optimize your salary, plan your budget, and track your career growth
             </p>
           </div>
-          
+
           <Tabs defaultValue="take-home" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="take-home">Take-Home Calculator</TabsTrigger>
               <TabsTrigger value="budgeting">Budget Planning</TabsTrigger>
               <TabsTrigger value="growth">Career Growth</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="take-home" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -36,11 +51,15 @@ export default function SalaryPage() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <TakeHomeCalculator />
+                  <TakeHomeCalculator
+                    initialGross={grossSalary}
+                    onGrossChange={setGrossSalary}
+                    onMonthlyTakeHomeUpdate={setMonthlyTakeHome}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="budgeting" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -50,11 +69,13 @@ export default function SalaryPage() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <SalaryBudgetingTool />
+                  <SalaryBudgetingTool
+                    syncedMonthlySalary={monthlyTakeHome}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="growth" className="space-y-6">
               <Card>
                 <CardHeader>
