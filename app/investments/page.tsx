@@ -38,6 +38,7 @@ import { db, auth } from "@/lib/firebase"
 import {
   collection,
   onSnapshot,
+  getDocs,
   query,
   where,
   orderBy,
@@ -474,21 +475,85 @@ Recommendation: ${asset.recommendation}
     if (!userId) return
 
     try {
+      // 1. Save to Transactions collection
       const transactionsRef = collection(db, "users", userId, "transactions")
       await addDoc(transactionsRef, {
         ...newTransaction,
         created_at: serverTimestamp()
       })
+
+      // 2. Sync to Portfolio holdings
+      const portfolioRef = collection(db, "users", userId, "portfolio")
+      const q = query(portfolioRef, where("symbol", "==", newTransaction.asset))
+      const querySnapshot = await getDocs(q)
+      
+      const isStable = ['debt', 'stable', 'fixed income', 'fd', 'ppf'].includes(newTransaction.category.toLowerCase())
+      
+      if (newTransaction.type === "Buy" || newTransaction.type === "Dividend" || newTransaction.type === "Bonus") {
+        if (!querySnapshot.empty) {
+          // Update existing holding
+          const portfolioDoc = querySnapshot.docs[0]
+          const existingData = portfolioDoc.data()
+          await updateDoc(portfolioDoc.ref, {
+            quantity: (Number(existingData.quantity) || 0) + (Number(newTransaction.quantity) || 0),
+            investedAmount: (Number(existingData.investedAmount) || 0) + (Number(newTransaction.amount) || 0),
+            updated_at: serverTimestamp()
+          })
+        } else {
+          // Create new holding
+          await addDoc(portfolioRef, {
+            symbol: newTransaction.asset,
+            name: newTransaction.asset, // Fallback to symbol
+            type: newTransaction.category === 'Crypto' ? 'Crypto' : 
+                  isStable ? 'Stable' : 'Stock',
+            category: newTransaction.category,
+            quantity: newTransaction.quantity,
+            investedAmount: newTransaction.amount,
+            currentPrice: newTransaction.price,
+            currentValue: newTransaction.amount,
+            totalGain: 0,
+            gainPercent: 0,
+            dayChange: 0,
+            dayChangePercent: 0,
+            color: "#3B82F6",
+            created_at: serverTimestamp(),
+            lastSync: serverTimestamp()
+          })
+        }
+      } else if (newTransaction.type === "Sell") {
+        if (!querySnapshot.empty) {
+          const portfolioDoc = querySnapshot.docs[0]
+          const existingData = portfolioDoc.data()
+          const newQty = (Number(existingData.quantity) || 0) - (Number(newTransaction.quantity) || 0)
+          
+          if (newQty <= 0.0001) {
+            // Remove from portfolio if quantity is zero
+            await deleteDoc(portfolioDoc.ref)
+          } else {
+            // Proportional reduction of investedAmount (cost basis)
+            const oldQty = Number(existingData.quantity) || 1
+            const oldInvested = Number(existingData.investedAmount) || 0
+            const newInvested = oldInvested * (newQty / oldQty)
+            
+            await updateDoc(portfolioDoc.ref, {
+              quantity: newQty,
+              investedAmount: newInvested,
+              updated_at: serverTimestamp()
+            })
+          }
+        }
+      }
+
       setAddTransactionOpen(false)
       toast({
-        title: "Transaction Added",
-        description: "Your transaction has been recorded successfully."
+        title: "Transaction Recorded",
+        description: `Successfully added ${newTransaction.asset} and updated your portfolio.`
       })
     } catch (error) {
       console.error("Error adding transaction:", error)
       toast({
         title: "Error",
-        description: "Failed to save transaction.",
+        description: "Failed to save transaction and update portfolio.",
         variant: "destructive"
       })
     }

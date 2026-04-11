@@ -56,7 +56,7 @@ class MarketDataFetcher(BaseTool):
         self.crypto_universe_path = os.path.join(self.universe_manager.CACHE_DIR, "crypto_universe.json")
         self.price_ttl_hours = 1
         
-    def execute(self, data_types: List[str] = None, sector_pattern: str = None) -> MarketDataResponse:
+    def execute(self, data_types: List[str] = None, sector_pattern: str = None, period: str = "1mo") -> MarketDataResponse:
         """
         Fetch market data for specified data types
         """
@@ -67,7 +67,7 @@ class MarketDataFetcher(BaseTool):
             market_data = {}
             
             if 'stocks' in data_types:
-                market_data['stocks'] = self.fetch_stock_data(sector_pattern=sector_pattern)
+                market_data['stocks'] = self.fetch_stock_data(sector_pattern=sector_pattern, period=period)
             
             if 'crypto' in data_types:
                 market_data['crypto'] = self.fetch_crypto_data()
@@ -101,10 +101,10 @@ class MarketDataFetcher(BaseTool):
                 error_message=str(e)
             )
     
-    def fetch_stock_data(self, sector_pattern: str = None) -> Dict[str, Any]:
+    def fetch_stock_data(self, sector_pattern: str = None, period: str = "1mo") -> Dict[str, Any]:
         """Fetch Indian stock data using batch yfinance calls with caching"""
         # 1. Check Cache first
-        cache_key = f"stocks_{sector_pattern or 'all'}"
+        cache_key = f"stocks_{sector_pattern or 'all'}_{period}"
         if self._is_price_cache_valid(cache_key):
             try:
                 with open(self.price_cache_path, 'r') as f:
@@ -121,9 +121,9 @@ class MarketDataFetcher(BaseTool):
 
         stock_data = {}
         try:
-            logger.info(f"Batch fetching data for {len(symbols)} symbols from yfinance...")
+            logger.info(f"Batch fetching data for {len(symbols)} symbols from yfinance (period: {period})...")
             # yfinance supports download(list_of_symbols)
-            tickers = yf.download(symbols, period="1mo", interval="1d", group_by='ticker', threads=True, progress=False, timeout=20)
+            tickers = yf.download(symbols, period=period, interval="1d", group_by='ticker', threads=True, progress=False, timeout=20)
             
             for symbol in symbols:
                 try:
@@ -529,12 +529,12 @@ class DataAgent:
         self.data_validator = DataValidator()
         logger.info("Data Agent initialized")
     
-    def execute(self, user_profile: Dict[str, Any], force_refresh: bool = False) -> Dict[str, Any]:
+    def execute(self, user_profile: Dict[str, Any], force_refresh: bool = False, period: str = "1mo") -> Dict[str, Any]:
         try:
             # Extract sector pattern for regex filtering if provided
             sector_pattern = user_profile.get("constraints", {}).get("sector_filter")
             
-            market_response = self.market_data_fetcher.execute(sector_pattern=sector_pattern)
+            market_response = self.market_data_fetcher.execute(sector_pattern=sector_pattern, period=period)
             if not market_response.success:
                 return {"error": "Failed to fetch market data"}
             

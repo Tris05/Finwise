@@ -1,13 +1,15 @@
 "use client"
  
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion } from "framer-motion"
 import { useSearchParams } from "next/navigation"
 import ReactMarkdown, { Options } from "react-markdown"
+import { useInvestments } from "@/hooks/useInvestments"
+import { auth } from "@/lib/firebase"
  
 // ✅ Wrapper to allow className in TS
 interface MarkdownProps extends Options {
@@ -22,6 +24,7 @@ const Markdown: React.FC<MarkdownProps> = ({ children, className, ...props }) =>
     </div>
   )
 }
+ 
  
 type Msg = { id: string; role: "user" | "assistant"; content: string }
  
@@ -38,6 +41,22 @@ export function ChatbotPanel() {
   const qc = useQueryClient()
   const searchParams = useSearchParams()
  
+  const { investments, totalValue, loading: portfolioLoading } = useInvestments()
+
+  const portfolioSummary = useMemo(() => {
+    if (portfolioLoading || investments.length === 0) return "No current holdings."
+    
+    const categories = Array.from(new Set(investments.map(inv => inv.category)))
+    let summary = `Portfolio Total Value: ₹${totalValue.toLocaleString()}\n`
+    summary += "Current Holdings:\n"
+    
+    investments.forEach(inv => {
+      summary += `- ${inv.name} (${inv.symbol}): ${inv.quantity} units @ ₹${inv.currentPrice.toLocaleString()}, Value: ₹${inv.currentValue.toLocaleString()}\n`
+    })
+    
+    return summary
+  }, [investments, totalValue, portfolioLoading])
+
   const chat = useMutation({
     mutationFn: async (prompt: string): Promise<{ reply: string }> => {
       const res = await fetch("/api/advisor/chat", {
@@ -45,7 +64,11 @@ export function ChatbotPanel() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ 
+          prompt,
+          userId: auth.currentUser?.uid,
+          portfolioSummary: portfolioSummary
+        }),
       })
       
       if (!res.ok) {
