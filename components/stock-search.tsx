@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Search, 
-  TrendingUp, 
-  TrendingDown, 
-  Star, 
-  Plus, 
-  Eye, 
+import {
+  Search,
+  TrendingUp,
+  TrendingDown,
+  Star,
+  Plus,
+  Eye,
   BarChart3,
   DollarSign,
   Building2,
@@ -56,6 +56,8 @@ interface StockSearchResult {
   country: string
   logoUrl?: string
   isValid: boolean
+  week52High?: number
+  week52Low?: number
 }
 
 interface DetailedStockData extends StockSearchResult {
@@ -64,8 +66,6 @@ interface DetailedStockData extends StockSearchResult {
   open: number
   high: number
   low: number
-  week52High: number
-  week52Low: number
   forwardPE?: number
   pegRatio?: number
   priceToBook?: number
@@ -156,7 +156,7 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
       console.error('Search error:', error)
       setSearchError(error instanceof Error ? error.message : 'Search failed')
       setSearchResults([])
-      
+
       // Show a helpful message for common issues
       if (error instanceof Error && error.message.includes('500')) {
         setSearchError('Server error - please try again in a moment')
@@ -169,7 +169,7 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
   const fetchDetailedData = async (symbol: string) => {
     setIsLoadingDetails(true)
     setSearchError(null)
-    
+
     try {
       const response = await fetch('/api/market-data', {
         method: 'POST',
@@ -299,12 +299,12 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div>
                             <div className="text-sm text-muted-foreground">Price</div>
                             <div className="font-semibold">
-                              {stock.currency === 'INR' ? '₹' : '$'}{stock.currentPrice.toFixed(2)}
+                              {stock.currency === 'INR' ? formatINR(stock.currentPrice) : `$${stock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                             </div>
                           </div>
                           <div>
@@ -315,25 +315,25 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Market Cap</div>
+                            <div className="text-sm text-muted-foreground">Volume</div>
                             <div className="font-semibold text-sm">
-                              {stock.marketCap > 1000000000000 
-                                ? `${(stock.marketCap / 1000000000000).toFixed(1)}T`
-                                : stock.marketCap > 1000000000
-                                ? `${(stock.marketCap / 1000000000).toFixed(1)}B`
-                                : `${(stock.marketCap / 1000000).toFixed(1)}M`
+                              {stock.volume > 1000000
+                                ? `${(stock.volume / 1000000).toFixed(1)}M`
+                                : stock.volume > 1000
+                                  ? `${(stock.volume / 1000).toFixed(1)}K`
+                                  : stock.volume.toLocaleString()
                               }
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">P/E</div>
-                            <div className="font-semibold">
-                              {stock.pe ? stock.pe.toFixed(1) : 'N/A'}
+                            <div className="text-sm text-muted-foreground">52W Range</div>
+                            <div className="font-semibold text-sm whitespace-nowrap">
+                              {stock.currency === 'INR' ? formatINR(stock.week52Low || 0) : `$${(stock.week52Low || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} - {stock.currency === 'INR' ? formatINR(stock.week52High || 0) : `$${(stock.week52High || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                             </div>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col space-y-2 ml-4">
                         <Button
                           variant="outline"
@@ -348,7 +348,7 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                           )}
                           <span className="ml-2">Details</span>
                         </Button>
-                        
+
                         <div className="flex space-x-2">
                           {onAddToWatchlist && (
                             <Button
@@ -405,7 +405,7 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                   <CardContent className="p-4">
                     <div className="text-sm text-muted-foreground">Current Price</div>
                     <div className="text-2xl font-bold">
-                      {selectedStock.currency === 'INR' ? '₹' : '$'}{selectedStock.currentPrice.toFixed(2)}
+                      {selectedStock.currency === 'INR' ? formatINR(selectedStock.currentPrice) : `$${selectedStock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </div>
                     <div className={`flex items-center space-x-1 ${getChangeColor(selectedStock.dayChange)}`}>
                       {getChangeIcon(selectedStock.dayChange)}
@@ -418,10 +418,10 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                   <CardContent className="p-4">
                     <div className="text-sm text-muted-foreground">52W High/Low</div>
                     <div className="text-lg font-semibold">
-                      {selectedStock.currency === 'INR' ? '₹' : '$'}{selectedStock.week52High.toFixed(2)}
+                      {selectedStock.currency === 'INR' ? formatINR(selectedStock.week52High || 0) : `$${(selectedStock.week52High || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {selectedStock.currency === 'INR' ? '₹' : '$'}{selectedStock.week52Low.toFixed(2)}
+                      {selectedStock.currency === 'INR' ? formatINR(selectedStock.week52Low || 0) : `$${(selectedStock.week52Low || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </div>
                   </CardContent>
                 </Card>
@@ -453,20 +453,20 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                 <TabsContent value="overview" className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Market Cap</div>
+                      <div className="text-sm text-muted-foreground">Volume</div>
                       <div className="font-semibold">
-                        {selectedStock.marketCap > 1000000000000 
-                          ? `${(selectedStock.marketCap / 1000000000000).toFixed(1)}T`
-                          : selectedStock.marketCap > 1000000000
-                          ? `${(selectedStock.marketCap / 1000000000).toFixed(1)}B`
-                          : `${(selectedStock.marketCap / 1000000).toFixed(1)}M`
+                        {selectedStock.volume > 1000000
+                          ? `${(selectedStock.volume / 1000000).toFixed(1)}M`
+                          : selectedStock.volume > 1000
+                            ? `${(selectedStock.volume / 1000).toFixed(1)}K`
+                            : selectedStock.volume.toLocaleString()
                         }
                       </div>
                     </div>
                     <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">P/E Ratio</div>
-                      <div className="font-semibold">
-                        {selectedStock.pe ? selectedStock.pe.toFixed(1) : 'N/A'}
+                      <div className="text-sm text-muted-foreground">Day Range</div>
+                      <div className="font-semibold whitespace-nowrap">
+                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.low || 0) : `$${(selectedStock.low || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} - {selectedStock.currency === 'INR' ? formatINR(selectedStock.high || 0) : `$${(selectedStock.high || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       </div>
                     </div>
                     <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
@@ -536,13 +536,13 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                     <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
                       <div className="text-sm text-muted-foreground">MA 20</div>
                       <div className="font-semibold">
-                        {selectedStock.currency === 'INR' ? '₹' : '$'}{selectedStock.ma20.toFixed(2)}
+                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.ma20) : `$${selectedStock.ma20.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       </div>
                     </div>
                     <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
                       <div className="text-sm text-muted-foreground">MA 50</div>
                       <div className="font-semibold">
-                        {selectedStock.currency === 'INR' ? '₹' : '$'}{selectedStock.ma50.toFixed(2)}
+                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.ma50) : `$${selectedStock.ma50.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       </div>
                     </div>
                     <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
@@ -554,13 +554,13 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                     <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
                       <div className="text-sm text-muted-foreground">Today's High</div>
                       <div className="font-semibold">
-                        {selectedStock.currency === 'INR' ? '₹' : '$'}{selectedStock.high.toFixed(2)}
+                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.high) : `$${selectedStock.high.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       </div>
                     </div>
                     <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
                       <div className="text-sm text-muted-foreground">Today's Low</div>
                       <div className="font-semibold">
-                        {selectedStock.currency === 'INR' ? '₹' : '$'}{selectedStock.low.toFixed(2)}
+                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.low) : `$${selectedStock.low.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       </div>
                     </div>
                   </div>
@@ -576,7 +576,7 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                         </p>
                       </div>
                     )}
-                    
+
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
                         <div className="text-sm text-muted-foreground">Industry</div>
@@ -599,9 +599,9 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                     {selectedStock.website && (
                       <div className="flex items-center space-x-2">
                         <Globe className="h-4 w-4 text-muted-foreground" />
-                        <a 
-                          href={selectedStock.website} 
-                          target="_blank" 
+                        <a
+                          href={selectedStock.website}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
                         >

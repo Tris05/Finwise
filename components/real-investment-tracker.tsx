@@ -40,6 +40,9 @@ interface RealInvestment {
   rate?: number
   tenure?: number | string
   rationale?: string
+  volume?: number
+  week52High?: number
+  week52Low?: number
 }
 
 interface RealInvestmentTrackerProps {
@@ -367,16 +370,25 @@ export function RealInvestmentTracker({
                         </div>
                       </div>
                     )}
-                    {!isDebt && investment.pe !== "N/A" && (
+                    {!isDebt && investment.volume !== undefined && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">P/E Ratio</span>
-                        <span className="font-medium">{investment.pe}</span>
+                        <span className="text-muted-foreground">Volume</span>
+                        <span className="font-medium">
+                          {investment.volume > 1000000
+                            ? `${(investment.volume / 1000000).toFixed(1)}M`
+                            : investment.volume > 1000
+                              ? `${(investment.volume / 1000).toFixed(1)}K`
+                              : investment.volume.toLocaleString()
+                          }
+                        </span>
                       </div>
                     )}
-                    {!isDebt && investment.dividend !== "N/A" && (
+                    {!isDebt && investment.week52High !== undefined && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Dividend Yield</span>
-                        <span className="font-medium">{investment.dividend}%</span>
+                        <span className="text-muted-foreground">52W Range</span>
+                        <span className="font-medium whitespace-nowrap">
+                          {formatINR(investment.week52Low || 0)} - {formatINR(investment.week52High || 0)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -490,16 +502,25 @@ export function RealInvestmentTracker({
                       </Badge>
                     </div>
                   )}
-                  {selectedInvestment.pe && selectedInvestment.pe !== "N/A" && selectedInvestment.pe !== 0 && (
+                  {!selectedInvestment.type?.toLowerCase().includes('fd') && !selectedInvestment.type?.toLowerCase().includes('ppf') && selectedInvestment.volume !== undefined && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">P/E Ratio</span>
-                      <span className="font-medium">{selectedInvestment.pe}</span>
+                      <span className="text-muted-foreground">Volume</span>
+                      <span className="font-medium">
+                        {selectedInvestment.volume > 1000000
+                          ? `${(selectedInvestment.volume / 1000000).toFixed(1)}M`
+                          : selectedInvestment.volume > 1000
+                            ? `${(selectedInvestment.volume / 1000).toFixed(1)}K`
+                            : selectedInvestment.volume.toLocaleString()
+                        }
+                      </span>
                     </div>
                   )}
-                  {selectedInvestment.dividend && selectedInvestment.dividend !== "N/A" && selectedInvestment.dividend !== 0 && (
+                  {!selectedInvestment.type?.toLowerCase().includes('fd') && !selectedInvestment.type?.toLowerCase().includes('ppf') && selectedInvestment.week52High !== undefined && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Dividend Yield</span>
-                      <span className="font-medium">{selectedInvestment.dividend}%</span>
+                      <span className="text-muted-foreground">52-Week Range</span>
+                      <span className="font-medium whitespace-nowrap">
+                        {formatINR(selectedInvestment.week52Low || 0)} - {formatINR(selectedInvestment.week52High || 0)}
+                      </span>
                     </div>
                   )}
                 </div>
