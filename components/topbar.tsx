@@ -9,7 +9,7 @@ import { useState } from "react"
 import { UserMenu } from "@/components/user-menu"
 import { useSmartNavigation } from "@/lib/smart-navigation"
 import { useInvestments } from "@/hooks/useInvestments"
-import { useQuery } from "@tanstack/react-query"
+import { useGameProgress } from "@/hooks/useGameProgress"
 
 export function Topbar() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -22,16 +22,8 @@ export function Topbar() {
     loading: investmentsLoading,
   } = useInvestments()
 
-  // Live learning level from game progress API
-  const { data: gameData, isLoading: gameLoading } = useQuery({
-    queryKey: ["game-progress"],
-    queryFn: async () => {
-      const res = await fetch("/api/game/progress")
-      if (!res.ok) return null
-      return res.json()
-    },
-    staleTime: 5 * 60 * 1000, // 5 min
-  })
+  // Live learning level from Firestore (same source as learning page)
+  const { level, loading: gameLoading } = useGameProgress()
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,7 +43,6 @@ export function Topbar() {
     }
   }
 
-  const level = gameData?.level ?? 1
   const isPortfolioUp = dayChangePercent >= 0
 
   return (

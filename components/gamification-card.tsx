@@ -1,38 +1,33 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { BookOpen, Brain, Trophy, Flame } from "lucide-react"
-
-type LearningStats = {
-  flashcardsCompleted: number
-  quizzesCompleted: number
-  totalLearningXP: number
-  currentStreak: number
-  longestStreak: number
-}
-
-type GameProgress = { 
-  xp: number
-  level: number
-  badges: string[]
-  streak: number
-  learningStats: LearningStats
-}
+import { useGameProgress } from "@/hooks/useGameProgress"
 
 export function GamificationCard() {
-  const { data } = useQuery({
-    queryKey: ["game-progress"],
-    queryFn: async (): Promise<GameProgress> => {
-      const res = await fetch("/api/game/progress")
-      return res.json()
-    },
-  })
+  const { xp, level, streak, badges, learningStats, loading } = useGameProgress()
 
-  const xpPct = Math.min(100, (data?.xp ?? 0) % 100)
-  const learningStats = data?.learningStats
+  const xpPct = Math.min(100, xp % 100)
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Gamification</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-2 w-full" />
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>
@@ -41,10 +36,16 @@ export function GamificationCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm">
-          Level: {data?.level ?? 1} • Streak: {data?.streak ?? 0} days
+          Level: {level} • Streak: {streak} days
         </div>
-        <Progress value={xpPct} />
-        
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{xp % 100} / 100 XP to next level</span>
+            <span>Lv {level}</span>
+          </div>
+          <Progress value={xpPct} />
+        </div>
+
         {learningStats && (
           <div className="space-y-3">
             <div className="text-sm font-medium">Learning Progress</div>
@@ -68,14 +69,16 @@ export function GamificationCard() {
             </div>
           </div>
         )}
-        
-        <div className="flex flex-wrap gap-2">
-          {(data?.badges ?? []).map((b) => (
-            <Badge key={b} variant="secondary">
-              {b}
-            </Badge>
-          ))}
-        </div>
+
+        {badges.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {badges.map((b) => (
+              <Badge key={b} variant="secondary">
+                {b}
+              </Badge>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

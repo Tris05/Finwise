@@ -2,25 +2,15 @@
 
 import { AppShell } from "@/components/app-shell"
 import { GamificationCard } from "@/components/gamification-card"
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Flashcards } from "@/components/flashcards"
 import { Quizzes } from "@/components/quizzes"
 import { useQuery } from "@tanstack/react-query"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
-
-const leaderboard = [
-  { user: "Aarav", xp: 1240 },
-  { user: "Diya", xp: 1180 },
-  { user: "Kabir", xp: 990 },
-  { user: "Isha", xp: 940 },
-  { user: "Rohan", xp: 900 },
-]
-
-const badges = ["SIP Starter", "Budget Boss", "Tax Pro", "Credit Smart", "Saver Streak", "Risk Aware"]
+import { useGameProgress } from "@/hooks/useGameProgress"
 
 type Flashcard = {
   id: string
@@ -42,8 +32,22 @@ type Quiz = {
 
 function LearningContent() {
   const [activeTab, setActiveTab] = useState("overview")
-  const queryClient = useQueryClient()
 
+  // ── Live game progress from Firestore ──────────────────────────────────────
+  const {
+    xp,
+    level,
+    badges,
+    learningStats,
+    weeklyXP,
+    monthlyXP,
+    loading: progressLoading,
+    earnXP,
+  } = useGameProgress()
+
+  const xpPct = Math.min(100, xp % 100)
+
+  // ── Flashcards & Quizzes from API ──────────────────────────────────────────
   const { data: flashcards } = useQuery({
     queryKey: ["flashcards"],
     queryFn: async (): Promise<Flashcard[]> => {
@@ -60,23 +64,8 @@ function LearningContent() {
     },
   })
 
-  const updateProgress = useMutation({
-    mutationFn: async (xp: number) => {
-      const res = await fetch("/api/game/progress", {
-        method: "POST",
-        body: JSON.stringify({ action: "learning_completed", xp }),
-      })
-      if (!res.ok) throw new Error("Failed to update progress")
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["game-progress"] })
-    },
-  })
-
-  const handleLearningComplete = (xp: number) => {
-    updateProgress.mutate(xp)
-  }
+  const handleFlashcardComplete = (xp: number) => earnXP(xp, "flashcard")
+  const handleQuizComplete = (xp: number) => earnXP(xp, "quiz")
 
   return (
     <AppShell>
@@ -88,8 +77,10 @@ function LearningContent() {
           <TabsTrigger value="progress">Progress</TabsTrigger>
         </TabsList>
 
+        {/* ── OVERVIEW ───────────────────────────────────────────────────── */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid lg:grid-cols-2 gap-5">
+            {/* XP Progress card */}
             <Card className="bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10">
               <CardHeader className="pb-2">
                 <CardTitle className="text-balance">Keep Earning XP!</CardTitle>
@@ -97,47 +88,53 @@ function LearningContent() {
               <CardContent className="text-sm text-muted-foreground">
                 Complete flashcards, quizzes, and ask the Advisor questions to unlock badges and level up.
                 <div className="mt-3">
-                  <div className="text-xs mb-1">XP Progress</div>
-                  <Progress value={64} />
+                  {progressLoading ? (
+                    <Skeleton className="h-2 w-full" />
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>XP Progress — Level {level}</span>
+                        <span>{xpPct} / 100</span>
+                      </div>
+                      <Progress value={xpPct} />
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
+            {/* Gamification card (level, streak, stats) */}
             <GamificationCard />
 
-            <Card>
+            {/* Badges — only earned ones */}
+            <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
-                <CardTitle>Leaderboard (Top 5)</CardTitle>
+                <CardTitle>Your Badges</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm">
-                <div className="grid grid-cols-3 gap-2 font-medium">
-                  <div>User</div>
-                  <div className="text-center">XP</div>
-                  <div className="text-right">Rank</div>
-                </div>
-                {leaderboard.map((r, idx) => (
-                  <div key={r.user} className="grid grid-cols-3 gap-2 border-b py-1.5">
-                    <div>{r.user}</div>
-                    <div className="text-center">{r.xp}</div>
-                    <div className="text-right">#{idx + 1}</div>
+              <CardContent>
+                {progressLoading ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full rounded-md" />
+                    ))}
                   </div>
-                ))}
+                ) : badges.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No badges yet — complete flashcards and quizzes to earn your first one!
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {badges.map((b) => (
+                      <div key={b} className="rounded-md border px-2 py-3 text-center text-xs font-medium">
+                        {b}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Badges</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-3 gap-2">
-                {badges.map((b) => (
-                  <div key={b} className="rounded-md border px-2 py-3 text-center text-xs">
-                    {b}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
+            {/* Learning modules */}
             <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle>Learning Modules</CardTitle>
@@ -161,6 +158,7 @@ function LearningContent() {
           </div>
         </TabsContent>
 
+        {/* ── FLASHCARDS ─────────────────────────────────────────────────── */}
         <TabsContent value="flashcards">
           <Card>
             <CardHeader>
@@ -168,7 +166,7 @@ function LearningContent() {
             </CardHeader>
             <CardContent>
               {flashcards ? (
-                <Flashcards flashcards={flashcards} onComplete={handleLearningComplete} />
+                <Flashcards flashcards={flashcards} onComplete={handleFlashcardComplete} />
               ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">Loading flashcards...</p>
@@ -178,6 +176,7 @@ function LearningContent() {
           </Card>
         </TabsContent>
 
+        {/* ── QUIZZES ────────────────────────────────────────────────────── */}
         <TabsContent value="quizzes">
           <Card>
             <CardHeader>
@@ -185,7 +184,7 @@ function LearningContent() {
             </CardHeader>
             <CardContent>
               {quizzes ? (
-                <Quizzes quizzes={quizzes} onComplete={handleLearningComplete} />
+                <Quizzes quizzes={quizzes} onComplete={handleQuizComplete} />
               ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">Loading quizzes...</p>
@@ -195,6 +194,7 @@ function LearningContent() {
           </Card>
         </TabsContent>
 
+        {/* ── PROGRESS ───────────────────────────────────────────────────── */}
         <TabsContent value="progress">
           <div className="grid lg:grid-cols-2 gap-5">
             <GamificationCard />
@@ -203,26 +203,50 @@ function LearningContent() {
                 <CardTitle>Learning Statistics</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-blue-50">
-                    <div className="text-2xl font-bold text-blue-600">12</div>
-                    <div className="text-sm text-blue-600">Flashcards</div>
+                {progressLoading ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {[...Array(4)].map((_, i) => (
+                      <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                    ))}
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-green-50">
-                    <div className="text-2xl font-bold text-green-600">3</div>
-                    <div className="text-sm text-green-600">Quizzes</div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>This Week</span>
-                    <span className="font-semibold">+150 XP</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>This Month</span>
-                    <span className="font-semibold">+450 XP</span>
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 rounded-lg bg-blue-50">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {learningStats?.flashcardsCompleted ?? 0}
+                        </div>
+                        <div className="text-sm text-blue-600">Flashcards</div>
+                      </div>
+                      <div className="text-center p-3 rounded-lg bg-green-50">
+                        <div className="text-2xl font-bold text-green-600">
+                          {learningStats?.quizzesCompleted ?? 0}
+                        </div>
+                        <div className="text-sm text-green-600">Quizzes</div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>This Week</span>
+                        <span className="font-semibold">
+                          {weeklyXP > 0 ? `+${weeklyXP} XP` : "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>This Month</span>
+                        <span className="font-semibold">
+                          {monthlyXP > 0 ? `+${monthlyXP} XP` : "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Total Learning XP</span>
+                        <span className="font-semibold">
+                          {learningStats?.totalLearningXP ?? 0} XP
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
