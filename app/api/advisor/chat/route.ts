@@ -41,14 +41,38 @@
 import { NextResponse } from "next/server"
 import { spawnSync } from "child_process"
 import path from "path"
+import fs from "fs"
+
+const LOG_FILE = path.join(process.cwd(), "agentic_ai", "logs", "chat_api.log")
+
+function logToFile(message: string, data?: any) {
+  const timestamp = new Date().toISOString()
+  const logEntry = `[${timestamp}] ${message}${data ? "\n" + JSON.stringify(data, null, 2) : ""}\n---\n`
+  try {
+    fs.appendFileSync(LOG_FILE, logEntry)
+  } catch (e) {
+    console.error("Failed to write to log file:", e)
+  }
+}
 
 export async function POST(req: Request) {
   try {
-    const { prompt, portfolioSummary, userId } = await req.json()
-    const apiKey = process.env.GEMINI_API_KEY || "AIzaSyAQZyjL6eaqbbjQbS60dSxDo9tOXd2k4S0"
+    let body;
+    try {
+      body = await req.json()
+    } catch (e: any) {
+      logToFile("Request JSON parse error", e.message)
+      return NextResponse.json({ error: "Invalid JSON in request body", details: e.message }, { status: 400 })
+    }
+
+    const { prompt, portfolioSummary, userId } = body
+    const apiKey = process.env.GEMINI_API_KEY
+    
+    logToFile("Request received", { userId, hasPortfolio: !!portfolioSummary, promptLength: prompt?.length })
 
     if (!apiKey) {
-      return NextResponse.json({ error: "Missing GEMINI_API_KEY" }, { status: 500 })
+      logToFile("Error: Missing GEMINI_API_KEY")
+      return NextResponse.json({ error: "Missing GEMINI_API_KEY environment variable." }, { status: 500 })
     }
 
     // --- STEP 1: Intent Detection ---
@@ -75,7 +99,7 @@ export async function POST(req: Request) {
     }
 
     const intentRes = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey,
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + apiKey,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -87,15 +111,21 @@ export async function POST(req: Request) {
     if (intentRes.ok) {
         const intentData = await intentRes.json()
         try {
-            intent = JSON.parse(intentData?.candidates?.[0]?.content?.parts?.[0]?.text || "{}")
-        } catch (e) {
-            console.error("Intent parse error:", e)
+            const rawText = intentData?.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
+            intent = JSON.parse(rawText)
+            logToFile("Intent detected", intent)
+        } catch (e: any) {
+            logToFile("Intent parse error", { error: e.message, raw: intentData?.candidates?.[0]?.content?.parts?.[0]?.text })
         }
+    } else {
+        const intentError = await intentRes.json().catch(() => ({}))
+        logToFile("Intent API Error", intentError)
     }
 
     let scenarioResults = ""
     // --- STEP 2: Execute Scenario Engine ---
     if (intent.is_scenario && userId) {
+        logToFile("Executing scenario engine...")
         const enginePath = path.join(process.cwd(), "agentic_ai", "agents", "advisor_scenario_engine.py")
         const result = spawnSync("python", [enginePath, userId, JSON.stringify(intent)], { encoding: 'utf-8' })
 
@@ -105,9 +135,12 @@ export async function POST(req: Request) {
                 const lastLine = lines[lines.length - 1]
                 const data = JSON.parse(lastLine)
                 scenarioResults = `\n\n**Data-Driven Scenario Simulation Results:**\n${JSON.stringify(data, null, 2)}`
-            } catch (e) {
-                console.error("Engine parse error:", e)
+                logToFile("Scenario results generated")
+            } catch (e: any) {
+                logToFile("Engine output parse error", { error: e.message, stdout: result.stdout })
             }
+        } else {
+            logToFile("Scenario engine error", { stderr: result.stderr, status: result.status })
         }
     }
 
@@ -118,7 +151,8 @@ export async function POST(req: Request) {
           role: "user",
           parts: [
             {
-              text: `You are an expert **Financial Advisor AI**.
+              text: `You are an expert **Financial Advisor AI**. 
+              Provide detailed but concise advice. Use bullet points for readability and keep the overall response to a reasonable length (around 200-300 words). Ensure you finish your sentences and provide a complete conclusion.
               
               **User's Current Portfolio Context:**
               ${portfolioSummary || "No portfolio data provided."}
@@ -132,12 +166,12 @@ export async function POST(req: Request) {
       ],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 2000,
+        maxOutputTokens: 1500,
       },
     }
 
     const res = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey,
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + apiKey,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -145,15 +179,27 @@ export async function POST(req: Request) {
       }
     )
 
-    if (!res.ok) throw new Error("Gemini synthesis error")
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        logToFile("Gemini API Final Synthesis Error", errorData)
+        return NextResponse.json({ 
+            error: "Gemini API Error", 
+            details: errorData.error?.message || "Check server logs for details" 
+        }, { status: res.status });
+    }
 
     const data = await res.json()
     const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response."
+    
+    logToFile("Success", { replyLength: reply.length })
 
     return NextResponse.json({ reply })
-  } catch (error) {
-    console.error("Chat API error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } catch (error: any) {
+    logToFile("Unhandled Chat API error", error.message)
+    return NextResponse.json({ 
+        error: "Internal server error", 
+        details: error.message 
+    }, { status: 500 })
   }
 }
  
