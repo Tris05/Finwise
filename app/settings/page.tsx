@@ -37,7 +37,9 @@ export default function SettingsPage() {
     targetAmount: 0,
     currentAmount: 0,
     targetDate: "",
-    priority: "Medium"
+    priority: "Medium",
+    monthlyContribution: 0,
+    expectedReturn: 8
   })
 
   const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -123,7 +125,9 @@ export default function SettingsPage() {
         targetAmount: newGoal.targetAmount,
         currentAmount: newGoal.currentAmount || 0,
         targetDate: newGoal.targetDate,
-        priority: newGoal.priority as "High" | "Medium" | "Low"
+        priority: newGoal.priority as "High" | "Medium" | "Low",
+        monthlyContribution: newGoal.monthlyContribution || 0,
+        expectedReturn: newGoal.expectedReturn || 8
       })
       setNewGoal({
         type: "Emergency Fund",
@@ -131,7 +135,9 @@ export default function SettingsPage() {
         targetAmount: 0,
         currentAmount: 0,
         targetDate: "",
-        priority: "Medium"
+        priority: "Medium",
+        monthlyContribution: 0,
+        expectedReturn: 8
       })
     }
   }
@@ -436,6 +442,24 @@ export default function SettingsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2">
+                    <Label>Monthly Contribution (₹)</Label>
+                    <Input
+                      type="number"
+                      value={newGoal.monthlyContribution || ""}
+                      onChange={(e) => setNewGoal({ ...newGoal, monthlyContribution: Number(e.target.value) })}
+                      placeholder="5000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Expected Return (% p.a.)</Label>
+                    <Input
+                      type="number"
+                      value={newGoal.expectedReturn || ""}
+                      onChange={(e) => setNewGoal({ ...newGoal, expectedReturn: Number(e.target.value) })}
+                      placeholder="8"
+                    />
+                  </div>
                 </div>
                 <Button onClick={handleAddGoal} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
@@ -456,7 +480,7 @@ export default function SettingsPage() {
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
-                          {getGoalIcon(goal.type)}
+                          {getGoalIcon((goal.type ?? "Other") as GoalType)}
                           <div>
                             <h3 className="font-semibold">{goal.name}</h3>
                             <p className="text-sm text-muted-foreground">{goal.type}</p>

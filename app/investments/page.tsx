@@ -486,9 +486,9 @@ Recommendation: ${asset.recommendation}
       const portfolioRef = collection(db, "users", userId, "portfolio")
       const q = query(portfolioRef, where("symbol", "==", newTransaction.asset))
       const querySnapshot = await getDocs(q)
-      
+
       const isStable = ['debt', 'stable', 'fixed income', 'fd', 'ppf'].includes(newTransaction.category.toLowerCase())
-      
+
       if (newTransaction.type === "Buy" || newTransaction.type === "Dividend" || newTransaction.type === "Bonus") {
         if (!querySnapshot.empty) {
           // Update existing holding
@@ -504,8 +504,8 @@ Recommendation: ${asset.recommendation}
           await addDoc(portfolioRef, {
             symbol: newTransaction.asset,
             name: newTransaction.asset, // Fallback to symbol
-            type: newTransaction.category === 'Crypto' ? 'Crypto' : 
-                  isStable ? 'Stable' : 'Stock',
+            type: newTransaction.category === 'Crypto' ? 'Crypto' :
+              isStable ? 'Stable' : 'Stock',
             category: newTransaction.category,
             quantity: newTransaction.quantity,
             investedAmount: newTransaction.amount,
@@ -525,7 +525,7 @@ Recommendation: ${asset.recommendation}
           const portfolioDoc = querySnapshot.docs[0]
           const existingData = portfolioDoc.data()
           const newQty = (Number(existingData.quantity) || 0) - (Number(newTransaction.quantity) || 0)
-          
+
           if (newQty <= 0.0001) {
             // Remove from portfolio if quantity is zero
             await deleteDoc(portfolioDoc.ref)
@@ -534,7 +534,7 @@ Recommendation: ${asset.recommendation}
             const oldQty = Number(existingData.quantity) || 1
             const oldInvested = Number(existingData.investedAmount) || 0
             const newInvested = oldInvested * (newQty / oldQty)
-            
+
             await updateDoc(portfolioDoc.ref, {
               quantity: newQty,
               investedAmount: newInvested,
@@ -1155,12 +1155,7 @@ Recommendation: ${asset.recommendation}
           </TabsContent>
 
           <TabsContent value="goals" className="space-y-6 mt-6">
-            <InvestmentGoals
-              goals={goals}
-              onAddGoal={handleAddGoal}
-              onEditGoal={handleEditGoal}
-              onDeleteGoal={handleDeleteGoal}
-            />
+            <InvestmentGoals />
           </TabsContent>
 
           <TabsContent value="analysis" className="space-y-8 mt-6">
