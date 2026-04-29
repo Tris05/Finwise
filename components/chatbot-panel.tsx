@@ -72,9 +72,16 @@ export function ChatbotPanel() {
       })
       
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
+        let errorData;
+        try {
+          errorData = await res.json()
+        } catch (e) {
+          const errorText = await res.text().catch(() => "No response body")
+          errorData = { error: "Non-JSON error response", details: errorText, status: res.status }
+        }
+        
         console.error("Chat API error:", errorData)
-        throw new Error(errorData.error || `HTTP ${res.status}: Failed to fetch chat response`)
+        throw new Error(errorData.error || errorData.details || `HTTP ${res.status}: Failed to fetch chat response`)
       }
       
       return res.json()

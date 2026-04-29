@@ -1,0 +1,416 @@
+[2026-04-13T18:23:05.265Z] Request JSON parse error
+"Expected property name or '}' in JSON at position 1 (line 1 column 2)"
+---
+[2026-04-13T18:26:19.919Z] Request received
+{
+  "userId": "test-user",
+  "hasPortfolio": false,
+  "promptLength": 28
+}
+---
+[2026-04-13T18:26:26.029Z] Intent API Error
+{
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+---
+[2026-04-13T18:26:26.268Z] Gemini API Final Synthesis Error
+{
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+---
+[2026-04-13T18:30:14.669Z] Request received
+{
+  "userId": "test-user",
+  "hasPortfolio": false,
+  "promptLength": 28
+}
+---
+[2026-04-13T18:30:25.892Z] Intent API Error
+{
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\nPlease retry in 45.769411708s.",
+    "status": "RESOURCE_EXHAUSTED",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.Help",
+        "links": [
+          {
+            "description": "Learn more about Gemini API quotas",
+            "url": "https://ai.google.dev/gemini-api/docs/rate-limits"
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+        "violations": [
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+            "quotaDimensions": {
+              "location": "global",
+              "model": "gemini-2.0-flash"
+            }
+          },
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            "quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
+            "quotaDimensions": {
+              "location": "global",
+              "model": "gemini-2.0-flash"
+            }
+          },
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count",
+            "quotaId": "GenerateContentInputTokensPerModelPerMinute-FreeTier",
+            "quotaDimensions": {
+              "location": "global",
+              "model": "gemini-2.0-flash"
+            }
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.RetryInfo",
+        "retryDelay": "45s"
+      }
+    ]
+  }
+}
+---
+[2026-04-13T18:30:26.306Z] Gemini API Final Synthesis Error
+{
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\nPlease retry in 34.654182391s.",
+    "status": "RESOURCE_EXHAUSTED",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.Help",
+        "links": [
+          {
+            "description": "Learn more about Gemini API quotas",
+            "url": "https://ai.google.dev/gemini-api/docs/rate-limits"
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+        "violations": [
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+            "quotaDimensions": {
+              "location": "global",
+              "model": "gemini-2.0-flash"
+            }
+          },
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            "quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
+            "quotaDimensions": {
+              "location": "global",
+              "model": "gemini-2.0-flash"
+            }
+          },
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count",
+            "quotaId": "GenerateContentInputTokensPerModelPerMinute-FreeTier",
+            "quotaDimensions": {
+              "model": "gemini-2.0-flash",
+              "location": "global"
+            }
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.RetryInfo",
+        "retryDelay": "34s"
+      }
+    ]
+  }
+}
+---
+[2026-04-13T18:43:37.522Z] Request received
+{
+  "userId": "test-user",
+  "hasPortfolio": false,
+  "promptLength": 5
+}
+---
+[2026-04-13T18:43:47.941Z] Intent API Error
+{
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\nPlease retry in 23.041587347s.",
+    "status": "RESOURCE_EXHAUSTED",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.Help",
+        "links": [
+          {
+            "description": "Learn more about Gemini API quotas",
+            "url": "https://ai.google.dev/gemini-api/docs/rate-limits"
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+        "violations": [
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+            "quotaDimensions": {
+              "location": "global",
+              "model": "gemini-2.0-flash"
+            }
+          },
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            "quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
+            "quotaDimensions": {
+              "location": "global",
+              "model": "gemini-2.0-flash"
+            }
+          },
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count",
+            "quotaId": "GenerateContentInputTokensPerModelPerMinute-FreeTier",
+            "quotaDimensions": {
+              "model": "gemini-2.0-flash",
+              "location": "global"
+            }
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.RetryInfo",
+        "retryDelay": "23s"
+      }
+    ]
+  }
+}
+---
+[2026-04-13T18:43:48.174Z] Gemini API Final Synthesis Error
+{
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\nPlease retry in 12.765176354s.",
+    "status": "RESOURCE_EXHAUSTED",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.Help",
+        "links": [
+          {
+            "description": "Learn more about Gemini API quotas",
+            "url": "https://ai.google.dev/gemini-api/docs/rate-limits"
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+        "violations": [
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count",
+            "quotaId": "GenerateContentInputTokensPerModelPerMinute-FreeTier",
+            "quotaDimensions": {
+              "model": "gemini-2.0-flash",
+              "location": "global"
+            }
+          },
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            "quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
+            "quotaDimensions": {
+              "location": "global",
+              "model": "gemini-2.0-flash"
+            }
+          },
+          {
+            "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+            "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+            "quotaDimensions": {
+              "model": "gemini-2.0-flash",
+              "location": "global"
+            }
+          }
+        ]
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.RetryInfo",
+        "retryDelay": "12s"
+      }
+    ]
+  }
+}
+---
+[2026-04-13T18:49:37.493Z] Request received
+{
+  "userId": "test-user",
+  "hasPortfolio": false,
+  "promptLength": 5
+}
+---
+[2026-04-13T18:49:43.246Z] Intent detected
+{
+  "is_scenario": false
+}
+---
+[2026-04-13T18:50:07.141Z] Success
+{
+  "replyLength": 1292
+}
+---
+[2026-04-13T18:53:02.632Z] Request received
+{
+  "userId": "O9o9Wn2F63OU6V7z53PpNdQtbux1",
+  "hasPortfolio": true,
+  "promptLength": 106
+}
+---
+[2026-04-13T18:53:07.778Z] Intent detected
+{
+  "is_scenario": true,
+  "scenario_type": "investment_addition",
+  "modification": {
+    "type": "add",
+    "category": "equity",
+    "amount": 100000
+  },
+  "horizon_days": 90
+}
+---
+[2026-04-13T18:53:07.779Z] Executing scenario engine...
+---
+[2026-04-13T18:53:22.121Z] Engine output parse error
+{
+  "error": "Unexpected token '}', \"}\" is not valid JSON",
+  "stdout": "{\r\n  \"initial_value\": 50500.0,\r\n  \"simulated_days\": 365,\r\n  \"expected_final_value\": 72231.53213247586,\r\n  \"median_final_value\": 56482.181330781576,\r\n  \"p5_value\": 18065.80529105352,\r\n  \"p95_value\": 178256.45427030837,\r\n  \"expected_gain_pct\": 43.03273689599179,\r\n  \"worst_case_drawdown_pct\": -64.22612813652768,\r\n  \"optimistic_upside_pct\": 252.9830777629869,\r\n  \"confidence\": \"95% (based on 1-year historical volatility)\",\r\n  \"sample_size\": 1000,\r\n  \"market_context\": \"Calculated using 1-year historical prices for equity holdings and standard benchmarks for other assets.\",\r\n  \"scenario_type\": \"what-if\"\r\n}\r\n"
+}
+---
+[2026-04-13T18:53:32.964Z] Success
+{
+  "replyLength": 3523
+}
+---
+[2026-04-13T19:01:31.397Z] Request received
+{
+  "userId": "test-user",
+  "hasPortfolio": false,
+  "promptLength": 5
+}
+---
+[2026-04-13T19:01:45.374Z] Intent detected
+{
+  "is_scenario": false
+}
+---
+[2026-04-13T19:01:50.850Z] Success
+{
+  "replyLength": 601
+}
+---
+[2026-04-13T19:08:04.685Z] Request received
+{
+  "userId": "O9o9Wn2F63OU6V7z53PpNdQtbux1",
+  "hasPortfolio": true,
+  "promptLength": 52
+}
+---
+[2026-04-13T19:08:15.149Z] Intent detected
+{
+  "is_scenario": true,
+  "scenario_type": "market_stress",
+  "modification": {
+    "type": "crash",
+    "category": "crypto",
+    "amount": 40
+  },
+  "horizon_days": 30
+}
+---
+[2026-04-13T19:08:15.150Z] Executing scenario engine...
+---
+[2026-04-13T19:08:20.480Z] Engine output parse error
+{
+  "error": "Unexpected token '}', \"}\" is not valid JSON",
+  "stdout": "{\r\n  \"initial_value\": 50500.0,\r\n  \"simulated_days\": 365,\r\n  \"expected_final_value\": 72824.60252719515,\r\n  \"median_final_value\": 56239.64332046619,\r\n  \"p5_value\": 19486.485399016998,\r\n  \"p95_value\": 181955.54855568588,\r\n  \"expected_gain_pct\": 44.20713371721811,\r\n  \"worst_case_drawdown_pct\": -61.412900199966344,\r\n  \"optimistic_upside_pct\": 260.30801694195225,\r\n  \"confidence\": \"95% (based on 1-year historical volatility)\",\r\n  \"sample_size\": 1000,\r\n  \"market_context\": \"Calculated using 1-year historical prices for equity holdings and standard benchmarks for other assets.\",\r\n  \"scenario_type\": \"what-if\"\r\n}\r\n"
+}
+---
+[2026-04-13T19:08:34.203Z] Success
+{
+  "replyLength": 667
+}
+---
+[2026-04-13T19:34:50.394Z] Request received
+{
+  "userId": "O9o9Wn2F63OU6V7z53PpNdQtbux1",
+  "hasPortfolio": true,
+  "promptLength": 52
+}
+---
+[2026-04-13T19:35:02.363Z] Intent detected
+{
+  "is_scenario": true,
+  "scenario_type": "market_stress",
+  "modification": {
+    "type": "crash",
+    "category": "crypto",
+    "amount": 40
+  },
+  "horizon_days": 30
+}
+---
+[2026-04-13T19:35:02.363Z] Executing scenario engine...
+---
+[2026-04-13T19:35:10.003Z] Engine output parse error
+{
+  "error": "Unexpected token '}', \"}\" is not valid JSON",
+  "stdout": "{\r\n  \"initial_value\": 50500.0,\r\n  \"simulated_days\": 365,\r\n  \"expected_final_value\": 73475.78329708528,\r\n  \"median_final_value\": 55590.301323061096,\r\n  \"p5_value\": 19010.605683771526,\r\n  \"p95_value\": 191135.07512628607,\r\n  \"expected_gain_pct\": 45.496600588287684,\r\n  \"worst_case_drawdown_pct\": -62.35523626975936,\r\n  \"optimistic_upside_pct\": 278.4852972797744,\r\n  \"confidence\": \"95% (based on 1-year historical volatility)\",\r\n  \"sample_size\": 1000,\r\n  \"market_context\": \"Calculated using 1-year historical prices for equity holdings and standard benchmarks for other assets.\",\r\n  \"scenario_type\": \"what-if\"\r\n}\r\n"
+}
+---
+[2026-04-13T19:35:16.859Z] Success
+{
+  "replyLength": 1849
+}
+---
+[2026-04-13T19:36:07.268Z] Request received
+{
+  "userId": "O9o9Wn2F63OU6V7z53PpNdQtbux1",
+  "hasPortfolio": true,
+  "promptLength": 41
+}
+---
+[2026-04-13T19:36:20.526Z] Intent detected
+{
+  "is_scenario": true,
+  "scenario_type": "investment_addition",
+  "modification": {
+    "type": "add",
+    "category": "gold",
+    "amount": 5000
+  },
+  "horizon_days": 365
+}
+---
+[2026-04-13T19:36:20.527Z] Executing scenario engine...
+---
+[2026-04-13T19:36:27.772Z] Engine output parse error
+{
+  "error": "Unexpected token '}', \"}\" is not valid JSON",
+  "stdout": "{\r\n  \"initial_value\": 50500.0,\r\n  \"simulated_days\": 365,\r\n  \"expected_final_value\": 73095.80290694615,\r\n  \"median_final_value\": 55407.844284580424,\r\n  \"p5_value\": 18429.925057577188,\r\n  \"p95_value\": 178288.72337534445,\r\n  \"expected_gain_pct\": 44.7441641721706,\r\n  \"worst_case_drawdown_pct\": -63.50509889588676,\r\n  \"optimistic_upside_pct\": 253.0469769808801,\r\n  \"confidence\": \"95% (based on 1-year historical volatility)\",\r\n  \"sample_size\": 1000,\r\n  \"market_context\": \"Calculated using 1-year historical prices for equity holdings and standard benchmarks for other assets.\",\r\n  \"scenario_type\": \"what-if\"\r\n}\r\n"
+}
+---
+[2026-04-13T19:36:35.671Z] Success
+{
+  "replyLength": 1946
+}
+---

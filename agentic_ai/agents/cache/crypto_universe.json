@@ -1,1 +1,15 @@
-{"timestamp": 1777450414.8960612, "ids": ["bitcoin", "ethereum", "tether", "ripple", "binancecoin", "usd-coin", "solana", "tron", "figure-heloc", "dogecoin"]}
+{
+    "timestamp": 1777450414.8960612,
+    "ids": [
+        "bitcoin",
+        "ethereum",
+        "tether",
+        "ripple",
+        "binancecoin",
+        "usd-coin",
+        "solana",
+        "tron",
+        "figure-heloc",
+        "dogecoin"
+    ]
+}
