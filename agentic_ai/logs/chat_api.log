@@ -414,3 +414,20 @@
   "replyLength": 1946
 }
 ---
+[2026-04-30T10:48:40.758Z] Request received
+{
+  "userId": "jgU4UmPg4vhuW0HMHis5Kv8hyF03",
+  "hasPortfolio": true,
+  "promptLength": 2
+}
+---
+[2026-04-30T10:48:42.868Z] Intent detected
+{
+  "is_scenario": false
+}
+---
+[2026-04-30T10:48:49.633Z] Success
+{
+  "replyLength": 2107
+}
+---

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TrendingUp, TrendingDown, Star, StarOff, Plus, Search, Eye, RefreshCw } from "lucide-react"
 import { formatINR } from "@/lib/utils"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface MarketAsset {
   symbol: string
@@ -42,6 +42,76 @@ export function MarketWatchlist({
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [showWatchedOnly, setShowWatchedOnly] = useState(false)
+
+  const [nifty, setNifty] = useState({ price: 21456.78, change: 234.56, changePercent: 1.11, loading: true })
+  const [sensex, setSensex] = useState({ price: 71234.56, change: 456.78, changePercent: 0.65, loading: true })
+  const [gold, setGold] = useState({ price: 6234, change: -45.67, changePercent: -0.73, loading: true })
+
+  useEffect(() => {
+    const fetchIndices = async () => {
+      try {
+        const fetchSymbol = async (symbol: string) => {
+          const res = await fetch('/api/market-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_stock', symbol })
+          })
+          const json = await res.json()
+          if (json.success && json.data) return json.data
+          return null
+        }
+
+        const [niftyData, sensexData, goldData] = await Promise.all([
+          fetchSymbol('^NSEI'),
+          fetchSymbol('^BSESN'),
+          fetchSymbol('GC=F')
+        ])
+
+        if (niftyData) {
+          setNifty({
+            price: niftyData.currentPrice,
+            change: niftyData.dayChange,
+            changePercent: niftyData.dayChangePercent,
+            loading: false
+          })
+        } else setNifty(p => ({ ...p, loading: false }))
+
+        if (sensexData) {
+          setSensex({
+            price: sensexData.currentPrice,
+            change: sensexData.dayChange,
+            changePercent: sensexData.dayChangePercent,
+            loading: false
+          })
+        } else setSensex(p => ({ ...p, loading: false }))
+
+        if (goldData) {
+          // Gold from Yahoo Finance is typically in USD per Troy Ounce
+          // But our API might return raw data. Let's just show raw or converted
+          const usdPrice = goldData.currentPrice
+          // Approximate INR conversion if not handled by API
+          // Let's use 83 INR/USD and 31.1 grams per troy ounce -> INR per gram
+          const inrPerGram = (usdPrice * 83) / 31.1035
+          const inrChange = (goldData.dayChange * 83) / 31.1035
+
+          setGold({
+            price: Math.round(inrPerGram),
+            change: Math.round(inrChange * 100) / 100,
+            changePercent: goldData.dayChangePercent,
+            loading: false
+          })
+        } else setGold(p => ({ ...p, loading: false }))
+
+      } catch (error) {
+        console.error("Error fetching indices:", error)
+        setNifty(p => ({ ...p, loading: false }))
+        setSensex(p => ({ ...p, loading: false }))
+        setGold(p => ({ ...p, loading: false }))
+      }
+    }
+
+    fetchIndices()
+  }, [])
 
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -79,11 +149,15 @@ export function MarketWatchlist({
             <CardTitle className="text-sm font-medium">Nifty 50</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">21,456.78</div>
-            <div className="flex items-center text-sm text-green-600">
-              <TrendingUp className="h-4 w-4 mr-1" />
-              +234.56 (+1.11%)
-            </div>
+            {nifty.loading ? <div className="animate-pulse h-8 bg-muted rounded w-1/2"></div> : (
+              <>
+                <div className="text-2xl font-bold">{nifty.price.toLocaleString('en-IN')}</div>
+                <div className={`flex items-center text-sm ${nifty.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {nifty.change >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                  {nifty.change >= 0 ? '+' : ''}{nifty.change.toFixed(2)} ({nifty.change >= 0 ? '+' : ''}{nifty.changePercent.toFixed(2)}%)
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -92,11 +166,15 @@ export function MarketWatchlist({
             <CardTitle className="text-sm font-medium">Sensex</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">71,234.56</div>
-            <div className="flex items-center text-sm text-green-600">
-              <TrendingUp className="h-4 w-4 mr-1" />
-              +456.78 (+0.65%)
-            </div>
+            {sensex.loading ? <div className="animate-pulse h-8 bg-muted rounded w-1/2"></div> : (
+              <>
+                <div className="text-2xl font-bold">{sensex.price.toLocaleString('en-IN')}</div>
+                <div className={`flex items-center text-sm ${sensex.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {sensex.change >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                  {sensex.change >= 0 ? '+' : ''}{sensex.change.toFixed(2)} ({sensex.change >= 0 ? '+' : ''}{sensex.changePercent.toFixed(2)}%)
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -105,11 +183,15 @@ export function MarketWatchlist({
             <CardTitle className="text-sm font-medium">Gold (24K)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹6,234</div>
-            <div className="flex items-center text-sm text-red-600">
-              <TrendingDown className="h-4 w-4 mr-1" />
-              -45.67 (-0.73%)
-            </div>
+            {gold.loading ? <div className="animate-pulse h-8 bg-muted rounded w-1/2"></div> : (
+              <>
+                <div className="text-2xl font-bold">₹{gold.price.toLocaleString('en-IN')}</div>
+                <div className={`flex items-center text-sm ${gold.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {gold.change >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                  {gold.change >= 0 ? '+' : ''}{gold.change.toFixed(2)} ({gold.change >= 0 ? '+' : ''}{gold.changePercent.toFixed(2)}%)
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

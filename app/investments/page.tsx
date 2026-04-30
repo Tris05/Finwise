@@ -18,6 +18,7 @@ import { AddGoalModal } from "@/components/add-goal-modal"
 import { EditGoalModal } from "@/components/edit-goal-modal"
 import { EditTransactionModal } from "@/components/edit-transaction-modal"
 import { SellInvestmentModal } from "@/components/sell-investment-modal"
+import { AssetDetailsModal } from "@/components/asset-details-modal"
 import { InvestmentRecommendations } from "@/components/investment-recommendations"
 import { InvestmentInsights } from "@/components/investment-insights"
 import { StockSearch } from "@/components/stock-search"
@@ -280,6 +281,8 @@ export default function InvestmentsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [addTransactionOpen, setAddTransactionOpen] = useState(false)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
+  const [assetDetailsOpen, setAssetDetailsOpen] = useState(false)
+  const [assetForDetails, setAssetForDetails] = useState<any>(null)
   const [editGoalOpen, setEditGoalOpen] = useState(false)
   const [sellInvestmentOpen, setSellInvestmentOpen] = useState(false)
   const [isMarketDataLoading, setIsMarketDataLoading] = useState(false)
@@ -301,6 +304,58 @@ export default function InvestmentsPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [goals, setGoals] = useState<any[]>([])
   const [marketAssetsState, setMarketAssets] = useState<any[]>(marketAssets)
+
+  // Fetch real market data for the default marketAssets
+  useEffect(() => {
+    const fetchMarketAssetsData = async () => {
+      try {
+        const res = await fetch('/api/market-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'get_portfolio',
+            portfolio: marketAssets.map(a => ({
+              symbol: a.symbol,
+              type: a.category,
+              quantity: 1,
+              investedAmount: 1
+            }))
+          })
+        })
+        const json = await res.json()
+        if (json.success && json.data) {
+          const updatedAssets = marketAssets.map(asset => {
+            const fetched = json.data.find((d: any) => d.symbol === asset.symbol)
+            if (fetched) {
+              return {
+                ...asset,
+                price: fetched.currentPrice || asset.price,
+                change: fetched.dayChange || asset.change,
+                changePercent: fetched.dayChangePercent || asset.changePercent,
+                marketCap: fetched.marketCap || asset.marketCap,
+                volume: fetched.volume || asset.volume
+              }
+            }
+            return asset
+          })
+          setMarketAssets(prev => {
+            // Keep the isWatched/isOwned state from prev, but update prices
+            return updatedAssets.map(newAsset => {
+              const old = prev.find(p => p.symbol === newAsset.symbol)
+              if (old) {
+                return { ...newAsset, isWatched: old.isWatched, isOwned: old.isOwned }
+              }
+              return newAsset
+            })
+          })
+        }
+      } catch (error) {
+        console.error("Failed to fetch market assets data:", error)
+      }
+    }
+    
+    fetchMarketAssetsData()
+  }, [])
 
   // Auth & Sync
   useEffect(() => {
@@ -881,8 +936,9 @@ export default function InvestmentsPage() {
   }
 
   const handleViewDetails = (asset: any) => {
-    // Show asset details in a modal or navigate to details page
-    alert(`Asset Details:\n\nSymbol: ${asset.symbol}\nName: ${asset.name}\nPrice: ${formatINR(asset.price)}\nChange: ${asset.changePercent.toFixed(2)}%\nCategory: ${asset.category}\nMarket Cap: ${formatINR(asset.marketCap)}`)
+    // Show asset details in a modal
+    setAssetForDetails(asset)
+    setAssetDetailsOpen(true)
     console.log("View details:", asset)
   }
 
@@ -1550,6 +1606,11 @@ export default function InvestmentsPage() {
         onOpenChange={setEditTransactionOpen}
         transaction={editingTransaction}
         onSave={handleEditTransactionSave}
+      />
+      <AssetDetailsModal 
+        isOpen={assetDetailsOpen}
+        onClose={() => setAssetDetailsOpen(false)}
+        asset={assetForDetails}
       />
     </AppShell>
   )

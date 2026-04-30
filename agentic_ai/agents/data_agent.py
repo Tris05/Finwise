@@ -231,6 +231,16 @@ class MarketDataFetcher(BaseTool):
 
     def fetch_crypto_data(self) -> Dict[str, Any]:
         """Fetch crypto data for the dynamically discovered top 10 list"""
+        cache_key = "crypto_prices"
+        if self._is_price_cache_valid(cache_key):
+            try:
+                with open(self.price_cache_path, 'r') as f:
+                    cache = json.load(f)
+                    logger.info("Using cached crypto data")
+                    return cache[cache_key]['data']
+            except Exception:
+                pass
+
         crypto_ids = self.fetch_crypto_universe()
         crypto_data = {}
         try:
@@ -263,6 +273,9 @@ class MarketDataFetcher(BaseTool):
             
         if not crypto_data:
             crypto_data = self._get_default_crypto_data()
+        else:
+            self._save_to_price_cache(cache_key, crypto_data)
+            
         return crypto_data
 
     def _is_cache_valid(self, path: str, ttl_days: int) -> bool:

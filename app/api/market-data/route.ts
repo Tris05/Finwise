@@ -20,6 +20,14 @@ async function resolveYahooTicker(query: string): Promise<string | null> {
   return null
 }
 
+// Global in-memory cache for CoinGecko to prevent rate limiting
+interface CoinGeckoCache {
+  data: any;
+  timestamp: number;
+}
+const coinGeckoCache: Record<string, CoinGeckoCache> = {};
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 // Helper function for fetching pure cryptocurrency data from CoinGecko
 async function fetchCoinGeckoData(rawSymbol: string) {
   try {
@@ -39,6 +47,13 @@ async function fetchCoinGeckoData(rawSymbol: string) {
     }
 
     const id = cryptoMap[rawSymbol.toUpperCase()] || rawSymbol.toLowerCase()
+    
+    // Check cache first
+    const now = Date.now();
+    if (coinGeckoCache[id] && (now - coinGeckoCache[id].timestamp < CACHE_TTL_MS)) {
+      return coinGeckoCache[id].data;
+    }
+
     const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true`
 
     const response = await fetch(url, { headers: { 'Accept': 'application/json' } })
@@ -53,7 +68,7 @@ async function fetchCoinGeckoData(rawSymbol: string) {
     const previousClose = currentPrice / (1 + (dayChangePercent / 100))
     const dayChange = currentPrice - previousClose
 
-    return {
+    const result = {
       symbol: rawSymbol,
       name: id.toUpperCase(),
       currentPrice: Math.round(currentPrice * 1000) / 1000,
@@ -77,6 +92,14 @@ async function fetchCoinGeckoData(rawSymbol: string) {
       isValid: true,
       lastUpdated: new Date().toISOString()
     }
+
+    // Save to cache
+    coinGeckoCache[id] = {
+      data: result,
+      timestamp: now
+    };
+
+    return result;
   } catch (error: any) {
     console.error(`Error fetching CoinGecko data for ${rawSymbol}:`, error)
     return null
