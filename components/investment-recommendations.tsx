@@ -29,6 +29,10 @@ import {
 } from "@/components/ui/tooltip"
 import { formatINR } from "@/lib/utils"
 import { motion } from "framer-motion"
+import { useFinancialGoals } from "@/hooks/useFinancialGoals"
+import { useState } from "react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import {
   ResponsiveContainer,
   PieChart as RePieChart,
@@ -56,6 +60,24 @@ export function InvestmentRecommendations({
   isLoading = false,
   existingPortfolio = []
 }: InvestmentRecommendationsProps) {
+  const { goals } = useFinancialGoals()
+  const [goalPickerOpen, setGoalPickerOpen] = useState(false)
+  const [pendingAsset, setPendingAsset] = useState<any>(null)
+  const [selectedGoalId, setSelectedGoalId] = useState<string>("none")
+
+  const handleAddClick = (asset: any) => {
+    setPendingAsset(asset)
+    setSelectedGoalId("none")
+    setGoalPickerOpen(true)
+  }
+
+  const handleConfirmAdd = () => {
+    if (pendingAsset) {
+      onAddInvestment({ ...pendingAsset, goalId: selectedGoalId === "none" ? null : selectedGoalId })
+    }
+    setGoalPickerOpen(false)
+    setPendingAsset(null)
+  }
 
   if (isLoading) {
     return (
@@ -289,7 +311,7 @@ export function InvestmentRecommendations({
           <div className="text-sm">
             <h4 className="font-bold text-blue-700 dark:text-blue-400">About this Distribution</h4>
             <p className="text-muted-foreground mt-1">
-              The quantities and amounts below are calculated to fit your <strong>{formatINR(output.meta_data?.target_portfolio_value || 0)}</strong> target portfolio.
+              The quantities and amounts below are calculated to fit your <strong>{formatINR(output.meta_data?.total_investment || 0)}</strong> target portfolio.
               While you can add individual assets, implementing the full recommended distribution ensures optimal diversification as per the AI strategy.
             </p>
           </div>
@@ -352,7 +374,7 @@ export function InvestmentRecommendations({
 
                       <Button
                         className="w-full h-9 text-xs font-bold"
-                        onClick={() => !isExisting && onAddInvestment({ ...asset, asset_class: assetClass })}
+                        onClick={() => !isExisting && handleAddClick({ ...asset, asset_class: assetClass })}
                         disabled={isExisting}
                         variant={isExisting ? "secondary" : "default"}
                       >
@@ -406,6 +428,40 @@ export function InvestmentRecommendations({
           </CardContent>
         </Card>
       )}
+
+      {/* Goal Assignment Dialog */}
+      <Dialog open={goalPickerOpen} onOpenChange={setGoalPickerOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add to Portfolio</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Adding <strong>{pendingAsset?.name || pendingAsset?.symbol}</strong> to your portfolio.
+              Optionally assign this investment to a financial goal.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Assign to Goal (Optional)</label>
+              <Select value={selectedGoalId} onValueChange={setSelectedGoalId}>
+                <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {goals.map((g: any) => (
+                    <SelectItem key={g.id} value={g.id}>{g.name} ({g.priority})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGoalPickerOpen(false)}>Cancel</Button>
+            <Button onClick={handleConfirmAdd}>
+              <PlusCircle className="w-3 h-3 mr-2" />
+              Confirm Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

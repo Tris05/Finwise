@@ -26,17 +26,15 @@ interface Transaction {
 interface InvestmentTransactionsProps {
   transactions: Transaction[]
   onAddTransaction?: () => void
-  onEditTransaction?: (transactionId: string) => void
+  onEditTransaction?: (transaction: Transaction) => void
   onDeleteTransaction?: (transactionId: string) => void
-  onExport?: () => void
 }
 
-export function InvestmentTransactions({ 
-  transactions, 
-  onAddTransaction, 
+export function InvestmentTransactions({
+  transactions,
+  onAddTransaction,
   onEditTransaction,
-  onDeleteTransaction,
-  onExport 
+  onDeleteTransaction
 }: InvestmentTransactionsProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<string>("all")
@@ -45,10 +43,10 @@ export function InvestmentTransactions({
 
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = transaction.asset.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.type.toLowerCase().includes(searchTerm.toLowerCase())
+      transaction.type.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === "all" || transaction.type === filterType
     const matchesCategory = filterCategory === "all" || transaction.category === filterCategory
-    
+
     // Apply tab filtering
     let matchesTab = true
     if (activeTab === "buy") {
@@ -58,7 +56,7 @@ export function InvestmentTransactions({
     } else if (activeTab === "income") {
       matchesTab = transaction.type === "Dividend" || transaction.type === "Interest" || transaction.type === "Bonus"
     }
-    
+
     return matchesSearch && matchesType && matchesCategory && matchesTab
   })
 
@@ -100,10 +98,6 @@ export function InvestmentTransactions({
         <div className="flex items-center justify-between">
           <CardTitle>Investment Transactions</CardTitle>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={onExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
             <Button size="sm" onClick={onAddTransaction}>
               <Plus className="h-4 w-4 mr-2" />
               Add Transaction
@@ -119,7 +113,7 @@ export function InvestmentTransactions({
             <TabsTrigger value="sell">Sell</TabsTrigger>
             <TabsTrigger value="income">Income</TabsTrigger>
           </TabsList>
-          
+
           <div className="mt-4 space-y-4">
             {/* Filters */}
             <div className="flex items-center space-x-4">
@@ -210,7 +204,7 @@ export function InvestmentTransactions({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onEditTransaction?.(transaction.id)}
+                            onClick={() => onEditTransaction?.(transaction)}
                             className="h-8 w-8 p-0"
                           >
                             <Edit className="h-4 w-4" />

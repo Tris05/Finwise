@@ -16,6 +16,7 @@ import { InvestmentGoals } from "@/components/investment-goals"
 import { AddTransactionModal } from "@/components/add-transaction-modal"
 import { AddGoalModal } from "@/components/add-goal-modal"
 import { EditGoalModal } from "@/components/edit-goal-modal"
+import { EditTransactionModal } from "@/components/edit-transaction-modal"
 import { SellInvestmentModal } from "@/components/sell-investment-modal"
 import { InvestmentRecommendations } from "@/components/investment-recommendations"
 import { InvestmentInsights } from "@/components/investment-insights"
@@ -24,7 +25,7 @@ import { useMarketData } from "@/hooks/use-market-data"
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Area, AreaChart } from "recharts"
 import { formatINR } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-import { Wifi, WifiOff, RefreshCw, Sparkles, PlusCircle } from "lucide-react"
+import { Wifi, WifiOff, RefreshCw, Sparkles, PlusCircle, Download } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -47,7 +48,8 @@ import {
   deleteDoc,
   updateDoc,
   doc,
-  serverTimestamp
+  serverTimestamp,
+  increment
 } from "firebase/firestore"
 import { onAuthStateChanged } from "firebase/auth"
 import { useEffect } from "react"
@@ -277,6 +279,8 @@ export default function InvestmentsPage() {
   const [editGoalOpen, setEditGoalOpen] = useState(false)
   const [sellInvestmentOpen, setSellInvestmentOpen] = useState(false)
   const [isMarketDataLoading, setIsMarketDataLoading] = useState(false)
+  const [editTransactionOpen, setEditTransactionOpen] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<any>(null)
 
   // Data States
   const [investments, setInvestments] = useState<any[]>(initialInvestments)
@@ -544,6 +548,15 @@ Recommendation: ${asset.recommendation}
         }
       }
 
+      // Explicit Goal Tagging Update
+      if (newTransaction.goalId) {
+        const goalRef = doc(db, "users", userId, "goals", newTransaction.goalId)
+        await updateDoc(goalRef, {
+          currentAmount: increment(newTransaction.amount),
+          updated_at: serverTimestamp()
+        })
+      }
+
       setAddTransactionOpen(false)
       toast({
         title: "Transaction Recorded",
@@ -559,9 +572,49 @@ Recommendation: ${asset.recommendation}
     }
   }
 
-  const handleEditTransaction = (transactionId: string) => {
-    console.log("Edit transaction:", transactionId)
-    // TODO: Implement edit transaction functionality
+  const handleEditTransaction = (transaction: any) => {
+    setEditingTransaction(transaction)
+    setEditTransactionOpen(true)
+  }
+
+  const handleEditTransactionSave = async (updated: any, original: any) => {
+    if (!userId) return
+    try {
+      // Update transaction ledger
+      const txRef = doc(db, "users", userId, "transactions", original.id)
+      await updateDoc(txRef, {
+        asset: updated.asset,
+        type: updated.type,
+        quantity: updated.quantity,
+        price: updated.price,
+        amount: updated.amount,
+        date: updated.date,
+        category: updated.category,
+        notes: updated.notes,
+        updated_at: serverTimestamp()
+      })
+
+      // Update portfolio cost basis with delta
+      const portfolioRef = collection(db, "users", userId, "portfolio")
+      const q = query(portfolioRef, where("symbol", "==", updated.asset))
+      const snap = await getDocs(q)
+      if (!snap.empty) {
+        const portfolioDoc = snap.docs[0]
+        const existing = portfolioDoc.data()
+        const qtyDelta = updated.quantity - original.quantity
+        const amountDelta = updated.amount - original.amount
+        await updateDoc(portfolioDoc.ref, {
+          quantity: Math.max(0, (Number(existing.quantity) || 0) + qtyDelta),
+          investedAmount: Math.max(0, (Number(existing.investedAmount) || 0) + amountDelta),
+          updated_at: serverTimestamp()
+        })
+      }
+
+      toast({ title: "Transaction Updated", description: "Changes saved successfully." })
+    } catch (err) {
+      console.error(err)
+      toast({ title: "Error", description: "Failed to update transaction.", variant: "destructive" })
+    }
   }
 
   const handleDeleteTransaction = async (transactionId: string) => {
@@ -585,25 +638,144 @@ Recommendation: ${asset.recommendation}
   }
 
   const handleExport = () => {
-    // Create CSV content
-    const csvContent = [
-      "Date,Type,Asset,Quantity,Price,Amount,Status,Category",
-      ...transactions.map(t =>
-        `${t.date},${t.type},${t.asset},${t.quantity},${t.price},${t.amount},${t.status},${t.category}`
-      )
-    ].join('\n')
+    try {
+      const w = window.open('', '_blank');
+      if (!w) {
+        toast({ title: 'Error', description: 'Please allow popups to generate the report.', variant: 'destructive' })
+        return;
+      }
 
+      const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      const isGain = portfolioData.totalGain >= 0;
 
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>FinWise Investment Report</title>
+          <style>
+            body { font-family: 'Inter', -apple-system, sans-serif; color: #111827; line-height: 1.5; padding: 40px; margin: 0; }
+            .header { border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+            h1 { color: #1e3a8a; margin: 0 0 5px 0; font-size: 28px; }
+            .meta { color: #6b7280; font-size: 14px; }
+            .summary-cards { display: flex; gap: 20px; margin-bottom: 30px; }
+            .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; flex: 1; }
+            .card-title { font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 8px; }
+            .card-value { font-size: 24px; font-weight: bold; color: #0f172a; }
+            .text-green { color: #16a34a; }
+            .text-red { color: #dc2626; }
+            h2 { color: #1e293b; font-size: 20px; margin-top: 40px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+            th { text-align: left; padding: 12px; background: #f1f5f9; color: #475569; font-weight: 600; border-bottom: 2px solid #cbd5e1; }
+            td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+            tr:nth-child(even) { background-color: #f8fafc; }
+            .footer { margin-top: 50px; font-size: 12px; text-align: center; color: #94a3b8; }
+            @media print {
+              body { padding: 0; }
+              .card { border: 1px solid #cbd5e1; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>FinWise Financial Analyst Report</h1>
+            <div class="meta">Generated for Portfolio ID: ${userId || 'Guest'} | Date: ${today}</div>
+          </div>
+
+          <div class="summary-cards">
+            <div class="card">
+              <div class="card-title">Total Portfolio Value</div>
+              <div class="card-value">${formatINR(portfolioData.totalValue)}</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Total Unrealized Gain</div>
+              <div class="card-value ${isGain ? 'text-green' : 'text-red'}">
+                ${isGain ? '+' : ''}${formatINR(portfolioData.totalGain)} (${portfolioData.totalGainPercent.toFixed(2)}%)
+              </div>
+            </div>
+          </div>
+
+          <h2>Current Holdings Overview</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Asset / Symbol</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Current Price</th>
+                <th>Total Value</th>
+                <th>P&L</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${realTimeInvestments.length > 0 ? realTimeInvestments.map(inv => {
+        const qty = Number(inv.quantity) || 0
+        const price = Number(inv.currentPrice) || 0
+        const value = qty * price || Number(inv.currentValue) || Number(inv.investedAmount) || 0
+        const invested = Number(inv.investedAmount) || 0
+        const gain = value - invested
+        return `
+                <tr>
+                  <td><strong>${inv.symbol}</strong><br><span style="font-size:12px;color:#64748b">${inv.name || inv.symbol}</span></td>
+                  <td>${inv.category || 'N/A'}</td>
+                  <td>${qty.toFixed(4)}</td>
+                  <td>${price > 0 ? formatINR(price) : 'N/A'}</td>
+                  <td>${value > 0 ? formatINR(value) : formatINR(invested)}</td>
+                  <td class="${gain >= 0 ? 'text-green' : 'text-red'}">
+                    ${gain >= 0 ? '+' : ''}${formatINR(gain)}
+                  </td>
+                </tr>`
+      }).join('') : '<tr><td colspan="6" style="text-align:center">No active holdings.</td></tr>'}
+            </tbody>
+          </table>
+
+          <h2>Recent Transaction Ledger</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Asset</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${transactions.length > 0 ? transactions.slice(0, 50).map(t => `
+                <tr>
+                  <td>${t.date}</td>
+                  <td><strong>${t.type}</strong></td>
+                  <td>${t.asset}</td>
+                  <td>${t.quantity}</td>
+                  <td>${formatINR(t.price)}</td>
+                  <td>${formatINR(t.amount)}</td>
+                </tr>
+              `).join('') : '<tr><td colspan="6" style="text-align:center">No transaction history.</td></tr>'}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <p>This report is generated dynamically via FinWise AI Systems. Not to be construed as direct financial advice.</p>
+          </div>
+          <script>
+            window.onload = () => {
+              setTimeout(() => {
+                window.print();
+              }, 500);
+            }
+          </script>
+        </body>
+        </html>
+      `;
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Export Failed", description: "Could not generate report." })
+    }
   }
 
   const handleToggleWatch = async (symbol: string) => {
@@ -958,6 +1130,10 @@ Recommendation: ${asset.recommendation}
                   <FinancialProfileForm onSuccess={() => setIsOptimizerOpen(false)} />
                 </DialogContent>
               </Dialog>
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="w-4 h-4 mr-2" />
+                Export Report
+              </Button>
               {marketDataError && (
                 <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
                   <WifiOff className="h-4 w-4" />
@@ -1139,7 +1315,6 @@ Recommendation: ${asset.recommendation}
               onAddTransaction={handleAddTransaction}
               onEditTransaction={handleEditTransaction}
               onDeleteTransaction={handleDeleteTransaction}
-              onExport={handleExport}
             />
           </TabsContent>
 
@@ -1247,6 +1422,12 @@ Recommendation: ${asset.recommendation}
         onOpenChange={setSellInvestmentOpen}
         investment={selectedInvestment}
         onSellInvestment={handleSellInvestmentSubmit}
+      />
+      <EditTransactionModal
+        open={editTransactionOpen}
+        onOpenChange={setEditTransactionOpen}
+        transaction={editingTransaction}
+        onSave={handleEditTransactionSave}
       />
     </AppShell>
   )

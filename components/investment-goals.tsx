@@ -7,12 +7,13 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Target, Plus, Edit, Trash2 } from "lucide-react"
 import { formatINR } from "@/lib/utils"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useFinancialGoals, FinancialGoal, goalTypeToCategory } from "@/hooks/useFinancialGoals"
 import { AddGoalModal } from "@/components/add-goal-modal"
 import { db } from "@/lib/firebase"
 import { addDoc, collection, serverTimestamp } from "firebase/firestore"
 import { useAuth } from "@/components/providers/auth-provider"
+import { useInvestments } from "@/hooks/useInvestments"
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -78,9 +79,41 @@ const cls = (map: Record<string, string>, k: string) => map[k] ?? "bg-gray-100 t
  */
 export function InvestmentGoals() {
   const { user } = useAuth()
-  const { goals, loading, deleteGoal } = useFinancialGoals()
+  const { goals: rawGoals, loading, deleteGoal } = useFinancialGoals()
+  const { investments } = useInvestments()
   const [selectedGoal, setSelectedGoal] = useState<FinancialGoal | null>(null)
   const [addOpen, setAddOpen] = useState(false)
+
+  // ─── Automated Goal Distribution Logic ───
+  // Calculate total liquid portfolio value
+  const totalPortfolioValue = investments.reduce((sum, inv) => sum + (Number(inv.currentValue) || 0), 0)
+
+  // Distribute portfolio value across goals sequentially by priority & target date urgency
+  const goals = useMemo(() => {
+    if (!rawGoals.length) return []
+    const priorityWeight: Record<string, number> = { High: 3, Medium: 2, Low: 1 }
+
+    const sortedGoals = [...rawGoals].sort((a, b) => {
+      if (priorityWeight[a.priority] !== priorityWeight[b.priority]) {
+        return priorityWeight[b.priority] - priorityWeight[a.priority]
+      }
+      return new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime()
+    })
+
+    let remainingValue = totalPortfolioValue
+    const distributedGoals = sortedGoals.map(goal => {
+      const allocation = Math.min(goal.targetAmount, remainingValue)
+      remainingValue = Math.max(0, remainingValue - allocation)
+      return {
+        ...goal,
+        // Automated system takes the maximum of manual tracking or automated portfolio funneling
+        currentAmount: Math.max(goal.currentAmount || 0, allocation),
+        isAutomated: allocation > (goal.currentAmount || 0)
+      }
+    })
+
+    return rawGoals.map(g => distributedGoals.find(dg => dg.id === g.id)!)
+  }, [rawGoals, totalPortfolioValue])
 
   const totalTarget = goals.reduce((s, g) => s + (g.targetAmount ?? 0), 0)
   const totalCurrent = goals.reduce((s, g) => s + (g.currentAmount ?? 0), 0)
@@ -180,7 +213,12 @@ export function InvestmentGoals() {
                       <div className="font-semibold">{formatINR(goal.targetAmount ?? 0)}</div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground">Current Amount</div>
+                      <div className="text-sm text-muted-foreground flex items-center">
+                        Current Amount
+                        {(goal as any).isAutomated && (
+                          <Badge variant="outline" className="ml-2 text-[8px] h-4 px-1 uppercase bg-primary/10">Auto</Badge>
+                        )}
+                      </div>
                       <div className="font-semibold">{formatINR(goal.currentAmount ?? 0)}</div>
                     </div>
                     <div>
@@ -254,7 +292,7 @@ export function InvestmentGoals() {
                   <div className="space-y-2 text-sm">
                     {([
                       ["Target Amount", formatINR(selectedGoal.targetAmount ?? 0)],
-                      ["Current Amount", formatINR(selectedGoal.currentAmount ?? 0)],
+                      ["Current Amount", formatINR(selectedGoal.currentAmount ?? 0) + ((selectedGoal as any).isAutomated ? ' (Auto-Assigned)' : '')],
                       ["Target Date", new Date(selectedGoal.targetDate).toLocaleDateString()],
                       ["Expected Return",
                         selectedGoal.expectedReturn != null

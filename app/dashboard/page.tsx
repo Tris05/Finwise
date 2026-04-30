@@ -202,7 +202,7 @@ export default function DashboardPage() {
       icon: Bot,
       color: "bg-gradient-to-br from-blue-500 to-purple-600",
       href: "/advisor",
-      stats: "95% accuracy"
+      stats: recommendations.length > 0 ? `${recommendations.length} insight${recommendations.length > 1 ? 's' : ''} ready` : "95% accuracy"
     },
     {
       title: "Smart Investments",
@@ -210,7 +210,7 @@ export default function DashboardPage() {
       icon: Wallet,
       color: "bg-gradient-to-br from-green-500 to-emerald-600",
       href: "/investments",
-      stats: "₹15.5L portfolio"
+      stats: invLoading ? "Loading..." : totalValue > 0 ? `${formatINR(totalValue)} portfolio` : "Start investing"
     },
     {
       title: "Credit Card Recommendations",
@@ -218,7 +218,7 @@ export default function DashboardPage() {
       icon: CreditCard,
       color: "bg-gradient-to-br from-orange-500 to-red-600",
       href: "/credit-cards",
-      stats: "3 cards recommended"
+      stats: "Personalized picks"
     },
     {
       title: "Document Management",
@@ -226,7 +226,7 @@ export default function DashboardPage() {
       icon: FileText,
       color: "bg-gradient-to-br from-indigo-500 to-blue-600",
       href: "/documents",
-      stats: "12 documents"
+      stats: "Secure & organized"
     },
     {
       title: "Loan Management",
@@ -234,7 +234,7 @@ export default function DashboardPage() {
       icon: Landmark,
       color: "bg-gradient-to-br from-teal-500 to-cyan-600",
       href: "/loan",
-      stats: "2 active loans"
+      stats: "AI repayment plans"
     },
     {
       title: "Learning Hub",
@@ -242,7 +242,7 @@ export default function DashboardPage() {
       icon: GraduationCap,
       color: "bg-gradient-to-br from-pink-500 to-rose-600",
       href: "/learning",
-      stats: "8 courses completed"
+      stats: score > 0 ? `Score: ${score}/1000` : "Start learning"
     }
   ]
 

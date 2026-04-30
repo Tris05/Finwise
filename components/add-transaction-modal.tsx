@@ -34,23 +34,23 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.asset.trim()) {
       newErrors.asset = "Asset symbol is required"
     }
-    
+
     if (!formData.quantity || parseFloat(formData.quantity) <= 0) {
       newErrors.quantity = "Valid quantity is required"
     }
-    
+
     if (!formData.price || parseFloat(formData.price) <= 0) {
       newErrors.price = "Valid price is required"
     }
-    
+
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
       newErrors.amount = "Valid amount is required"
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -69,10 +69,10 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
         category: formData.category,
         notes: formData.notes
       }
-      
+
       onAddTransaction(transaction)
       onOpenChange(false)
-      
+
       // Reset form
       setFormData({
         asset: "",
@@ -105,7 +105,7 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
             <span>Add New Transaction</span>
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -119,7 +119,7 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
               />
               {errors.asset && <p className="text-sm text-red-500">{errors.asset}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="type">Transaction Type *</Label>
               <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
@@ -151,7 +151,7 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
               />
               {errors.quantity && <p className="text-sm text-red-500">{errors.quantity}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="price">Price per Unit *</Label>
               <Input
@@ -165,7 +165,7 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
               />
               {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="amount">Total Amount *</Label>
               <Input
@@ -197,7 +197,7 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Transaction Date</Label>
               <Popover>
@@ -226,7 +226,7 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
               placeholder="Add any notes about this transaction..."
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              rows={3}
+              rows={2}
             />
           </div>
         </div>
