@@ -47,7 +47,7 @@ export default function SignupPage() {
       }
 
       toast({ title: "Account created!", description: "Welcome to FinWise!" })
-      router.push("/dashboard")
+      router.push("/onboarding")
 
     } catch (error: any) {
       console.error("Signup error:", error)

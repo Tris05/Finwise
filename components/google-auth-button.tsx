@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signInWithPopup, signOut } from "firebase/auth"
+import { signInWithPopup, signOut, getAdditionalUserInfo } from "firebase/auth"
 import { auth, googleProvider } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -39,16 +39,21 @@ export function GoogleAuthButton({ onSuccess, onError }: GoogleAuthButtonProps) 
         description: `Signed in as ${user.displayName || user.email}`,
       })
       
-      console.log("Redirecting to dashboard...")
+      // Check if new user
+      const additionalUserInfo = getAdditionalUserInfo(result)
+      const isNewUser = additionalUserInfo?.isNewUser
+
+      const destination = isNewUser ? "/onboarding" : "/dashboard"
+      console.log(`Redirecting to ${destination}...`)
       
-      // Redirect to dashboard - try both methods
+      // Redirect - try both methods
       try {
-        router.push("/dashboard")
+        router.push(destination)
         console.log("Router.push called successfully")
       } catch (routerError) {
         console.error("Router error:", routerError)
         // Fallback to window.location
-        window.location.href = "/dashboard"
+        window.location.href = destination
       }
       
     } catch (error: any) {

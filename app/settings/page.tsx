@@ -229,14 +229,7 @@ export default function SettingsPage() {
                 <CardTitle>Account Security</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="twofa">Enable 2FA</Label>
-                  <Switch
-                    id="twofa"
-                    checked={settings.twoFA}
-                    onCheckedChange={(v) => handleUpdateSettings({ twoFA: !!v })}
-                  />
-                </div>
+
                 <div className="space-y-2">
                   <Button variant="outline" className="w-full">Change Password</Button>
                   <Button variant="outline" className="w-full">Update Security Questions</Button>

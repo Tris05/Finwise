@@ -37,38 +37,12 @@ export default function SecurityPage() {
     { t: "Fri", a: 0 },
   ]
 
-  const handleUpdate2FA = async (v: boolean) => {
-    const user = auth.currentUser
-    if (!user) return
 
-    try {
-      const userRef = doc(db, "users", user.uid)
-      await setDoc(userRef, {
-        settings: {
-          twoFA: v
-        }
-      }, { merge: true })
-    } catch (error) {
-      console.error("Error updating 2FA:", error)
-    }
-  }
   return (
     <AppShell>
       <div className="grid lg:grid-cols-2 gap-6">
         <SecurityTimeline />
-        <Card>
-          <CardHeader>
-            <CardTitle>2FA Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <Label htmlFor="twofa">Enable 2FA (TOTP/Email)</Label>
-            <Switch
-              id="twofa"
-              checked={settings.twoFA}
-              onCheckedChange={handleUpdate2FA}
-            />
-          </CardContent>
-        </Card>
+
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Anomaly Trend</CardTitle>
