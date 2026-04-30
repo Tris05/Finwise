@@ -2,6 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
+async function readApiErrorSummary(response: Response): Promise<string> {
+  const text = await response.text()
+  const contentType = response.headers.get('content-type') || ''
+  const compact = text.replace(/\s+/g, ' ').trim()
+  const snippet = compact.slice(0, 220)
+
+  if (contentType.includes('application/json')) return snippet
+  if (snippet.toLowerCase().includes('<!doctype html') || snippet.toLowerCase().includes('<html')) {
+    return `HTML error response received (${response.status})`
+  }
+  return snippet || `HTTP ${response.status}`
+}
+
 interface MarketData {
   symbol: string
   name: string
@@ -79,7 +92,7 @@ export function useMarketData(initialPortfolio: Investment[]): UseMarketDataRetu
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
+        const errorText = await readApiErrorSummary(response)
         console.error('API Error:', errorText)
         throw new Error(`Failed to fetch market data: ${response.status}`)
       }
@@ -149,7 +162,7 @@ export function useStockData(symbol: string) {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
+        const errorText = await readApiErrorSummary(response)
         console.error('API Error:', errorText)
         throw new Error(`Failed to fetch stock data: ${response.status}`)
       }
@@ -206,7 +219,7 @@ export function useMultipleStocksData(symbols: string[]) {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
+        const errorText = await readApiErrorSummary(response)
         console.error('API Error:', errorText)
         throw new Error(`Failed to fetch stocks data: ${response.status}`)
       }

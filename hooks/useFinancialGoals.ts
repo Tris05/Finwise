@@ -59,8 +59,8 @@ export const useFinancialGoals = () => {
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const goalsData = snapshot.docs.map(doc => ({
+                ...doc.data(),
                 id: doc.id,
-                ...doc.data()
             } as FinancialGoal));
             setGoals(goalsData);
             setLoading(false);

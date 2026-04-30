@@ -12,13 +12,16 @@ import { CalendarIcon, Plus, Minus } from "lucide-react"
 import { format } from "date-fns"
 import { useState } from "react"
 
+export type GoalOption = { id: string; name: string }
+
 interface AddTransactionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAddTransaction: (transaction: any) => void
+  goals?: GoalOption[]
 }
 
-export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: AddTransactionModalProps) {
+export function AddTransactionModal({ open, onOpenChange, onAddTransaction, goals = [] }: AddTransactionModalProps) {
   const [formData, setFormData] = useState({
     asset: "",
     type: "Buy",
@@ -27,7 +30,8 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
     amount: "",
     date: new Date(),
     category: "Equity",
-    notes: ""
+    notes: "",
+    goalId: "none" as string,
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -58,7 +62,6 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
   const handleSubmit = () => {
     if (validateForm()) {
       const transaction = {
-        id: Date.now().toString(),
         date: format(formData.date, "yyyy-MM-dd"),
         type: formData.type,
         asset: formData.asset.toUpperCase(),
@@ -67,7 +70,8 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
         amount: parseFloat(formData.amount),
         status: "Completed",
         category: formData.category,
-        notes: formData.notes
+        notes: formData.notes,
+        ...(formData.goalId && formData.goalId !== "none" ? { goalId: formData.goalId } : {}),
       }
 
       onAddTransaction(transaction)
@@ -82,7 +86,8 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
         amount: "",
         date: new Date(),
         category: "Equity",
-        notes: ""
+        notes: "",
+        goalId: "none",
       })
       setErrors({})
     }
@@ -229,6 +234,28 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction }: Ad
               rows={2}
             />
           </div>
+
+          {goals.length > 0 && (
+            <div className="space-y-2">
+              <Label>Link to goal (optional)</Label>
+              <Select
+                value={formData.goalId}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, goalId: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No goal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No goal</SelectItem>
+                  {goals.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">

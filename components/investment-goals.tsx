@@ -178,9 +178,7 @@ export function InvestmentGoals() {
               const status = computeStatus(goal)
               const progress = goal.targetAmount > 0
                 ? Math.min(100, (goal.currentAmount / goal.targetAmount) * 100) : 0
-              const required = getRequiredMonthly(goal)
               const months = getMonthsRemaining(goal.targetDate)
-              const contrib = goal.monthlyContribution
 
               return (
                 <div
@@ -239,15 +237,7 @@ export function InvestmentGoals() {
                     <Progress value={progress} className="h-2" />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground">Monthly Contribution</div>
-                      <div className="font-medium">{contrib != null ? formatINR(contrib) : "—"}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Required Monthly</div>
-                      <div className="font-medium">{formatINR(required)}</div>
-                    </div>
+                  <div className="grid grid-cols-1 text-sm">
                     <div>
                       <div className="text-muted-foreground">Expected Return</div>
                       <div className="font-medium">
@@ -328,14 +318,9 @@ export function InvestmentGoals() {
               </div>
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-semibold mb-2">Contribution Analysis</h4>
+                  <h4 className="font-semibold mb-2">Timeline</h4>
                   <div className="space-y-2 text-sm">
                     {([
-                      ["Current Monthly",
-                        selectedGoal.monthlyContribution != null
-                          ? formatINR(selectedGoal.monthlyContribution)
-                          : "Not set"],
-                      ["Required Monthly", formatINR(getRequiredMonthly(selectedGoal))],
                       ["Months Remaining", String(getMonthsRemaining(selectedGoal.targetDate))],
                     ] as [string, string][]).map(([k, v]) => (
                       <div key={k} className="flex justify-between">
@@ -351,8 +336,8 @@ export function InvestmentGoals() {
                     {(() => {
                       const s = computeStatus(selectedGoal)
                       if (s === "Completed") return <p>🎉 Goal achieved! Well done.</p>
-                      if (s === "Behind") return <p>Consider increasing your monthly contribution to stay on track.</p>
-                      if (s === "Ahead") return <p>Great job! You're ahead of schedule. You may reduce contributions slightly.</p>
+                      if (s === "Behind") return <p>Try assigning more assets to this goal to stay on track.</p>
+                      if (s === "Ahead") return <p>Great job! This goal is ahead of schedule.</p>
                       return <p>You're on track to meet your goal. Keep it up!</p>
                     })()}
                   </div>

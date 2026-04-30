@@ -32,8 +32,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { EditHoldingModal } from "@/components/edit-holding-modal"
 import { FinancialProfileForm } from "@/components/FinancialProfileForm"
 import { db, auth } from "@/lib/firebase"
 import {
@@ -281,6 +285,11 @@ export default function InvestmentsPage() {
   const [isMarketDataLoading, setIsMarketDataLoading] = useState(false)
   const [editTransactionOpen, setEditTransactionOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<any>(null)
+  const [editHoldingOpen, setEditHoldingOpen] = useState(false)
+  const [holdingForEdit, setHoldingForEdit] = useState<any>(null)
+  const [assignGoalOpen, setAssignGoalOpen] = useState(false)
+  const [holdingForGoalAssign, setHoldingForGoalAssign] = useState<any>(null)
+  const [assignGoalPick, setAssignGoalPick] = useState<string>("none")
 
   // Data States
   const [investments, setInvestments] = useState<any[]>(initialInvestments)
@@ -309,8 +318,8 @@ export default function InvestmentsPage() {
         const portfolioRef = collection(db, "users", user.uid, "portfolio")
         unsubs.push(onSnapshot(portfolioRef, (snapshot) => {
           const portfolioData = snapshot.docs.map(doc => ({
+            ...doc.data(),
             id: doc.id,
-            ...doc.data()
           }))
           setInvestments(portfolioData)
         }))
@@ -334,8 +343,8 @@ export default function InvestmentsPage() {
         const qTransactions = query(transactionsRef, orderBy("date", "desc"))
         unsubs.push(onSnapshot(qTransactions, (snapshot) => {
           const transactionsData = snapshot.docs.map(doc => ({
+            ...doc.data(),
             id: doc.id,
-            ...doc.data()
           }))
           setTransactions(transactionsData)
         }))
@@ -344,8 +353,8 @@ export default function InvestmentsPage() {
         const goalsRef = collection(db, "users", user.uid, "goals")
         unsubs.push(onSnapshot(goalsRef, (snapshot) => {
           const goalsData = snapshot.docs.map(doc => ({
+            ...doc.data(),
             id: doc.id,
-            ...doc.data()
           }))
           setGoals(goalsData)
         }))
@@ -443,28 +452,8 @@ export default function InvestmentsPage() {
     }, 1000)
   }
 
-  const handleAssetClick = (asset: any) => {
-    // Show detailed asset information in a modal or navigate to details
-    const details = `
-Asset Details:
-Symbol: ${asset.symbol}
-Name: ${asset.name}
-Current Price: ${formatINR(asset.currentPrice)}
-Day Change: ${asset.dayChangePercent.toFixed(2)}%
-Sector: ${asset.sector}
-Market Cap: ${asset.marketCap}
-P/E Ratio: ${asset.pe}
-Dividend Yield: ${asset.dividend}%
-Risk Level: ${asset.riskLevel}
-Recommendation: ${asset.recommendation}
-    `
-
-
-    toast({
-      title: `${asset.symbol} Details`,
-      description: details,
-      duration: 5000,
-    })
+  const handleAssetClick = (_asset: any) => {
+    // Intentionally no toast popup. Card details are shown inline in the portfolio tracker.
   }
 
   const handleRebalance = () => {
@@ -479,10 +468,12 @@ Recommendation: ${asset.recommendation}
     if (!userId) return
 
     try {
-      // 1. Save to Transactions collection
+      const { id: _omitClientId, ...transactionPayload } = newTransaction
+
+      // 1. Save to Transactions collection (never persist client-generated id — must match Firestore doc id)
       const transactionsRef = collection(db, "users", userId, "transactions")
       await addDoc(transactionsRef, {
-        ...newTransaction,
+        ...transactionPayload,
         created_at: serverTimestamp()
       })
 
@@ -492,6 +483,7 @@ Recommendation: ${asset.recommendation}
       const querySnapshot = await getDocs(q)
 
       const isStable = ['debt', 'stable', 'fixed income', 'fd', 'ppf'].includes(newTransaction.category.toLowerCase())
+      const goalIdForHolding = newTransaction.goalId || null
 
       if (newTransaction.type === "Buy" || newTransaction.type === "Dividend" || newTransaction.type === "Bonus") {
         if (!querySnapshot.empty) {
@@ -501,6 +493,7 @@ Recommendation: ${asset.recommendation}
           await updateDoc(portfolioDoc.ref, {
             quantity: (Number(existingData.quantity) || 0) + (Number(newTransaction.quantity) || 0),
             investedAmount: (Number(existingData.investedAmount) || 0) + (Number(newTransaction.amount) || 0),
+            ...(goalIdForHolding ? { goalId: goalIdForHolding } : {}),
             updated_at: serverTimestamp()
           })
         } else {
@@ -521,7 +514,8 @@ Recommendation: ${asset.recommendation}
             dayChangePercent: 0,
             color: "#3B82F6",
             created_at: serverTimestamp(),
-            lastSync: serverTimestamp()
+            lastSync: serverTimestamp(),
+            ...(goalIdForHolding ? { goalId: goalIdForHolding } : {}),
           })
         }
       } else if (newTransaction.type === "Sell") {
@@ -548,13 +542,20 @@ Recommendation: ${asset.recommendation}
         }
       }
 
-      // Explicit Goal Tagging Update
+      // Explicit goal balance update (sign depends on transaction type)
       if (newTransaction.goalId) {
-        const goalRef = doc(db, "users", userId, "goals", newTransaction.goalId)
-        await updateDoc(goalRef, {
-          currentAmount: increment(newTransaction.amount),
-          updated_at: serverTimestamp()
-        })
+        const amt = Number(newTransaction.amount) || 0
+        const type = newTransaction.type as string
+        const increasesGoal = ["Buy", "Dividend", "Bonus", "Interest"].includes(type)
+        const decreasesGoal = type === "Sell"
+        const delta = increasesGoal ? amt : decreasesGoal ? -amt : 0
+        if (delta !== 0) {
+          const goalRef = doc(db, "users", userId, "goals", newTransaction.goalId)
+          await updateDoc(goalRef, {
+            currentAmount: increment(delta),
+            updated_at: serverTimestamp()
+          })
+        }
       }
 
       setAddTransactionOpen(false)
@@ -634,6 +635,51 @@ Recommendation: ${asset.recommendation}
         description: "Failed to delete transaction.",
         variant: "destructive"
       })
+    }
+  }
+
+  const handleOpenEditHolding = (inv: any) => {
+    setHoldingForEdit(inv)
+    setEditHoldingOpen(true)
+  }
+
+  const handleSaveEditHolding = async (payload: { quantity: number; investedAmount: number; notes: string }) => {
+    if (!userId || !holdingForEdit) return
+    try {
+      await updateDoc(doc(db, "users", userId, "portfolio", holdingForEdit.id), {
+        quantity: payload.quantity,
+        investedAmount: payload.investedAmount,
+        notes: payload.notes,
+        updated_at: serverTimestamp(),
+      })
+      toast({ title: "Position updated", description: "Your holding has been saved." })
+      setHoldingForEdit(null)
+    } catch (e) {
+      console.error(e)
+      toast({ title: "Error", description: "Failed to update holding.", variant: "destructive" })
+      throw e
+    }
+  }
+
+  const handleOpenAssignGoal = (inv: any) => {
+    setHoldingForGoalAssign(inv)
+    setAssignGoalPick(inv.goalId ? String(inv.goalId) : "none")
+    setAssignGoalOpen(true)
+  }
+
+  const handleSaveAssignGoal = async () => {
+    if (!userId || !holdingForGoalAssign) return
+    try {
+      await updateDoc(doc(db, "users", userId, "portfolio", holdingForGoalAssign.id), {
+        goalId: assignGoalPick === "none" ? null : assignGoalPick,
+        updated_at: serverTimestamp(),
+      })
+      toast({ title: "Goal updated", description: "This holding is linked to your selected goal." })
+      setAssignGoalOpen(false)
+      setHoldingForGoalAssign(null)
+    } catch (e) {
+      console.error(e)
+      toast({ title: "Error", description: "Failed to assign goal.", variant: "destructive" })
     }
   }
 
@@ -951,6 +997,9 @@ Recommendation: ${asset.recommendation}
       }
 
       const portfolioRef = collection(db, "users", userId, "portfolio")
+      const amount = Number(recommendation.amount) || 0
+      const linkedGoalId = recommendation.goalId || null
+
       await addDoc(portfolioRef, {
         symbol: recommendation.symbol || recommendation.name,
         name: recommendation.name,
@@ -961,7 +1010,7 @@ Recommendation: ${asset.recommendation}
           recommendation.asset_class === 'crypto' ? 'Crypto' :
             recommendation.asset_class === 'mutual_funds' ? 'Mutual Fund' : 'Commodity',
         quantity: recommendation.quantity || 1,
-        investedAmount: recommendation.amount || 0,
+        investedAmount: amount,
         currentPrice: recommendation.current_price || recommendation.price || 0,
         created_at: serverTimestamp(),
         color: "#3B82F6", // Default color
@@ -969,8 +1018,17 @@ Recommendation: ${asset.recommendation}
         rationale: recommendation.rationale || "",
         rate: recommendation.rate || (recommendation.current_price === "Stable" ? 0.07 : 0),
         tenure: recommendation.term || recommendation.tenure || "N/A",
-        purchaseDate: new Date().toISOString()
+        purchaseDate: new Date().toISOString(),
+        ...(linkedGoalId ? { goalId: linkedGoalId } : {}),
       })
+
+      if (linkedGoalId && amount > 0) {
+        const goalRef = doc(db, "users", userId, "goals", linkedGoalId)
+        await updateDoc(goalRef, {
+          currentAmount: increment(amount),
+          updated_at: serverTimestamp()
+        })
+      }
 
       toast({
         title: "Success",
@@ -1289,6 +1347,9 @@ Recommendation: ${asset.recommendation}
               onInvestmentClick={handleAssetClick}
               onAddInvestment={() => setAddTransactionOpen(true)}
               onSellInvestment={handleSellInvestment}
+              goals={goals.map((g) => ({ id: g.id, name: g.name }))}
+              onEditPosition={handleOpenEditHolding}
+              onAssignGoal={handleOpenAssignGoal}
             />
           </TabsContent>
 
@@ -1405,7 +1466,68 @@ Recommendation: ${asset.recommendation}
         open={addTransactionOpen}
         onOpenChange={setAddTransactionOpen}
         onAddTransaction={handleAddTransactionSubmit}
+        goals={goals.map((g) => ({ id: g.id, name: g.name }))}
       />
+      <EditHoldingModal
+        open={editHoldingOpen}
+        onOpenChange={(open) => {
+          setEditHoldingOpen(open)
+          if (!open) setHoldingForEdit(null)
+        }}
+        investment={
+          holdingForEdit
+            ? {
+                id: holdingForEdit.id,
+                symbol: holdingForEdit.symbol,
+                name: holdingForEdit.name,
+                quantity: Number(holdingForEdit.quantity) || 0,
+                investedAmount: Number(holdingForEdit.investedAmount) || 0,
+                notes: holdingForEdit.notes,
+              }
+            : null
+        }
+        onSave={handleSaveEditHolding}
+      />
+      <Dialog
+        open={assignGoalOpen}
+        onOpenChange={(open) => {
+          setAssignGoalOpen(open)
+          if (!open) setHoldingForGoalAssign(null)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign to goal</DialogTitle>
+            <DialogDescription>
+              {holdingForGoalAssign
+                ? `Link ${holdingForGoalAssign.symbol} to a goal, or choose none.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label>Goal</Label>
+            <Select value={assignGoalPick} onValueChange={setAssignGoalPick}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select goal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {goals.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setAssignGoalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handleSaveAssignGoal()}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AddGoalModal
         open={addGoalOpen}
         onOpenChange={setAddGoalOpen}
