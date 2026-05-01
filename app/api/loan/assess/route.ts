@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   // Determine affordability and risk based on loan type and amount
   let affordability = "Medium"
   let risk = "Medium"
-  let mitigations = []
+  let mitigations: string[] = []
   
   if (loanType === "house") {
     if (amount > 10000000) {

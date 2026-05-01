@@ -418,7 +418,7 @@ export function useDataFlowManager() {
     // Update goal progress based on current investments
     state.investmentGoals.forEach(goal => {
       const relevantInvestments = state.investments.filter(inv => 
-        inv.category === goal.category || inv.sector === goal.category
+        String(inv.category) === String(goal.category) || String(inv.sector) === String(goal.category)
       )
       const currentAmount = relevantInvestments.reduce((sum, inv) => sum + inv.currentValue, 0)
       

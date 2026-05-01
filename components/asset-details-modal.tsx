@@ -66,6 +66,8 @@ const TradingViewWidget = memo(({ symbol, category }: { symbol: string, category
           "hide_top_toolbar": false,
           "hide_legend": false,
           "save_image": false,
+          "width": "100%",
+          "height": "100%",
           "container_id": wrapper.id
         })
       }
@@ -84,16 +86,31 @@ const TradingViewWidget = memo(({ symbol, category }: { symbol: string, category
   }, [symbol, category])
 
   return (
-    <div className="tradingview-widget-container" ref={container} style={{ height: "100%", width: "100%", minHeight: "500px" }}>
+    <div className="tradingview-widget-container" ref={container} style={{ height: "100%", width: "100%", minHeight: "100%" }}>
     </div>
   )
 })
 TradingViewWidget.displayName = "TradingViewWidget"
 
+export { TradingViewWidget }
+
 export function AssetDetailsModal({ isOpen, onClose, asset }: AssetDetailsModalProps) {
   if (!asset) return null
 
-  const isGain = asset.change >= 0
+  // Handle different asset structures (watchlist vs stock search)
+  const price = asset.price || asset.currentPrice || 0
+  const change = asset.change || asset.dayChange || 0
+  const changePercent = asset.changePercent || asset.dayChangePercent || 0
+  const currency = asset.currency || (asset.exchange?.includes('NASDAQ') || asset.exchange?.includes('NYSE') || asset.symbol?.includes('.US') ? 'USD' : 'INR')
+  const isGain = change >= 0
+
+  // Format price based on currency
+  const formatPrice = (value: number) => {
+    if (currency === 'USD') {
+      return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }
+    return formatINR(value)
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -105,27 +122,30 @@ export function AssetDetailsModal({ isOpen, onClose, asset }: AssetDetailsModalP
               <span className="text-muted-foreground text-lg">{asset.name}</span>
             </div>
             <div className="text-right pr-6">
-              <div className="text-2xl font-bold">{formatINR(asset.price)}</div>
+              <div className="text-2xl font-bold">{formatPrice(price)}</div>
               <div className={`flex items-center text-sm ${isGain ? 'text-green-600' : 'text-red-600'} justify-end`}>
                 {isGain ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-                {formatINR(Math.abs(asset.change))} ({asset.changePercent.toFixed(2)}%)
+                {formatPrice(Math.abs(change))} ({changePercent.toFixed(2)}%)
               </div>
             </div>
           </DialogTitle>
         </DialogHeader>
         
         <div className="flex-1 min-h-0 mt-4 border rounded-md overflow-hidden bg-white">
-          <TradingViewWidget symbol={asset.symbol} category={asset.category} />
+          <TradingViewWidget 
+            symbol={asset.symbol} 
+            category={asset.category || asset.sector === 'Cryptocurrency' ? 'Crypto' : 'Equity'} 
+          />
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
           <div>
             <div className="text-sm text-muted-foreground">Category</div>
-            <div className="font-medium">{asset.category}</div>
+            <div className="font-medium">{asset.category || asset.sector || 'N/A'}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Market Cap</div>
-            <div className="font-medium">{formatINR(asset.marketCap)}</div>
+            <div className="font-medium">{formatPrice(asset.marketCap || 0)}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Volume</div>

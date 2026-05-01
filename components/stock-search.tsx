@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Search,
   TrendingUp,
@@ -14,20 +12,8 @@ import {
   Star,
   Plus,
   Eye,
-  BarChart3,
-  DollarSign,
-  Building2,
-  Globe,
-  Users,
-  Calendar,
-  Target,
   AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  RefreshCw,
-  ExternalLink,
-  Info
+  Loader2
 } from "lucide-react"
 import { formatINR } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
@@ -89,16 +75,14 @@ interface DetailedStockData extends StockSearchResult {
 interface StockSearchProps {
   onAddToWatchlist?: (stock: StockSearchResult) => void
   onAddToPortfolio?: (stock: StockSearchResult) => void
+  onViewDetails?: (stock: StockSearchResult) => void
 }
 
-export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchProps) {
+export function StockSearch({ onAddToWatchlist, onAddToPortfolio, onViewDetails }: StockSearchProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<StockSearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [selectedStock, setSelectedStock] = useState<DetailedStockData | null>(null)
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const [showDetails, setShowDetails] = useState(false)
 
   // Debounced search
   const debouncedSearch = useCallback(
@@ -166,44 +150,7 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
     }
   }
 
-  const fetchDetailedData = async (symbol: string) => {
-    setIsLoadingDetails(true)
-    setSearchError(null)
-
-    try {
-      const response = await fetch('/api/market-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'get_detailed_stock',
-          symbol: symbol
-        }),
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API Error:', errorText)
-        throw new Error(`Failed to fetch detailed data: ${response.status}`)
-      }
-
-      const result = await response.json()
-
-      if (result.success) {
-        setSelectedStock(result.data)
-        setShowDetails(true)
-      } else {
-        throw new Error(result.error || 'Failed to fetch detailed data')
-      }
-    } catch (error) {
-      console.error('Error fetching detailed data:', error)
-      setSearchError(error instanceof Error ? error.message : 'Failed to fetch detailed data')
-    } finally {
-      setIsLoadingDetails(false)
-    }
-  }
-
+  
   const getChangeColor = (change: number) => {
     if (change > 0) return 'text-green-600 dark:text-green-400'
     if (change < 0) return 'text-red-600 dark:text-red-400'
@@ -338,14 +285,9 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => fetchDetailedData(stock.symbol)}
-                          disabled={isLoadingDetails}
+                          onClick={() => onViewDetails?.(stock)}
                         >
-                          {isLoadingDetails ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
+                          <Eye className="h-4 w-4" />
                           <span className="ml-2">Details</span>
                         </Button>
 
@@ -379,263 +321,6 @@ export function StockSearch({ onAddToWatchlist, onAddToPortfolio }: StockSearchP
         )}
       </AnimatePresence>
 
-      {/* Stock Details Modal */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-3">
-              <div>
-                <h2 className="text-xl font-bold">{selectedStock?.name}</h2>
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <span className="font-mono">{selectedStock?.symbol}</span>
-                  <span>•</span>
-                  <span>{selectedStock?.exchange}</span>
-                  <span>•</span>
-                  <span>{selectedStock?.sector}</span>
-                </div>
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-
-          {selectedStock && (
-            <div className="space-y-6">
-              {/* Price Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-sm text-muted-foreground">Current Price</div>
-                    <div className="text-2xl font-bold">
-                      {selectedStock.currency === 'INR' ? formatINR(selectedStock.currentPrice) : `$${selectedStock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                    </div>
-                    <div className={`flex items-center space-x-1 ${getChangeColor(selectedStock.dayChange)}`}>
-                      {getChangeIcon(selectedStock.dayChange)}
-                      <span>{selectedStock.dayChangePercent.toFixed(2)}%</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-sm text-muted-foreground">52W High/Low</div>
-                    <div className="text-lg font-semibold">
-                      {selectedStock.currency === 'INR' ? formatINR(selectedStock.week52High || 0) : `$${(selectedStock.week52High || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {selectedStock.currency === 'INR' ? formatINR(selectedStock.week52Low || 0) : `$${(selectedStock.week52Low || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-sm text-muted-foreground">Recommendation</div>
-                    <Badge className={getRecommendationColor(selectedStock.recommendation)}>
-                      {selectedStock.recommendation}
-                    </Badge>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Risk: <Badge variant="outline" className={getRiskColor(selectedStock.riskLevel)}>
-                        {selectedStock.riskLevel}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Detailed Metrics */}
-              <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="financials">Financials</TabsTrigger>
-                  <TabsTrigger value="technical">Technical</TabsTrigger>
-                  <TabsTrigger value="company">Company</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview" className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Volume</div>
-                      <div className="font-semibold">
-                        {selectedStock.volume > 1000000
-                          ? `${(selectedStock.volume / 1000000).toFixed(1)}M`
-                          : selectedStock.volume > 1000
-                            ? `${(selectedStock.volume / 1000).toFixed(1)}K`
-                            : selectedStock.volume.toLocaleString()
-                        }
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Day Range</div>
-                      <div className="font-semibold whitespace-nowrap">
-                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.low || 0) : `$${(selectedStock.low || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} - {selectedStock.currency === 'INR' ? formatINR(selectedStock.high || 0) : `$${(selectedStock.high || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Dividend Yield</div>
-                      <div className="font-semibold">
-                        {selectedStock.dividend.toFixed(2)}%
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Beta</div>
-                      <div className="font-semibold">
-                        {selectedStock.beta ? selectedStock.beta.toFixed(2) : 'N/A'}
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="financials" className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Revenue Growth</div>
-                      <div className="font-semibold">
-                        {selectedStock.revenueGrowth ? `${(selectedStock.revenueGrowth * 100).toFixed(1)}%` : 'N/A'}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Earnings Growth</div>
-                      <div className="font-semibold">
-                        {selectedStock.earningsGrowth ? `${(selectedStock.earningsGrowth * 100).toFixed(1)}%` : 'N/A'}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Profit Margins</div>
-                      <div className="font-semibold">
-                        {selectedStock.profitMargins ? `${(selectedStock.profitMargins * 100).toFixed(1)}%` : 'N/A'}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Debt to Equity</div>
-                      <div className="font-semibold">
-                        {selectedStock.debtToEquity ? selectedStock.debtToEquity.toFixed(2) : 'N/A'}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Current Ratio</div>
-                      <div className="font-semibold">
-                        {selectedStock.currentRatio ? selectedStock.currentRatio.toFixed(2) : 'N/A'}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Quick Ratio</div>
-                      <div className="font-semibold">
-                        {selectedStock.quickRatio ? selectedStock.quickRatio.toFixed(2) : 'N/A'}
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="technical" className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Volatility</div>
-                      <div className="font-semibold">
-                        {selectedStock.volatility.toFixed(1)}%
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">MA 20</div>
-                      <div className="font-semibold">
-                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.ma20) : `$${selectedStock.ma20.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">MA 50</div>
-                      <div className="font-semibold">
-                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.ma50) : `$${selectedStock.ma50.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Volume Ratio</div>
-                      <div className="font-semibold">
-                        {selectedStock.volumeRatio.toFixed(2)}x
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Today's High</div>
-                      <div className="font-semibold">
-                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.high) : `$${selectedStock.high.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <div className="text-sm text-muted-foreground">Today's Low</div>
-                      <div className="font-semibold">
-                        {selectedStock.currency === 'INR' ? formatINR(selectedStock.low) : `$${selectedStock.low.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="company" className="space-y-4">
-                  <div className="space-y-4">
-                    {selectedStock.description && (
-                      <div>
-                        <h4 className="font-semibold mb-2">About</h4>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {selectedStock.description}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                        <div className="text-sm text-muted-foreground">Industry</div>
-                        <div className="font-semibold">{selectedStock.industry}</div>
-                      </div>
-                      <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                        <div className="text-sm text-muted-foreground">Employees</div>
-                        <div className="font-semibold">
-                          {selectedStock.employees ? selectedStock.employees.toLocaleString() : 'N/A'}
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
-                        <div className="text-sm text-muted-foreground">Location</div>
-                        <div className="font-semibold">
-                          {selectedStock.city}, {selectedStock.state}, {selectedStock.country}
-                        </div>
-                      </div>
-                    </div>
-
-                    {selectedStock.website && (
-                      <div className="flex items-center space-x-2">
-                        <Globe className="h-4 w-4 text-muted-foreground" />
-                        <a
-                          href={selectedStock.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
-                        >
-                          <span>Visit Website</span>
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              {/* Action Buttons */}
-              <div className="flex space-x-3 pt-4 border-t">
-                {onAddToWatchlist && (
-                  <Button onClick={() => onAddToWatchlist(selectedStock)}>
-                    <Star className="h-4 w-4 mr-2" />
-                    Add to Watchlist
-                  </Button>
-                )}
-                {onAddToPortfolio && (
-                  <Button onClick={() => onAddToPortfolio(selectedStock)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add to Portfolio
-                  </Button>
-                )}
-                <Button variant="outline" onClick={() => setShowDetails(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+      </div>
   )
 }

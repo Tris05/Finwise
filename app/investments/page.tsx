@@ -23,7 +23,7 @@ import { InvestmentRecommendations } from "@/components/investment-recommendatio
 import { InvestmentInsights } from "@/components/investment-insights"
 import { StockSearch } from "@/components/stock-search"
 import { useMarketData } from "@/hooks/use-market-data"
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Area, AreaChart } from "recharts"
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Area, AreaChart, ReferenceLine } from "recharts"
 import { formatINR } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { Wifi, WifiOff, RefreshCw, Sparkles, PlusCircle, Download } from "lucide-react"
@@ -59,7 +59,8 @@ import {
 import { onAuthStateChanged } from "firebase/auth"
 import { useEffect } from "react"
 
-const LIVE_REFRESH_MS = 5000
+const LIVE_REFRESH_MS = 60000
+const MOMENTUM_REFRESH_MS = 300000 // 5 minutes
 const MAX_LIVE_POINTS = 120
 const MARKET_INDICATORS = [
   { key: "nifty", label: "Nifty 50", symbol: "^NSEI", color: "#3B82F6" },
@@ -139,6 +140,8 @@ export default function InvestmentsPage() {
   const [liveChartData, setLiveChartData] = useState<any[]>([])
   const [indicatorBaselines, setIndicatorBaselines] = useState<Record<string, number>>({})
   const [latestIndicators, setLatestIndicators] = useState<Record<string, { price: number; dayChangePercent: number; currency: string }>>({})
+  const [marketOpenData, setMarketOpenData] = useState<Record<string, { price: number; dayChangePercent: number; currency: string }>>({})
+  const [momentumChartData, setMomentumChartData] = useState<any[]>([])
 
   // Fetch market data for a given list of symbols
   const fetchMarketAssetsData = async (symbols: string[]) => {
@@ -392,10 +395,156 @@ export default function InvestmentsPage() {
   }
 
   useEffect(() => {
+    // Preload data immediately for instant chart display
+    preloadHistoricalData()
+    
+    // Start real data fetching
     void fetchIndicators()
     const interval = setInterval(() => {
       void fetchIndicators()
     }, LIVE_REFRESH_MS)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Fetch market open data for momentum streams
+  const fetchMarketOpenData = async () => {
+    try {
+      const responses = await Promise.allSettled(
+        MARKET_INDICATORS.map(async (indicator) => {
+          const response = await fetch(`/api/market-data?symbol=${indicator.symbol}&type=quote`)
+          if (!response.ok) return null
+          const data = await response.json()
+          if (data.error) return null
+          return {
+            key: indicator.key,
+            price: data.price || 0,
+            dayChangePercent: data.dayChangePercent || 0,
+            currency: data.currency || "INR"
+          }
+        })
+      )
+
+      const validResponses = responses
+        .filter((result) => result.status === 'fulfilled' && (result as any).value !== null)
+        .map((result) => (result as any).value) as { key: string; price: number; dayChangePercent: number; currency: string }[]
+      if (validResponses.length === 0) return
+
+      // Store market open data (only set if not already set)
+      setMarketOpenData((prev) => {
+        if (Object.keys(prev).length === 0) {
+          const marketOpenMap = validResponses.reduce((acc, item) => {
+            acc[item.key] = { price: item.price, dayChangePercent: item.dayChangePercent, currency: item.currency }
+            return acc
+          }, {} as Record<string, { price: number; dayChangePercent: number; currency: string }>)
+          return marketOpenMap
+        }
+        return prev
+      })
+
+      // Create momentum chart data point
+      const point: Record<string, any> = {
+        t: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      }
+      
+      validResponses.forEach((item) => {
+        point[`${item.key}DayMove`] = Number(item.dayChangePercent.toFixed(2))
+      })
+
+      setMomentumChartData((prevPoints) => [...prevPoints, point].slice(-50)) // Keep last 50 points
+    } catch (error) {
+      console.error("Failed to fetch market open data:", error)
+    }
+  }
+
+  // Preload historical data for immediate chart display
+  const preloadHistoricalData = () => {
+    const now = new Date()
+    const marketOpenTime = new Date(now)
+    marketOpenTime.setHours(9, 15, 0, 0) // Indian market opens at 9:15 AM
+    
+    // Generate historical data points for Live Market Pulse (last 30 points, 1 minute intervals)
+    const liveHistoricalData = []
+    for (let i = 29; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60000)
+      const point: Record<string, any> = {
+        t: time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+      }
+      
+      // Generate realistic mock data for each indicator
+      MARKET_INDICATORS.forEach((indicator) => {
+        const baseChange = Math.random() * 2 - 1 // Random between -1 and 1
+        const volatility = indicator.key === 'btc' ? 3 : indicator.key === 'gold' ? 1.5 : 0.8
+        const change = baseChange * volatility
+        point[`${indicator.key}Move`] = Number(change.toFixed(2))
+        point[`${indicator.key}DayMove`] = Number(change.toFixed(2))
+      })
+      
+      liveHistoricalData.push(point)
+    }
+    setLiveChartData(liveHistoricalData)
+    
+    // Generate historical data for Momentum Streams with hour markers
+    const momentumHistoricalData = []
+    const marketStartTime = new Date(now)
+    marketStartTime.setHours(9, 15, 0, 0)
+    
+    // Generate data points including hour markers
+    const hourMarkers = ['10:15', '11:15', '12:15', '1:15', '2:15', '3:15']
+    const currentTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    
+    // Add data points from market open to current time
+    let dataPointTime = new Date(marketStartTime)
+    let pointIndex = 0
+    
+    while (dataPointTime <= now && pointIndex < 50) {
+      const timeStr = dataPointTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      const point: Record<string, any> = {
+        t: timeStr,
+      }
+      
+      // Generate realistic cumulative growth data
+      const hoursFromOpen = (dataPointTime.getTime() - marketStartTime.getTime()) / (1000 * 60 * 60)
+      MARKET_INDICATORS.forEach((indicator) => {
+        const baseGrowth = Math.sin(hoursFromOpen * 0.5) * 2 + Math.random() * 0.5
+        const volatility = indicator.key === 'btc' ? 3 : indicator.key === 'gold' ? 1.5 : 0.8
+        const change = baseGrowth * volatility * Math.min(hoursFromOpen / 6, 1)
+        point[`${indicator.key}DayMove`] = Number(change.toFixed(2))
+      })
+      
+      momentumHistoricalData.push(point)
+      
+      // Add extra points at hour markers for clarity
+      if (hourMarkers.includes(timeStr)) {
+        const markerPoint = { ...point }
+        momentumHistoricalData.push(markerPoint)
+      }
+      
+      dataPointTime = new Date(dataPointTime.getTime() + 5 * 60000) // 5 minute intervals
+      pointIndex++
+    }
+    setMomentumChartData(momentumHistoricalData)
+    
+    // Initialize market open data with mock values
+    const mockMarketOpen = MARKET_INDICATORS.reduce((acc, indicator) => {
+      acc[indicator.key] = {
+        price: indicator.key === 'nifty' ? 19500 + Math.random() * 1000 :
+               indicator.key === 'sensex' ? 65000 + Math.random() * 2000 :
+               indicator.key === 'gold' ? 62000 + Math.random() * 1000 :
+               45000 + Math.random() * 5000, // BTC
+        dayChangePercent: Math.random() * 2 - 1,
+        currency: indicator.key === 'btc' ? 'USD' : 'INR'
+      }
+      return acc
+    }, {} as Record<string, { price: number; dayChangePercent: number; currency: string }>)
+    setMarketOpenData(mockMarketOpen)
+  }
+
+  // Separate useEffect for momentum streams (5 minutes)
+  useEffect(() => {
+    void fetchMarketOpenData()
+    const interval = setInterval(() => {
+      void fetchMarketOpenData()
+    }, MOMENTUM_REFRESH_MS)
     return () => clearInterval(interval)
   }, [])
 
@@ -1192,14 +1341,14 @@ export default function InvestmentsPage() {
         />
 
         {/* Live Indicator Trend Chart */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20 mb-8">
           <CardHeader className="pb-4">
             <div>
               <CardTitle className="text-xl font-semibold">Live Market Pulse</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">Continuously streaming indicator movement with smooth curves (refreshes every {LIVE_REFRESH_MS / 1000}s)</p>
             </div>
           </CardHeader>
-          <CardContent className="h-96">
+          <CardContent className="h-[32rem] pb-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
               {MARKET_INDICATORS.map((indicator) => {
                 const current = latestIndicators[indicator.key]
@@ -1220,7 +1369,7 @@ export default function InvestmentsPage() {
                 )
               })}
             </div>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" className="mb-4">
               <LineChart data={liveChartData}>
                 <defs>
                   <linearGradient id="niftyGlow" x1="0" y1="0" x2="0" y2="1">
@@ -1245,6 +1394,7 @@ export default function InvestmentsPage() {
                   axisLine={false}
                   tickLine={false}
                   className="text-xs text-muted-foreground"
+                  tick={{ dy: 15 }}
                 />
                 <YAxis
                   axisLine={false}
@@ -1314,12 +1464,12 @@ export default function InvestmentsPage() {
           <CardHeader className="pb-4">
             <div>
               <CardTitle className="text-xl font-semibold">Live Momentum Streams</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Smoothed day-change curves so you can track momentum shifts in real time</p>
+              <p className="text-sm text-muted-foreground mt-1">Growth/decline from market open to now (refreshes every 5 minutes)</p>
             </div>
           </CardHeader>
           <CardContent className="h-96">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={liveChartData}>
+              <AreaChart data={momentumChartData}>
                 <defs>
                   <linearGradient id="niftyArea" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
@@ -1341,6 +1491,13 @@ export default function InvestmentsPage() {
                 <XAxis dataKey="t" axisLine={false} tickLine={false} className="text-xs text-muted-foreground" />
                 <YAxis axisLine={false} tickLine={false} className="text-xs text-muted-foreground" />
                 <Tooltip formatter={(value: any, name: any) => [`${Number(value).toFixed(2)}%`, name]} />
+                {/* Hour markers from market open (9:15 AM) */}
+                <ReferenceLine x="10:15" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3" />
+                <ReferenceLine x="11:15" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3" />
+                <ReferenceLine x="12:15" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3" />
+                <ReferenceLine x="1:15" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3" />
+                <ReferenceLine x="2:15" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3" />
+                <ReferenceLine x="3:15" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3" />
                 <Area type="monotone" dataKey="niftyDayMove" stroke="#3B82F6" fill="url(#niftyArea)" strokeWidth={2} />
                 <Area type="monotone" dataKey="sensexDayMove" stroke="#10B981" fill="url(#sensexArea)" strokeWidth={2} />
                 <Area type="monotone" dataKey="goldDayMove" stroke="#F59E0B" fill="url(#goldArea)" strokeWidth={2} />
@@ -1403,6 +1560,7 @@ export default function InvestmentsPage() {
             <StockSearch
               onAddToWatchlist={handleAddToWatchlist}
               onAddToPortfolio={handleAddToPortfolio}
+              onViewDetails={handleViewDetails}
             />
             <div className="mt-8">
               <MarketWatchlist

@@ -47,7 +47,7 @@ export function CustomCareerGoals() {
     }
     const updatedGoals = [...goals, newGoal]
     setGoals(updatedGoals)
-    saveUserPreferences({ budgetCategories: [], careerGoals: updatedGoals })
+    saveUserPreferences({ budgetCategories: { needs: [], wants: [], savings: [] }, careerGoals: updatedGoals })
     setIsAddingGoal(false)
   }
 
@@ -56,14 +56,14 @@ export function CustomCareerGoals() {
       goal.id === updatedGoal.id ? updatedGoal : goal
     )
     setGoals(updatedGoals)
-    saveUserPreferences({ budgetCategories: [], careerGoals: updatedGoals })
+    saveUserPreferences({ budgetCategories: { needs: [], wants: [], savings: [] }, careerGoals: updatedGoals })
     setEditingGoal(null)
   }
 
   const deleteGoal = (goalId: string) => {
     const updatedGoals = goals.filter(goal => goal.id !== goalId)
     setGoals(updatedGoals)
-    saveUserPreferences({ budgetCategories: [], careerGoals: updatedGoals })
+    saveUserPreferences({ budgetCategories: { needs: [], wants: [], savings: [] }, careerGoals: updatedGoals })
   }
 
   const updateMilestone = (goalId: string, milestoneId: string, completed: boolean) => {
@@ -80,7 +80,7 @@ export function CustomCareerGoals() {
         : goal
     )
     setGoals(updatedGoals)
-    saveUserPreferences({ budgetCategories: [], careerGoals: updatedGoals })
+    saveUserPreferences({ budgetCategories: { needs: [], wants: [], savings: [] }, careerGoals: updatedGoals })
   }
 
   const getProgressColor = (progress: number) => {

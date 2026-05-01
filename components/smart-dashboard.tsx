@@ -288,12 +288,12 @@ export function SmartDashboard() {
   const learningProgress = (state.learningProgress.xp % 100) / 100 * 100
 
   // Smart KPIs
-  const kpis = [
+  const kpis: SmartKPICardProps[] = [
     { 
       label: "Total Portfolio Value", 
       value: formatINR(portfolioValue || 1642300), 
       delta: `+${gainPercent.toFixed(1)}%`, 
-      trend: gainPercent >= 0 ? "up" : "down",
+      trend: (gainPercent >= 0 ? "up" : "down") as "up" | "down" | "neutral",
       icon: DollarSign,
       color: "text-green-600",
       bgColor: "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20",
@@ -305,37 +305,37 @@ export function SmartDashboard() {
       label: "Learning Progress", 
       value: `${state.learningProgress.level}`, 
       delta: `${state.learningProgress.xp} XP`, 
-      trend: "up",
+      trend: "up" as "up" | "down" | "neutral",
       icon: GraduationCap,
       color: "text-blue-600",
       bgColor: "bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20",
-      change: `${state.learningProgress.badges.length} badges`,
-      period: "Current",
+      change: "+12 XP this week",
+      period: "This Week",
       onClick: () => navigate('/learning')
     },
     { 
       label: "Active Goals", 
       value: state.investmentGoals.filter(g => g.isActive).length, 
       delta: "On Track", 
-      trend: "up",
+      trend: "up" as "up" | "down" | "neutral",
       icon: Target,
       color: "text-purple-600",
       bgColor: "bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/20 dark:to-violet-950/20",
-      change: "75% avg progress",
+      change: "2 goals completed",
       period: "This Month",
-      onClick: () => navigate('/investments?tab=goals')
+      onClick: () => navigate('/settings')
     },
     { 
       label: "Investment Score", 
       value: "847/1000",
       delta: "+12 points", 
-      trend: "up",
+      trend: "up" as "up" | "down" | "neutral",
       icon: Star,
       color: "text-orange-600",
       bgColor: "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20",
-      change: "Excellent",
-      period: "This Week",
-      onClick: () => navigate('/advisor')
+      change: "Top 15% percentile",
+      period: "All Time",
+      onClick: () => navigate('/portfolio-optimizer')
     }
   ]
 

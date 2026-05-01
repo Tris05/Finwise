@@ -149,8 +149,6 @@ export function PortfolioPie({
               cy="50%"
               innerRadius={60}
               outerRadius={120}
-              activeIndex={activeIndex ?? -1}
-              activeShape={(props) => <Sector {...props} outerRadius={(props.outerRadius as number) + 5} />}
               onClick={(_, i) => onSliceClick?.(data[i])}
               onMouseEnter={(_, i) => setActiveIndex(i)}
               onMouseLeave={() => setActiveIndex(null)}
