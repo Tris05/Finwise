@@ -1338,6 +1338,7 @@ export default function InvestmentsPage() {
           onRefresh={handleRefresh}
           onRebalance={handleRebalance}
           isLoading={isLoading || isMarketDataFetching}
+          goals={goals}
         />
 
         {/* Live Indicator Trend Chart */}

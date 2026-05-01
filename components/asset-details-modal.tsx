@@ -24,6 +24,9 @@ const TradingViewWidget = memo(({ symbol, category }: { symbol: string, category
     // Format symbol for TradingView
     let tvSymbol = symbol
     
+    // Debug logging
+    console.log('TradingViewWidget - Symbol:', symbol, 'Category:', category)
+    
     if (category === 'Crypto') {
       // For crypto like 'bitcoin', we need a ticker. But wait, if symbol is 'BTC', use BINANCE:BTCUSDT
       // We will just let TradingView try to resolve it, or use CRYPTO prefix.
@@ -35,11 +38,58 @@ const TradingViewWidget = memo(({ symbol, category }: { symbol: string, category
         tvSymbol = `NSE:${symbol.replace('.NS', '')}`
       } else if (symbol.includes('.BO')) {
         tvSymbol = `BSE:${symbol.replace('.BO', '')}`
+      } else if (symbol.includes('.US') || symbol.includes('.NASDAQ') || symbol.includes('.NYSE')) {
+        // US stocks with exchange suffix - remove suffix and use raw symbol
+        tvSymbol = symbol.split('.')[0]
       } else {
-        // Assume US stock or let TV decide
-        tvSymbol = symbol
+        // Need to distinguish between US and Indian stocks
+        // US stocks typically have 1-5 letters, Indian stocks typically have 3-6 letters
+        // But this is not reliable alone, so we need better logic
+        
+        // Common US stock patterns (most US tech stocks)
+        const commonUSStocks = ['AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'DIS', 'AMD', 'INTC', 'CSCO', 'PEP', 'COST', 'WMT', 'PG', 'JNJ', 'UNH', 'HD', 'KO']
+        
+        // Check if it's a common US stock
+        if (commonUSStocks.includes(symbol)) {
+          tvSymbol = symbol
+        } else if (symbol.length <= 4) {
+          // Short symbols (1-4 letters) are likely US stocks
+          tvSymbol = symbol
+        } else if (symbol.length >= 5 && symbol.length <= 6) {
+          // 5-6 letters could be either, but likely Indian if no exchange suffix
+          // Default to NSE for 5-6 letter symbols (most Indian stocks)
+          tvSymbol = `NSE:${symbol}`
+        } else {
+          // For longer symbols, let TradingView decide
+          tvSymbol = symbol
+        }
+      }
+    } else {
+      // Default case - treat as Equity if category is not clearly defined
+      console.log('Using default case - treating as Equity')
+      if (symbol.includes('.NS')) {
+        tvSymbol = `NSE:${symbol.replace('.NS', '')}`
+      } else if (symbol.includes('.BO')) {
+        tvSymbol = `BSE:${symbol.replace('.BO', '')}`
+      } else if (symbol.includes('.US') || symbol.includes('.NASDAQ') || symbol.includes('.NYSE')) {
+        tvSymbol = symbol.split('.')[0]
+      } else {
+        // Apply same logic as above for default case
+        const commonUSStocks = ['AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'DIS', 'AMD', 'INTC', 'CSCO', 'PEP', 'COST', 'WMT', 'PG', 'JNJ', 'UNH', 'HD', 'KO']
+        
+        if (commonUSStocks.includes(symbol)) {
+          tvSymbol = symbol
+        } else if (symbol.length <= 4) {
+          tvSymbol = symbol
+        } else if (symbol.length >= 5 && symbol.length <= 6) {
+          tvSymbol = `NSE:${symbol}`
+        } else {
+          tvSymbol = symbol
+        }
       }
     }
+    
+    console.log('Final TradingView Symbol:', tvSymbol)
 
     let script = document.getElementById('tradingview-widget-script') as HTMLScriptElement
     
@@ -134,7 +184,35 @@ export function AssetDetailsModal({ isOpen, onClose, asset }: AssetDetailsModalP
         <div className="flex-1 min-h-0 mt-4 border rounded-md overflow-hidden bg-white">
           <TradingViewWidget 
             symbol={asset.symbol} 
-            category={asset.category || asset.sector === 'Cryptocurrency' ? 'Crypto' : 'Equity'} 
+            category={(() => {
+              // More robust category detection
+              let cat = 'Equity' // Default to Equity
+              
+              // Check explicit category first
+              if (asset.category) {
+                if (asset.category.toLowerCase().includes('crypto')) {
+                  cat = 'Crypto'
+                } else if (asset.category.toLowerCase().includes('equity')) {
+                  cat = 'Equity'
+                } else {
+                  cat = asset.category
+                }
+              }
+              
+              // Check sector if category is not explicitly set
+              if (!asset.category && asset.sector) {
+                if (asset.sector.toLowerCase().includes('cryptocurrency') || 
+                    asset.sector.toLowerCase().includes('crypto') ||
+                    asset.sector.toLowerCase().includes('digital')) {
+                  cat = 'Crypto'
+                } else {
+                  cat = 'Equity'
+                }
+              }
+              
+              console.log('AssetDetailsModal - Asset:', asset.symbol, 'Category:', asset.category, 'Sector:', asset.sector, 'Final Category:', cat)
+              return cat
+            })()} 
           />
         </div>
         
