@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { auth } from "@/lib/firebase"
 
 type Log = {
   id: string
@@ -17,13 +18,23 @@ export function SecurityTimeline() {
   const { data, refetch } = useQuery({
     queryKey: ["security-logs"],
     queryFn: async (): Promise<Log[]> => {
-      const res = await fetch("/api/security/logs")
+      const res = await fetch("/api/security/logs", {
+        headers: {
+          'x-user-id': 'current-user'
+        }
+      })
       return res.json()
     },
   })
 
   async function act(id: string, action: "ack" | "report") {
-    await fetch("/api/security/logs", { method: "POST", body: JSON.stringify({ id, action }) })
+    await fetch("/api/security/logs", { 
+      method: "POST", 
+      headers: {
+        'x-user-id': 'current-user'
+      },
+      body: JSON.stringify({ id, action }) 
+    })
     refetch()
   }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
-  const { amount, rate, tenure, loanType } = await req.json()
+  const { amount, rate, tenure, loanType, annualIncome } = await req.json()
   
   // Calculate EMI using the formula: EMI = P × r × (1 + r)^n / ((1 + r)^n - 1)
   const monthlyRate = rate / 100 / 12
@@ -19,54 +19,55 @@ export async function POST(req: Request) {
     }
   }
   
-  // Determine affordability and risk based on loan type and amount
-  let affordability = "Medium"
-  let risk = "Medium"
+  // Calculate DTI ratio (EMI as % of Monthly Income)
+  const monthlyIncome = annualIncome ? annualIncome / 12 : 100000 // Default to 1L if not provided
+  const emiStress = Math.round(Math.min(100, (emi / monthlyIncome) * 100))
+  
+  // Determine affordability and risk based on DTI ratio
+  let affordability: "Low" | "Medium" | "High" = "Medium"
+  let risk: "Low" | "Medium" | "High" = "Medium"
   let mitigations: string[] = []
   
-  if (loanType === "house") {
-    if (amount > 10000000) {
-      affordability = "Low"
-      risk = "High"
-      mitigations = [
-        "Consider increasing down payment to reduce EMI burden",
-        "Look for lower interest rates from SBI or HDFC",
-        "Ensure monthly EMI is less than 40% of income",
-        "Consider longer tenure with prepayment flexibility"
-      ]
-    } else {
-      mitigations = [
-        "SBI offers lowest home loan rates (8.4%)",
-        "Consider prepayment to save interest",
-        "Maintain DTI < 40% as per RBI guidelines",
-        "Check for government subsidies if eligible"
-      ]
-    }
-  } else if (loanType === "car") {
-    if (amount > 1500000) {
-      affordability = "Low"
-      risk = "High"
-      mitigations = [
-        "Consider higher down payment to reduce EMI",
-        "Compare rates from multiple banks",
-        "Ensure EMI doesn't exceed 20% of monthly income",
-        "Consider shorter tenure for car loans"
-      ]
-    } else {
-      mitigations = [
-        "HDFC offers competitive car loan rates",
-        "Consider shorter tenure (3-5 years) for cars",
-        "Check for manufacturer financing offers",
-        "Maintain good credit score for better rates"
-      ]
-    }
-  } else if (loanType === "student") {
+  // DTI-based affordability and risk assessment
+  if (emiStress > 50) {
+    affordability = "Low"
+    risk = "High"
     mitigations = [
-      "SBI offers lowest education loan rates (7.5%)",
-      "Moratorium period available during studies",
-      "Interest subsidy available for certain courses",
-      "Consider government education loan schemes"
+      "Reduce loan amount or increase down payment",
+      "Look for lower interest rates from SBI or HDFC", 
+      "Consider longer loan tenure to reduce EMI",
+      "Increase income before applying for this loan amount"
     ]
+  } else if (emiStress > 35) {
+    affordability = "Medium" 
+    risk = "Medium"
+    mitigations = [
+      "Monitor EMI burden carefully",
+      "Consider prepayment to reduce interest cost",
+      "Maintain emergency fund for loan payments",
+      "Look for opportunities to refinance at better rates"
+    ]
+  } else {
+    affordability = "High"
+    risk = "Low"
+    mitigations = [
+      "This loan is well within your affordability",
+      "Consider prepayment to save on interest",
+      "Maintain good credit score for better rates",
+      "Check for government subsidies if eligible"
+    ]
+  }
+
+  // Add loan-type specific mitigations
+  if (loanType === "house") {
+    mitigations.push("Section 24(b): Tax deduction up to ₹2L on interest")
+    mitigations.push("Section 80C: Tax deduction on principal repayment")
+  } else if (loanType === "car") {
+    mitigations.push("Consider zero-depreciation insurance for new cars")
+    mitigations.push("Avoid long tenure for depreciating assets")
+  } else if (loanType === "student") {
+    mitigations.push("Section 80E: Full interest deduction for 8 years")
+    mitigations.push("Utilize moratorium period effectively")
   }
   
   const response = {

@@ -49,14 +49,8 @@ const BANK_RATES = {
 export default function LoanPage() {
   const { annualIncome } = useUserProfile()
   const [loanType, setLoanType] = useState<"house" | "car" | "student">("house")
-  const [loanValues, setLoanValues] = useState({
-    amount: 5000000,
-    tenure: 240,
-    rate: 8.5
-  })
   const [modelStatus, setModelStatus] = useState<any>(null)
-  const [loanAnalysis, setLoanAnalysis] = useState<any>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [loanValues, setLoanValues] = useState({ amount: 5000000, rate: 8.5, tenure: 240 })
 
   const monthlyIncome = annualIncome ? annualIncome / 12 : 100000 // Default to 1L if not synced
 
@@ -72,10 +66,26 @@ export default function LoanPage() {
     return Math.round(Math.min(100, stress))
   }, [currentEMI, monthlyIncome])
 
+  // Calculate interest savings with best bank rate
+  const calculateInterestSavings = () => {
+    const bestBankRate = compare[0]?.rate
+    if (!bestBankRate) return 0
+    
+    const bestRate = typeof bestBankRate === 'string' ? parseFloat(bestBankRate.replace('%', '')) : bestBankRate
+    const rateDiff = loanValues.rate - bestRate
+    if (rateDiff <= 0) return 0
+    
+    // Calculate total interest with current rate vs best rate
+    const currentTotalInterest = (currentEMI * loanValues.tenure) - loanValues.amount
+    const bestEMI = calculateEMI(loanValues.amount, bestRate, loanValues.tenure)
+    const bestTotalInterest = (bestEMI * loanValues.tenure) - loanValues.amount
+    
+    return currentTotalInterest - bestTotalInterest
+  }
+
   // Dynamic bank comparison based on current loan amount and tenure
   const compare = useMemo(() => {
-    const currentBankRates = BANK_RATES[loanType as keyof typeof BANK_RATES]
-    return currentBankRates.map((bank: any) => {
+    return BANK_RATES[loanType].map(bank => {
       const emi = calculateEMI(loanValues.amount, bank.rate, loanValues.tenure)
       return {
         ...bank,
@@ -101,84 +111,6 @@ export default function LoanPage() {
     }
     checkModelStatus()
   }, [])
-
-  // Comprehensive loan analysis function
-  const analyzeLoan = async () => {
-    setIsAnalyzing(true)
-    try {
-      // Get basic assessment
-      const assessResponse = await fetch('/api/loan/assess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: loanValues.amount,
-          rate: loanValues.rate,
-          tenure: loanValues.tenure,
-          loanType: loanType
-        })
-      })
-      const assessData = await assessResponse.json()
-
-      // Get AI prediction if models are available
-      let predictData = null
-      if (modelStatus?.modelsLoaded) {
-        try {
-          const predictResponse = await fetch('/api/loan/predict', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              loanAmount: loanValues.amount,
-              loanDuration: loanValues.tenure / 12,
-              baseInterestRate: loanValues.rate,
-              monthlyLoanPayment: currentEMI,
-              age: 30,
-              annualIncome: annualIncome || 1200000,
-              creditScore: 750,
-              employmentStatus: 'employed',
-              experience: 5,
-              monthlyDebtPayments: currentEMI * 0.3,
-              creditCardUtilizationRate: 0.3,
-              numberOfOpenCreditLines: 3,
-              numberOfCreditInquiries: 2,
-              bankruptcyHistory: 0,
-              previousLoanDefaults: 0,
-              paymentHistory: 0,
-              lengthOfCreditHistory: 5,
-              savingsAccountBalance: 100000,
-              checkingAccountBalance: 50000,
-              totalAssets: 2000000,
-              totalLiabilities: loanValues.amount * 0.8,
-              monthlyIncome: monthlyIncome,
-              utilityBillsPaymentHistory: 0,
-              jobTenure: 3,
-              netWorth: 1500000,
-              interestRate: loanValues.rate,
-              totalDebtToIncomeRatio: (currentEMI * 1.3) / monthlyIncome,
-              educationLevel: 'graduate',
-              maritalStatus: 'single',
-              homeOwnershipStatus: 'rented',
-              loanPurpose: loanType,
-              numberOfDependents: 0
-            })
-          })
-          predictData = await predictResponse.json()
-        } catch (predictError) {
-          console.error('Failed to get AI prediction:', predictError)
-        }
-      }
-
-      // Combine both analyses
-      setLoanAnalysis({
-        assessment: assessData,
-        prediction: predictData,
-        hasAI: !!predictData
-      })
-    } catch (error) {
-      console.error('Failed to analyze loan:', error)
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
 
   return (
     <AppShell>
@@ -293,8 +225,8 @@ export default function LoanPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-xs text-muted-foreground uppercase">Interest Saved</div>
-                    <div className="text-xl font-bold text-green-600">₹{Math.round(currentEMI * 0.1).toLocaleString()}*</div>
-                    <div className="text-[10px] text-muted-foreground">*via 0.5% rate reduction</div>
+                    <div className="text-xl font-bold text-green-600">₹{Math.round(calculateInterestSavings()).toLocaleString()}*</div>
+                    <div className="text-[10px] text-muted-foreground">*vs. current rate with best bank</div>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-xs text-muted-foreground uppercase">Affordability</div>
@@ -355,117 +287,6 @@ export default function LoanPage() {
               <span>🎯</span>
               Best Selection: {compare[0].bank} offers the most competitive interest rate of {compare[0].rate} for this loan profile.
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Comprehensive Loan Analysis */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <CardTitle>🔍 Comprehensive Loan Analysis</CardTitle>
-              <button
-                onClick={analyzeLoan}
-                disabled={isAnalyzing}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isAnalyzing ? 'Analyzing...' : 'Analyze Loan'}
-              </button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loanAnalysis ? (
-              <div className="space-y-6">
-                {/* Basic Assessment Section */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-semibold text-gray-700 mb-2">EMI Analysis</h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Monthly EMI:</span>
-                          <span className="font-bold">₹{loanAnalysis.assessment.emi?.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Affordability:</span>
-                          <span className={`font-bold ${loanAnalysis.assessment.affordability === 'High' ? 'text-green-600' : loanAnalysis.assessment.affordability === 'Medium' ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {loanAnalysis.assessment.affordability}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Risk Level:</span>
-                          <span className={`font-bold ${loanAnalysis.assessment.risk === 'Low' ? 'text-green-600' : loanAnalysis.assessment.risk === 'Medium' ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {loanAnalysis.assessment.risk}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-semibold text-blue-700 mb-2">Recommendations</h4>
-                      <ul className="space-y-1 text-sm">
-                        {loanAnalysis.assessment.mitigations?.map((mitigation: string, index: number) => (
-                          <li key={index} className="flex items-start">
-                            <span className="text-blue-600 mr-2">•</span>
-                            <span className="text-gray-700">{mitigation}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                {/* AI Prediction Section (if available) */}
-                {loanAnalysis.hasAI && loanAnalysis.prediction && (
-                  <div className="border-t pt-6">
-                    <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                      🤖 AI-Powered Approval Prediction
-                      <Badge variant="outline" className="text-xs">ML Models Active</Badge>
-                    </h4>
-                    <div className="grid md:grid-cols-3 gap-4 mb-4">
-                      <div className="p-4 bg-gray-50 rounded-lg text-center">
-                        <div className="text-2xl font-bold mb-1">{loanAnalysis.prediction.loanApproved ? '✅' : '❌'}</div>
-                        <div className="text-sm font-semibold">{loanAnalysis.prediction.loanApproved ? 'Approved' : 'Rejected'}</div>
-                      </div>
-                      <div className="p-4 bg-blue-50 rounded-lg text-center">
-                        <div className="text-2xl font-bold mb-1">{loanAnalysis.prediction.riskScore}</div>
-                        <div className="text-sm font-semibold">Risk Score</div>
-                      </div>
-                      <div className="p-4 bg-green-50 rounded-lg text-center">
-                        <div className="text-2xl font-bold mb-1">{loanAnalysis.prediction.acceptanceScore}%</div>
-                        <div className="text-sm font-semibold">Acceptance Score</div>
-                      </div>
-                    </div>
-                    <div className="p-4 bg-yellow-50 rounded-lg">
-                      <h5 className="font-semibold text-yellow-700 mb-2">AI Risk Analysis</h5>
-                      <p className="text-sm text-gray-700 mb-2">{loanAnalysis.prediction.riskLevel}</p>
-                      <div className="text-sm text-gray-600">Confidence: {loanAnalysis.prediction.confidence}%</div>
-                    </div>
-                    {loanAnalysis.prediction.recommendations && loanAnalysis.prediction.recommendations.length > 0 && (
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <h5 className="font-semibold text-blue-700 mb-2">AI Recommendations</h5>
-                        <ul className="space-y-1 text-sm">
-                          {loanAnalysis.prediction.recommendations.map((rec: string, index: number) => (
-                            <li key={index} className="flex items-start">
-                              <span className="text-blue-600 mr-2">•</span>
-                              <span className="text-gray-700">{rec}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <div className="text-4xl mb-2">📊</div>
-                <p>Click "Analyze Loan" to get comprehensive loan analysis</p>
-                {modelStatus?.modelsLoaded && (
-                  <p className="text-sm mt-2">Includes AI-powered approval prediction</p>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
 
