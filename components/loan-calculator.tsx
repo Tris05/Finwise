@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useMutation } from "@tanstack/react-query"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts"
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Area, AreaChart, CartesianGrid } from "recharts"
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
 import {
@@ -23,6 +23,7 @@ import {
   type BankOffer
 } from "@/lib/loan-calculator"
 import { useLoans } from "@/hooks/useLoans"
+import { useUserProfile } from "@/hooks/useUserProfile"
 
 type AssessResponse = {
   emi: number
@@ -40,6 +41,8 @@ interface LoanCalculatorProps {
 }
 
 export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps) {
+  const { annualIncome } = useUserProfile()
+  
   // Default values based on loan type
   const getDefaultValues = (type: LoanType) => {
     switch (type) {
@@ -118,7 +121,7 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
 
       const res = await fetch("/api/loan/assess", {
         method: "POST",
-        body: JSON.stringify({ amount, rate, tenure, loanType }),
+        body: JSON.stringify({ amount, rate, tenure, loanType, annualIncome }),
       })
       if (!res.ok) throw new Error("Failed")
       return res.json()
@@ -208,19 +211,6 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
                   Calculating...
                 </>
               ) : "Assess Loan"}
-            </Button>
-            <Button
-              onClick={() => predictLoan.mutate()}
-              variant="outline"
-              disabled={predictLoan.isPending}
-              className="min-w-[140px]"
-            >
-              {predictLoan.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Predicting...
-                </>
-              ) : "Predict Approval"}
             </Button>
           </div>
         </CardContent>
@@ -337,18 +327,121 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
           {assess.data && (
             <Card>
               <CardHeader>
-                <CardTitle>Balance Over Time</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  📊 Balance Over Time
+                  <Badge variant="outline" className="text-xs">
+                    {assess.data.schedule.length} years
+                  </Badge>
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Track your loan balance reduction over the entire tenure
+                </p>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
+                <div className="h-96">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={assess.data.schedule}>
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="balance" stroke="var(--chart-4)" />
-                    </LineChart>
+                    <AreaChart 
+                      data={assess.data.schedule}
+                      margin={{ top: 10, right: 30, left: 60, bottom: 40 }}
+                    >
+                      <defs>
+                        <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid 
+                        strokeDasharray="3 3" 
+                        stroke="#e5e7eb" 
+                        className="opacity-30"
+                      />
+                      <XAxis 
+                        dataKey="month" 
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        tickLine={{ stroke: '#e5e7eb' }}
+                        axisLine={{ stroke: '#e5e7eb' }}
+                        label={{ 
+                          value: 'Time (Months)', 
+                          position: 'insideBottom', 
+                          offset: -5,
+                          style: { fontSize: 12, fill: '#6b7280' }
+                        }}
+                        tickFormatter={(value) => {
+                          if (value % 12 === 0) {
+                            return `Year ${value / 12}`
+                          }
+                          return ''
+                        }}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        tickLine={{ stroke: '#e5e7eb' }}
+                        axisLine={{ stroke: '#e5e7eb' }}
+                        label={{ 
+                          value: 'Outstanding Balance (₹)', 
+                          angle: -90, 
+                          position: 'insideLeft',
+                          style: { fontSize: 12, fill: '#6b7280' }
+                        }}
+                        tickFormatter={(value) => {
+                          if (value >= 100000) {
+                            return `₹${(value / 100000).toFixed(0)}L`
+                          }
+                          return `₹${(value / 1000).toFixed(0)}K`
+                        }}
+                      />
+                      <Tooltip 
+                        formatter={(value: any, name: any) => [
+                          `₹${Number(value).toLocaleString()}`,
+                          'Outstanding Balance'
+                        ]}
+                        labelFormatter={(label) => {
+                          const month = Number(label)
+                          const year = Math.floor(month / 12)
+                          const remainingMonth = month % 12
+                          return `Month ${month} (${year > 0 ? `Year ${year}` : 'Start'}${remainingMonth > 0 ? `, Month ${remainingMonth}` : ''})`
+                        }}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                          backdropFilter: 'blur(8px)'
+                        }}
+                        labelStyle={{ color: '#374151', fontWeight: 'bold' }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="balance" 
+                        stroke="#3B82F6"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#balanceGradient)"
+                        animationDuration={1500}
+                        animationEasing="ease-in-out"
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="text-xs text-blue-600 font-medium">Starting Balance</div>
+                    <div className="text-lg font-bold text-blue-700">
+                      ₹{assess.data.schedule[0]?.balance?.toLocaleString() || '0'}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <div className="text-xs text-green-600 font-medium">Final Balance</div>
+                    <div className="text-lg font-bold text-green-700">
+                      ₹{assess.data.schedule[assess.data.schedule.length - 1]?.balance?.toLocaleString() || '0'}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <div className="text-xs text-purple-600 font-medium">Total Paid</div>
+                    <div className="text-lg font-bold text-purple-700">
+                      ₹{assess.data.emi ? (assess.data.emi * assess.data.schedule[assess.data.schedule.length - 1]?.month || 0).toLocaleString() : '0'}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -15,6 +15,7 @@ interface PortfolioOverviewProps {
   onRefresh?: () => void
   onRebalance?: () => void
   isLoading?: boolean
+  goals?: any[]
 }
 
 export function PortfolioOverview({
@@ -25,10 +26,19 @@ export function PortfolioOverview({
   dayChangePercent = 0,
   onRefresh,
   onRebalance,
-  isLoading = false
+  isLoading = false,
+  goals = []
 }: PortfolioOverviewProps) {
   const isGain = totalGain >= 0
   const isDayGain = dayChange >= 0
+
+  // Calculate goals progress
+  const completedGoals = goals.filter(goal => {
+    const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0
+    return progress >= 100
+  }).length
+  const totalGoals = goals.length
+  const goalsProgress = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -92,11 +102,11 @@ export function PortfolioOverview({
           </div>
         </CardHeader>
         <CardContent className="space-y-3 pr-4">
-          <div className="text-2xl font-bold text-foreground">3/5</div>
+          <div className="text-2xl font-bold text-foreground">{completedGoals}/{totalGoals}</div>
           <div className="flex items-center space-x-2 flex-wrap">
             <span className="text-xs text-muted-foreground">Goals achieved</span>
             <Badge variant="secondary" className="text-xs px-2 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-              60% Complete
+              {goalsProgress}% Complete
             </Badge>
           </div>
         </CardContent>

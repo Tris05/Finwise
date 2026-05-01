@@ -15,7 +15,7 @@ from scorer import score_financial_fields
 app = Flask(__name__, static_folder="static")
 CORS(app, resources={r"/*": {"origins": "*"}}) 
 
-POPPLER_PATH = None  # set if needed on Windows
+POPPLER_PATH = r"C:\poppler\poppler-25.12.0\Library\bin"  # set if needed on Windows
 layout_model = LayoutModel(device="cpu")  # change to "cuda" if you have GPU and torch GPU available
 
 @app.route("/")
@@ -77,7 +77,12 @@ def analyze():
             "height": page_img.height
         })
 
-    risky_texts = {str(v).lower() for v in regex_fields.values() if isinstance(v, (str, int, float))}
+    risky_texts = {'overdue', 'late payment', 'default', 'delinquent', 'warning'}
+    if score > 0:
+        for k in ['total_due', 'min_due', 'credit_limit']:
+            if k in regex_fields:
+                risky_texts.add(str(regex_fields[k]).lower())
+
     for e in all_entities:
         text = str(e.get("text", "")).lower()
         e["risky"] = any(rt in text for rt in risky_texts)

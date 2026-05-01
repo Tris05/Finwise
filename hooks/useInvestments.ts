@@ -43,8 +43,8 @@ export const useInvestments = () => {
         const portfolioRef = collection(db, "users", user.uid, "portfolio")
         const unsubscribe = onSnapshot(portfolioRef, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
+                ...doc.data(),
                 id: doc.id,
-                ...doc.data()
             }))
             setBaseInvestments(data)
             setLoading(false)

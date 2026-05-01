@@ -91,7 +91,7 @@ const round = (val: number) => Math.round((val + Number.EPSILON) * 100) / 100
 
 export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     const [step, setStep] = useState(1)
-    const [totalSteps] = useState(6)
+    const [totalSteps] = useState(5)
     const { optimizePortfolio, loading, currentRequest, error: optimizerError } = usePortfolioOptimizer()
     const { annualIncome, age, riskProfile } = useUserProfile()
     const { investments, totalValue } = useInvestments()
@@ -450,79 +450,6 @@ export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) 
                                         <ChevronLeft className="mr-2 w-4 h-4" /> Back
                                     </Button>
                                     <Button type="button" onClick={nextStep} className="flex-1 h-12 font-bold">
-                                        Next: Current Holdings <ChevronRight className="ml-2 w-4 h-4" />
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-                        </motion.div>
-                    )}
-
-                    {step === 4 && (
-                        <motion.div
-                            key="step4"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="space-y-6"
-                        >
-                            <Card className="border-none shadow-xl bg-background/60 backdrop-blur-md">
-                                <CardHeader>
-                                    <div className="flex items-center gap-2 text-primary font-semibold mb-1">
-                                        <Briefcase className="w-5 h-5" />
-                                        <span>Portfolio context</span>
-                                    </div>
-                                    <CardTitle className="text-3xl font-extrabold">Existing Holdings</CardTitle>
-                                    <CardDescription>What assets do you already own? (Optional but recommended)</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-xs">Stocks (₹)</Label>
-                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.stocks", { valueAsNumber: true })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs">Crypto (₹)</Label>
-                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.crypto", { valueAsNumber: true })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs">FD (₹)</Label>
-                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.fd", { valueAsNumber: true })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs">PPF (₹)</Label>
-                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.ppf", { valueAsNumber: true })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs">Mutual Funds (₹)</Label>
-                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.mutual_funds", { valueAsNumber: true })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs">Commodities (₹)</Label>
-                                            <Input type="number" className="bg-secondary/20" {...form.register("financial_details.existing_investments.commodities", { valueAsNumber: true })} />
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-6 border-t border-border/50">
-                                        <Label className="text-sm font-bold text-red-400 flex items-center gap-2 mb-4">
-                                            <AlertTriangle className="w-4 h-4" /> Outstanding Debts
-                                        </Label>
-                                        <div className="grid grid-cols-2 gap-6">
-                                            <div className="space-y-2">
-                                                <Label className="text-xs">Loans (Home/Auto/Personal)</Label>
-                                                <Input type="number" className="bg-red-500/5 border-red-500/10" {...form.register("financial_details.debts.loans", { valueAsNumber: true })} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs">Credit Card Dues</Label>
-                                                <Input type="number" className="bg-red-500/5 border-red-500/10" {...form.register("financial_details.debts.credit_cards", { valueAsNumber: true })} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="flex gap-4">
-                                    <Button type="button" variant="ghost" onClick={prevStep} className="flex-1 h-12">
-                                        <ChevronLeft className="mr-2 w-4 h-4" /> Back
-                                    </Button>
-                                    <Button type="button" onClick={nextStep} className="flex-1 h-12 font-bold">
                                         Next: Financial Goals <ChevronRight className="ml-2 w-4 h-4" />
                                     </Button>
                                 </CardFooter>
@@ -530,9 +457,11 @@ export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) 
                         </motion.div>
                     )}
 
-                    {step === 5 && (
+
+
+                    {step === 4 && (
                         <motion.div
-                            key="step5"
+                            key="step4"
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
@@ -607,9 +536,9 @@ export const FinancialProfileForm = ({ onSuccess }: { onSuccess?: () => void }) 
                         </motion.div>
                     )}
 
-                    {step === 6 && (
+                    {step === 5 && (
                         <motion.div
-                            key="step6"
+                            key="step5"
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}

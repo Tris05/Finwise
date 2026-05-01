@@ -89,10 +89,24 @@ class StockSelector:
                 # Calculate risk-adjusted score
                 score = (mean_return / max(volatility, 1e-6)) * 100
                 
-                # Boost for preferred stocks
-                if sym in preferred_stocks or any(pref in sym for pref in preferred_stocks):
+                # Robust preferred stock matching
+                sym_upper = sym.upper()
+                sym_base = sym_upper.split('.')[0] # e.g. TCS.NS -> TCS
+                name_upper = str(d.get("name", "")).upper()
+                name_words = set(name_upper.replace(',', '').replace('.', '').split())
+                
+                is_preferred = False
+                for pref in preferred_stocks:
+                    p = pref.upper().strip()
+                    if not p: continue
+                    # Exact match on symbol (with or without .NS) or exact match as a whole word in the company name
+                    if p == sym_upper or p == sym_base or p in name_words or p == name_upper:
+                        is_preferred = True
+                        break
+                        
+                if is_preferred:
                     score *= 1.3
-                    logger.info(f"Boosting {sym} - preferred stock")
+                    logger.info(f"Boosting {sym} - preferred stock match")
                 
                 # Boost for market cap if available
                 mc = d.get("market_cap")

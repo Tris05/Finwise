@@ -5,10 +5,11 @@ import { AppShell } from "@/components/app-shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { RebalanceModal } from "@/components/rebalance-modal"
 import { GamificationCard } from "@/components/gamification-card"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from "recharts"
+import { useMarketData } from "@/hooks/use-market-data"
 import { motion, AnimatePresence } from "framer-motion"
 import { formatINR } from "@/lib/utils"
 import {
@@ -45,23 +46,30 @@ import { useAgenticInsights } from "@/hooks/useAgenticInsights"
 import { useFinancialGoals } from "@/hooks/useFinancialGoals"
 import { usePortfolioHistory } from "@/hooks/usePortfolioHistory"
 
-
-
+// Live Market Pulse Constants
+const LIVE_REFRESH_MS = 60000
+const MAX_LIVE_POINTS = 120
+const MARKET_INDICATORS = [
+  { key: "nifty", label: "Nifty 50", symbol: "^NSEI", color: "#3B82F6" },
+  { key: "sensex", label: "Sensex", symbol: "^BSESN", color: "#10B981" },
+  { key: "gold", label: "Gold", symbol: "GC=F", color: "#F59E0B" },
+  { key: "btc", label: "Bitcoin", symbol: "BTC-USD", color: "#8B5CF6" },
+]
 
 // Realistic portfolio data with actual Indian companies
 const portfolioData = [
   { name: "Jan 2024", value: 1245000, gain: 45000, date: "2024-01-01" },
   { name: "Feb 2024", value: 1289000, gain: 44000, date: "2024-02-01" },
   { name: "Mar 2024", value: 1321000, gain: 32000, date: "2024-03-01" },
-  { name: "Apr 2024", value: 1358000, gain: 37000, date: "2024-04-01" },
-  { name: "May 2024", value: 1412000, gain: 54000, date: "2024-05-01" },
-  { name: "Jun 2024", value: 1389000, gain: -23000, date: "2024-06-01" },
-  { name: "Jul 2024", value: 1445000, gain: 56000, date: "2024-07-01" },
-  { name: "Aug 2024", value: 1492000, gain: 47000, date: "2024-08-01" },
+  { name: "Apr 2024", value: 1356000, gain: 35000, date: "2024-04-01" },
+  { name: "May 2024", value: 1389000, gain: 33000, date: "2024-05-01" },
+  { name: "Jun 2024", value: 1423000, gain: 34000, date: "2024-06-01" },
+  { name: "Jul 2024", value: 1456000, gain: 33000, date: "2024-07-01" },
+  { name: "Aug 2024", value: 1492000, gain: 36000, date: "2024-08-01" },
   { name: "Sep 2024", value: 1528000, gain: 36000, date: "2024-09-01" },
   { name: "Oct 2024", value: 1564000, gain: 36000, date: "2024-10-01" },
-  { name: "Nov 2024", value: 1591000, gain: 27000, date: "2024-11-01" },
-  { name: "Dec 2024", value: 1642300, gain: 51300, date: "2024-12-01" },
+  { name: "Nov 2024", value: 1632000, gain: 68000, date: "2024-11-01" },
+  { name: "Dec 2024", value: 1689000, gain: 57000, date: "2024-12-01" },
 ]
 
 const weeklyPerformance = [
@@ -103,6 +111,9 @@ const financialGoals = [
 export default function DashboardPage() {
   const [open, setOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  const [liveChartData, setLiveChartData] = useState<any[]>([])
+  const [indicatorBaselines, setIndicatorBaselines] = useState<Record<string, number>>({})
+  const [latestIndicators, setLatestIndicators] = useState<Record<string, { price: number; dayChangePercent: number; currency: string }>>({})
 
   const { city, riskProfile } = useUserProfile()
   const {
@@ -119,6 +130,101 @@ export default function DashboardPage() {
   const { history, loading: historyLoading } = usePortfolioHistory(12)
 
   const displayHistory = history.length > 0 ? history : portfolioData // Fallback to mock for empty new accounts
+
+  // Live Market Pulse functions
+  const fetchIndicators = async () => {
+    try {
+      const responses = await Promise.all(
+        MARKET_INDICATORS.map(async (indicator) => {
+          const response = await fetch('/api/market-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'get_quote',
+              symbol: indicator.symbol
+            }),
+          })
+          if (!response.ok) return null
+          const data = await response.json()
+          return data.success ? { key: indicator.key, price: data.data.price, dayChangePercent: data.data.dayChangePercent, currency: data.data.currency } : null
+        })
+      )
+
+      const validResponses = responses.filter((response): response is NonNullable<typeof response> => response !== null)
+
+      if (validResponses.length > 0) {
+        setLatestIndicators((prev) => {
+          const next = { ...prev }
+          validResponses.forEach((item) => {
+            next[item.key] = { price: item.price, dayChangePercent: item.dayChangePercent, currency: item.currency }
+          })
+          return next
+        })
+
+        setIndicatorBaselines((prev) => {
+          const next = { ...prev }
+          validResponses.forEach((item) => {
+            if (!prev[item.key]) {
+              next[item.key] = item.price
+            }
+          })
+          return next
+        })
+
+        const point: Record<string, any> = {
+          t: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+        }
+        MARKET_INDICATORS.forEach((indicator) => {
+          point[`${indicator.key}Price`] = null
+          point[`${indicator.key}Move`] = null
+          point[`${indicator.key}DayMove`] = null
+        })
+
+        validResponses.forEach((item) => {
+          const baseline = indicatorBaselines[item.key] || item.price
+          const move = ((item.price - baseline) / baseline) * 100
+          point[`${item.key}Price`] = item.price
+          point[`${item.key}Move`] = Number(move.toFixed(2))
+          point[`${item.key}DayMove`] = Number(item.dayChangePercent.toFixed(2))
+        })
+
+        setLiveChartData((prevPoints) => [...prevPoints, point].slice(-MAX_LIVE_POINTS))
+      }
+    } catch (error) {
+      console.error("Failed to fetch indicators:", error)
+    }
+  }
+
+  const preloadHistoricalData = () => {
+    const now = new Date()
+    const liveHistoricalData = []
+    for (let i = 29; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60000)
+      const point: Record<string, any> = {
+        t: time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+      }
+      
+      MARKET_INDICATORS.forEach((indicator) => {
+        const baseChange = Math.random() * 2 - 1
+        const volatility = indicator.key === 'btc' ? 3 : indicator.key === 'gold' ? 1.5 : 0.8
+        const change = baseChange * volatility
+        point[`${indicator.key}Move`] = Number(change.toFixed(2))
+        point[`${indicator.key}DayMove`] = Number((Math.random() * 4 - 2).toFixed(2))
+      })
+      
+      liveHistoricalData.push(point)
+    }
+    setLiveChartData(liveHistoricalData)
+  }
+
+  useEffect(() => {
+    preloadHistoricalData()
+    void fetchIndicators()
+    const interval = setInterval(() => {
+      void fetchIndicators()
+    }, LIVE_REFRESH_MS)
+    return () => clearInterval(interval)
+  }, [])
 
   const kpis = [
     {
@@ -202,7 +308,7 @@ export default function DashboardPage() {
       icon: Bot,
       color: "bg-gradient-to-br from-blue-500 to-purple-600",
       href: "/advisor",
-      stats: "95% accuracy"
+      stats: recommendations.length > 0 ? `${recommendations.length} insight${recommendations.length > 1 ? 's' : ''} ready` : "95% accuracy"
     },
     {
       title: "Smart Investments",
@@ -210,7 +316,7 @@ export default function DashboardPage() {
       icon: Wallet,
       color: "bg-gradient-to-br from-green-500 to-emerald-600",
       href: "/investments",
-      stats: "₹15.5L portfolio"
+      stats: invLoading ? "Loading..." : totalValue > 0 ? `${formatINR(totalValue)} portfolio` : "Start investing"
     },
     {
       title: "Credit Card Recommendations",
@@ -218,7 +324,7 @@ export default function DashboardPage() {
       icon: CreditCard,
       color: "bg-gradient-to-br from-orange-500 to-red-600",
       href: "/credit-cards",
-      stats: "3 cards recommended"
+      stats: "Personalized picks"
     },
     {
       title: "Document Management",
@@ -226,7 +332,7 @@ export default function DashboardPage() {
       icon: FileText,
       color: "bg-gradient-to-br from-indigo-500 to-blue-600",
       href: "/documents",
-      stats: "12 documents"
+      stats: "Secure & organized"
     },
     {
       title: "Loan Management",
@@ -234,7 +340,7 @@ export default function DashboardPage() {
       icon: Landmark,
       color: "bg-gradient-to-br from-teal-500 to-cyan-600",
       href: "/loan",
-      stats: "2 active loans"
+      stats: "AI repayment plans"
     },
     {
       title: "Learning Hub",
@@ -242,7 +348,7 @@ export default function DashboardPage() {
       icon: GraduationCap,
       color: "bg-gradient-to-br from-pink-500 to-rose-600",
       href: "/learning",
-      stats: "8 courses completed"
+      stats: score > 0 ? `Score: ${score}/1000` : "Start learning"
     }
   ]
 
@@ -490,7 +596,7 @@ export default function DashboardPage() {
               </CardHeader>
 
               <CardContent className="space-y-6">
-                {/* Portfolio Growth Chart with Enhanced Animations */}
+                {/* Live Market Pulse Chart */}
                 <motion.div
                   className="space-y-4"
                   initial={{ opacity: 0, y: 20 }}
@@ -498,8 +604,23 @@ export default function DashboardPage() {
                   transition={{ delay: 0.6 }}
                 >
                   <div className="text-center">
-                    <h3 className="text-lg font-semibold">Portfolio Growth</h3>
-                    <p className="text-sm text-muted-foreground">12-month performance trend</p>
+                    <h3 className="text-lg font-semibold">Live Market Pulse</h3>
+                    <p className="text-sm text-muted-foreground">Continuously streaming indicator movement with smooth curves (refreshes every {LIVE_REFRESH_MS / 1000}s)</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    {MARKET_INDICATORS.map((indicator) => {
+                      const current = latestIndicators[indicator.key]
+                      const isUp = (current?.dayChangePercent ?? 0) >= 0
+                      return (
+                        <div key={indicator.key} className="text-center p-2 rounded-lg bg-white/50 dark:bg-slate-800/50">
+                          <div className="text-xs font-medium text-muted-foreground">{indicator.label}</div>
+                          <div className={`text-sm font-semibold ${isUp ? 'text-green-600' : 'text-red-600'}`}>
+                            {current ? `${current.dayChangePercent >= 0 ? '+' : ''}${current.dayChangePercent.toFixed(2)}%` : '--'}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
 
                   <motion.div
@@ -508,36 +629,36 @@ export default function DashboardPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.8 }}
                   >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={displayHistory} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                    <ResponsiveContainer width="100%" height="100%" className="mb-4">
+                      <LineChart data={liveChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                         <defs>
-                          <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8} />
-                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1} />
+                          <linearGradient id="niftyGlow" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.05} />
                           </linearGradient>
-                          <linearGradient id="colorGain" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.8} />
-                            <stop offset="95%" stopColor="#10B981" stopOpacity={0.1} />
+                          <linearGradient id="sensexGlow" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="#10B981" stopOpacity={0.05} />
+                          </linearGradient>
+                          <linearGradient id="goldGlow" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.05} />
+                          </linearGradient>
+                          <linearGradient id="btcGlow" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0.05} />
                           </linearGradient>
                         </defs>
-                        <XAxis
-                          dataKey="name"
-                          tick={{ fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
-                          tickFormatter={(value) => value.split(' ')[0]}
+                        <XAxis 
+                          dataKey="t" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          className="text-xs text-muted-foreground"
+                          tick={{ dy: 15 }}
                         />
-                        <YAxis
-                          tick={{ fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
-                          tickFormatter={(value) => `₹${(value / 100000).toFixed(0)}L`}
-                        />
-                        <Tooltip
-                          formatter={(value, name) => [
-                            name === 'value' ? formatINR(Number(value as any)) : formatINR(Number(value as any)),
-                            name === 'value' ? 'Portfolio Value' : 'Gain/Loss'
-                          ]}
+                        <YAxis axisLine={false} tickLine={false} className="text-xs text-muted-foreground" />
+                        <Tooltip 
+                          formatter={(value: any, name: any) => [`${Number(value).toFixed(2)}%`, name]}
                           labelStyle={{ color: '#374151', fontWeight: 'bold' }}
                           contentStyle={{
                             backgroundColor: 'white',
@@ -547,17 +668,43 @@ export default function DashboardPage() {
                             backdropFilter: 'blur(10px)'
                           }}
                         />
-                        <Area
-                          type="monotone"
-                          dataKey="value"
-                          stroke="#3B82F6"
-                          strokeWidth={3}
-                          fillOpacity={1}
-                          fill="url(#colorValue)"
-                          dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                          activeDot={{ r: 6, stroke: '#3B82F6', strokeWidth: 2 }}
+                        <Line 
+                          type="monotone" 
+                          dataKey="niftyMove" 
+                          stroke="#3B82F6" 
+                          strokeWidth={2} 
+                          dot={false}
+                          animationDuration={1200}
+                          name="Nifty %"
                         />
-                      </AreaChart>
+                        <Line 
+                          type="monotone" 
+                          dataKey="sensexMove" 
+                          stroke="#10B981" 
+                          strokeWidth={2} 
+                          dot={false}
+                          animationDuration={1200}
+                          name="Sensex %"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="goldMove" 
+                          stroke="#F59E0B" 
+                          strokeWidth={2} 
+                          dot={false}
+                          animationDuration={1200}
+                          name="Gold %"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="btcMove" 
+                          stroke="#8B5CF6" 
+                          strokeWidth={2} 
+                          dot={false}
+                          animationDuration={1200}
+                          name="Bitcoin %"
+                        />
+                      </LineChart>
                     </ResponsiveContainer>
                   </motion.div>
                 </motion.div>

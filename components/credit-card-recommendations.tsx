@@ -35,6 +35,7 @@ import {
 } from "lucide-react"
 import { formatINR } from "@/lib/utils"
 import { useState, useEffect } from "react"
+import { useUserProfile } from "@/hooks/useUserProfile"
 import { motion, AnimatePresence } from "framer-motion"
 import { CreditCardComparison } from "./credit-card-comparison"
 import creditCardsData from "@/data/credit-cards-detailed.json"
@@ -124,11 +125,12 @@ interface UserProfile {
 }
 
 export function CreditCardRecommendations() {
+  const { annualIncome } = useUserProfile()
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [filteredCards, setFilteredCards] = useState<CreditCard[]>([])
   const [selectedCards, setSelectedCards] = useState<string[]>([])
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    monthlyIncome: 50000,
+    monthlyIncome: annualIncome ? Math.round((annualIncome / 12) * 100) / 100 : 50000,
     monthlySpending: 30000,
     cibilScore: 750,
     spendingCategories: {
@@ -146,6 +148,16 @@ export function CreditCardRecommendations() {
   const [userId, setUserId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
+
+  // Update monthly income when annual income changes from database
+  useEffect(() => {
+    if (annualIncome) {
+      setUserProfile(prev => ({
+        ...prev,
+        monthlyIncome: Math.round((annualIncome / 12) * 100) / 100
+      }))
+    }
+  }, [annualIncome])
   const [filterBank, setFilterBank] = useState("all")
   const [sortBy, setSortBy] = useState("rating")
   const [loading, setLoading] = useState(true)
@@ -449,7 +461,7 @@ export function CreditCardRecommendations() {
           </p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Monthly Income</label>
               <Input
@@ -457,7 +469,14 @@ export function CreditCardRecommendations() {
                 value={userProfile.monthlyIncome}
                 onChange={(e) => handleProfileUpdate('monthlyIncome', Number(e.target.value))}
                 placeholder="50000"
+                readOnly={!!annualIncome}
+                className={annualIncome ? "bg-muted" : ""}
               />
+              {annualIncome && (
+                <p className="text-xs text-muted-foreground">
+                  Fetched from your profile (₹{annualIncome.toLocaleString()}/year)
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Monthly Spending</label>
@@ -479,26 +498,7 @@ export function CreditCardRecommendations() {
                 max="900"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Primary Goal</label>
-              <Select
-                value={userProfile.goals[0] || ""}
-                onValueChange={(value) => handleProfileUpdate('goals', [value])}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your goal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="travel">Travel</SelectItem>
-                  <SelectItem value="cashback">Cashback</SelectItem>
-                  <SelectItem value="dining">Dining & Entertainment</SelectItem>
-                  <SelectItem value="shopping">Online Shopping</SelectItem>
-                  <SelectItem value="fuel">Fuel</SelectItem>
-                  <SelectItem value="general">General Rewards</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                      </div>
         </CardContent>
       </Card>
 

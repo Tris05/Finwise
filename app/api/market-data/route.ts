@@ -1,8 +1,143 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Simple stock data fetcher using direct HTTP requests to Yahoo Finance
-async function fetchStockData(symbol: string) {
+// Helper function to dynamically resolve unknown symbols via Yahoo Finance Search API
+async function resolveYahooTicker(query: string): Promise<string | null> {
   try {
+    const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}`
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    })
+    if (!response.ok) return null
+    const data = await response.json()
+    if (data.quotes && data.quotes.length > 0) {
+      return data.quotes[0].symbol
+    }
+  } catch (error) {
+    console.error(`Error resolving ticker for ${query}:`, error)
+  }
+  return null
+}
+
+// Global in-memory cache for CoinGecko to prevent rate limiting
+interface CoinGeckoCache {
+  data: any;
+  timestamp: number;
+}
+const coinGeckoCache: Record<string, CoinGeckoCache> = {};
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// Helper function for fetching pure cryptocurrency data from CoinGecko
+async function fetchCoinGeckoData(rawSymbol: string) {
+  try {
+    const cryptoMap: Record<string, string> = {
+      'BITCOIN': 'bitcoin',
+      'ETHEREUM': 'ethereum',
+      'TETHER': 'tether',
+      'DOGECOIN': 'dogecoin',
+      'BINANCE COIN': 'binancecoin',
+      'SOLANA': 'solana',
+      'RIPPLE': 'ripple',
+      'CARDANO': 'cardano',
+      'LITECOIN': 'litecoin',
+      'USDT': 'tether',
+      'BTC': 'bitcoin',
+      'ETH': 'ethereum'
+    }
+
+    const id = cryptoMap[rawSymbol.toUpperCase()] || rawSymbol.toLowerCase()
+    
+    // Check cache first
+    const now = Date.now();
+    if (coinGeckoCache[id] && (now - coinGeckoCache[id].timestamp < CACHE_TTL_MS)) {
+      return coinGeckoCache[id].data;
+    }
+
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true`
+
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } })
+    if (!response.ok) throw new Error(`CoinGecko HTTP error! status: ${response.status}`)
+
+    const data = await response.json()
+    if (!data[id]) throw new Error(`No data available for CoinGecko ID: ${id}`)
+
+    const coinData = data[id]
+    const currentPrice = coinData.usd || 0
+    const dayChangePercent = coinData.usd_24h_change || 0
+    const previousClose = currentPrice / (1 + (dayChangePercent / 100))
+    const dayChange = currentPrice - previousClose
+
+    const result = {
+      symbol: rawSymbol,
+      name: id.toUpperCase(),
+      currentPrice: Math.round(currentPrice * 1000) / 1000,
+      dayChange: Math.round(dayChange * 1000) / 1000,
+      dayChangePercent: Math.round(dayChangePercent * 100) / 100,
+      previousClose: Math.round(previousClose * 1000) / 1000,
+      open: currentPrice,
+      high: currentPrice,
+      low: currentPrice,
+      volume: coinData.usd_24h_vol || 0,
+      currency: 'USD',
+      exchange: 'Crypto',
+      marketCap: coinData.usd_market_cap || 0,
+      pe: null,
+      dividend: 0,
+      sector: 'Cryptocurrency',
+      industry: 'Digital Assets',
+      beta: null,
+      week52High: currentPrice,
+      week52Low: currentPrice,
+      isValid: true,
+      lastUpdated: new Date().toISOString()
+    }
+
+    // Save to cache
+    coinGeckoCache[id] = {
+      data: result,
+      timestamp: now
+    };
+
+    return result;
+  } catch (error: any) {
+    console.error(`Error fetching CoinGecko data for ${rawSymbol}:`, error)
+    return null
+  }
+}
+
+// Simple stock data fetcher using direct HTTP requests to Yahoo Finance
+async function fetchStockData(rawSymbol: string) {
+  let symbol = rawSymbol
+  let isResolvedFormally = false
+  try {
+    // Map common crypto names to Yahoo Finance ticker pairs
+    const cryptoMap: Record<string, string> = {
+      'BITCOIN': 'BTC-USD',
+      'ETHEREUM': 'ETH-USD',
+      'TETHER': 'USDT-USD',
+      'DOGECOIN': 'DOGE-USD',
+      'BINANCE COIN': 'BNB-USD',
+      'SOLANA': 'SOL-USD',
+      'RIPPLE': 'XRP-USD',
+      'CARDANO': 'ADA-USD',
+      'LITECOIN': 'LTC-USD'
+    }
+
+    if (cryptoMap[rawSymbol.toUpperCase()]) {
+      symbol = cryptoMap[rawSymbol.toUpperCase()]
+      isResolvedFormally = true
+    } else {
+      // For plain names (like SHIBA INU, or RELIANCE), ask Yahoo what the canonical ticker is
+      if (!rawSymbol.includes('.') && !rawSymbol.includes('-')) {
+        const resolvedTicker = await resolveYahooTicker(rawSymbol)
+        if (resolvedTicker) {
+          symbol = resolvedTicker
+          isResolvedFormally = true
+        }
+      }
+    }
+
     // Yahoo Finance API endpoint (unofficial but widely used)
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`
     const response = await fetch(url, {
@@ -12,7 +147,10 @@ async function fetchStockData(symbol: string) {
     })
 
     // If 404, try adding .NS for Indian stocks if not already present
-    if (response.status === 404 && !symbol.includes('.')) {
+    // Skip this for cryptocurrencies to prevent formatting like BTC-USD.NS
+    // Also skip if Yahoo already specifically resolved the canon ticker for us.
+    const isCrypto = !!cryptoMap[rawSymbol.toUpperCase()] || symbol.includes('-USD')
+    if (response.status === 404 && !symbol.includes('.') && !isCrypto && !isResolvedFormally) {
       return fetchStockData(`${symbol}.NS`)
     }
 
@@ -28,17 +166,28 @@ async function fetchStockData(symbol: string) {
 
     const result = data.chart.result[0]
     const meta = result.meta
-    const quotes = result.indicators.quote[0]
-    const timestamps = result.timestamp
+    const quotes = result.indicators?.quote?.[0] || {}
+    const timestamps = result.timestamp || []
 
-    // Get the latest data
-    if (!timestamps || timestamps.length === 0) {
-      throw new Error('No price history available')
+    let currentPrice = meta.regularMarketPrice
+    let openPrice = currentPrice
+    let highPrice = meta.regularMarketDayHigh || currentPrice
+    let lowPrice = meta.regularMarketDayLow || currentPrice
+    let volume = meta.regularMarketVolume || 0
+
+    // Get the latest data from timestamps if available
+    if (timestamps.length > 0 && quotes.close && quotes.close.length > 0) {
+      const latestIndex = timestamps.length - 1
+      if (quotes.close[latestIndex] != null) currentPrice = quotes.close[latestIndex]
+      if (quotes.open?.[latestIndex] != null) openPrice = quotes.open[latestIndex]
+      if (quotes.high?.[latestIndex] != null) highPrice = quotes.high[latestIndex]
+      if (quotes.low?.[latestIndex] != null) lowPrice = quotes.low[latestIndex]
+      if (quotes.volume?.[latestIndex] != null) volume = quotes.volume[latestIndex] || volume
+    } else if (currentPrice == null) {
+      throw new Error('No price history or market price available')
     }
 
-    const latestIndex = timestamps.length - 1
-    const currentPrice = quotes.close[latestIndex]
-    const previousClose = meta.previousClose || currentPrice
+    const previousClose = meta.previousClose || meta.chartPreviousClose || currentPrice
     const dayChange = currentPrice - previousClose
     const dayChangePercent = previousClose !== 0 ? (dayChange / previousClose) * 100 : 0
 
@@ -49,10 +198,10 @@ async function fetchStockData(symbol: string) {
       dayChange: Math.round(dayChange * 100) / 100,
       dayChangePercent: Math.round(dayChangePercent * 100) / 100,
       previousClose: Math.round(previousClose * 100) / 100,
-      open: quotes.open[latestIndex] ? Math.round(quotes.open[latestIndex] * 100) / 100 : currentPrice,
-      high: quotes.high[latestIndex] ? Math.round(quotes.high[latestIndex] * 100) / 100 : currentPrice,
-      low: quotes.low[latestIndex] ? Math.round(quotes.low[latestIndex] * 100) / 100 : currentPrice,
-      volume: quotes.volume[latestIndex] || 0,
+      open: Math.round(openPrice * 100) / 100,
+      high: Math.round(highPrice * 100) / 100,
+      low: Math.round(lowPrice * 100) / 100,
+      volume: volume,
       currency: meta.currency || 'USD',
       exchange: meta.exchangeName || 'Unknown',
       marketCap: meta.marketCap || 0,
@@ -66,40 +215,56 @@ async function fetchStockData(symbol: string) {
       isValid: true,
       lastUpdated: new Date().toISOString()
     }
-  } catch (error) {
-    console.error(`Error fetching data for ${symbol}:`, error)
+  } catch (error: any) {
+    // Only log if it's not a generic 404 error we expect for unsupported symbols
+    if (!error.message?.includes('status: 404')) {
+      console.error(`Error fetching data for ${symbol}:`, error)
+    }
     return null
   }
 }
 
 async function searchStocks(query: string, limit: number = 10) {
-  const results = []
+  const normalizedQuery = query.trim()
+  if (!normalizedQuery) return []
 
-  // Common symbol variations to try
-  const variations = [
-    query.toUpperCase(),
-    `${query.toUpperCase()}.NS`,  // NSE
-    `${query.toUpperCase()}.BO`,  // BSE
-    `${query.toUpperCase()}.L`,   // LSE
-    `${query.toUpperCase()}.T`,   // TSE
-    `${query.toUpperCase()}.HK`,  // HKEX
-    `${query.toUpperCase()}.AX`,  // ASX
-  ]
-
-  // Try each variation
-  for (const symbol of variations.slice(0, limit)) {
-    try {
-      const data = await fetchStockData(symbol)
-      if (data) {
-        results.push(data)
+  try {
+    // Prefer Yahoo's search endpoint so company-name queries work reliably.
+    const searchUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(normalizedQuery)}`
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
-    } catch (error) {
-      // Continue to next variation
-      continue
-    }
-  }
+    })
 
-  return results
+    let candidateSymbols: string[] = []
+
+    if (response.ok) {
+      const payload = await response.json()
+      const quotes = Array.isArray(payload?.quotes) ? payload.quotes : []
+
+      candidateSymbols = quotes
+        .filter((q: any) => q?.symbol && q?.quoteType !== 'INDEX')
+        .map((q: any) => String(q.symbol).toUpperCase())
+    }
+
+    // Fallback for cases where Yahoo search returns no quotes.
+    if (candidateSymbols.length === 0) {
+      candidateSymbols = [
+        normalizedQuery.toUpperCase(),
+        `${normalizedQuery.toUpperCase()}.NS`,
+        `${normalizedQuery.toUpperCase()}.BO`
+      ]
+    }
+
+    const uniqueSymbols = [...new Set(candidateSymbols)].slice(0, Math.max(1, Math.min(limit, 10)))
+    const results = await Promise.all(uniqueSymbols.map((symbol) => fetchStockData(symbol)))
+
+    return results.filter(Boolean)
+  } catch (error) {
+    console.error(`Error searching stocks for query "${normalizedQuery}":`, error)
+    return []
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -128,6 +293,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'get_stock') {
       const symbol = body.symbol
+      const type = (body.type || '').toLowerCase()
 
       if (!symbol) {
         return NextResponse.json({
@@ -136,7 +302,9 @@ export async function POST(request: NextRequest) {
         }, { status: 400 })
       }
 
-      const data = await fetchStockData(symbol)
+      const isCrypto = type === 'crypto' || ['bitcoin', 'ethereum', 'tether', 'dogecoin', 'solana', 'ripple', 'cardano', 'litecoin', 'usdt', 'btc', 'eth'].includes(symbol.toLowerCase())
+
+      const data = isCrypto ? await fetchCoinGeckoData(symbol) : await fetchStockData(symbol)
 
       if (data) {
         return NextResponse.json({
@@ -212,11 +380,20 @@ export async function POST(request: NextRequest) {
 
       for (const investment of portfolio) {
         const symbol = investment.symbol
-        const data = await fetchStockData(symbol)
+        const type = investment.type?.toLowerCase() || ''
 
-        const isDebt = ['bond', 'debt', 'mutual fund', 'fixed income', 'fd', 'ppf'].includes(investment.type?.toLowerCase() || '') ||
+        const isDebt = ['bond', 'debt', 'mutual fund', 'fixed income', 'fd', 'ppf'].includes(type) ||
           symbol.toLowerCase().includes('fd-') ||
           symbol.toLowerCase().includes('ppf')
+
+        const isCrypto = type === 'crypto' || ['bitcoin', 'ethereum', 'tether', 'dogecoin', 'solana', 'ripple', 'cardano', 'litecoin', 'usdt', 'btc', 'eth'].includes(symbol.toLowerCase())
+
+        let data = null
+        if (isCrypto) {
+          data = await fetchCoinGeckoData(symbol)
+        } else if (!isDebt) {
+          data = await fetchStockData(symbol)
+        }
 
         if (data) {
           const quantity = investment.quantity || 0
@@ -228,6 +405,7 @@ export async function POST(request: NextRequest) {
           updatedPortfolio.push({
             ...investment,
             currentPrice: data.currentPrice,
+            currency: data.currency || 'USD',
             dayChange: data.dayChange,
             dayChangePercent: data.dayChangePercent,
             marketCap: data.marketCap,
@@ -240,6 +418,9 @@ export async function POST(request: NextRequest) {
             currentValue: Math.round(currentValue * 100) / 100,
             totalGain: Math.round(totalGain * 100) / 100,
             gainPercent: Math.round(gainPercent * 100) / 100,
+            volume: data.volume || 0,
+            week52High: data.week52High || data.currentPrice,
+            week52Low: data.week52Low || data.currentPrice,
             lastUpdated: data.lastUpdated
           })
         } else if (isDebt) {

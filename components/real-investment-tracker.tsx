@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { TrendingUp, TrendingDown, Eye, EyeOff, MoreHorizontal, Star, AlertTriangle, CheckCircle, XCircle, Plus, Filter, Search } from "lucide-react"
+import { TrendingUp, TrendingDown, Eye, EyeOff, MoreHorizontal, Star, AlertTriangle, CheckCircle, XCircle, Plus, Filter, Search, Target } from "lucide-react"
 import { formatINR } from "@/lib/utils"
 import { useState } from "react"
 import {
@@ -36,24 +36,36 @@ interface RealInvestment {
   pe: number | string
   dividend: number | string
   riskLevel: 'Low' | 'Medium' | 'High' | 'Unknown'
-  recommendation: 'Buy' | 'Hold' | 'Sell' | 'Strong Buy' | 'Strong Sell'
+  recommendation?: 'Buy' | 'Hold' | 'Sell' | 'Strong Buy' | 'Strong Sell'
+  goalId?: string | null
   rate?: number
   tenure?: number | string
   rationale?: string
+  volume?: number
+  week52High?: number
+  week52Low?: number
 }
+
+type GoalLite = { id: string; name: string }
 
 interface RealInvestmentTrackerProps {
   investments: RealInvestment[]
   onInvestmentClick?: (investment: RealInvestment) => void
   onAddInvestment?: () => void
   onSellInvestment?: (investment: RealInvestment) => void
+  goals?: GoalLite[]
+  onEditPosition?: (investment: RealInvestment) => void
+  onAssignGoal?: (investment: RealInvestment) => void
 }
 
 export function RealInvestmentTracker({
   investments,
   onInvestmentClick,
   onAddInvestment,
-  onSellInvestment
+  onSellInvestment,
+  goals = [],
+  onEditPosition,
+  onAssignGoal,
 }: RealInvestmentTrackerProps) {
   const [showValues, setShowValues] = useState(true)
   const [selectedInvestment, setSelectedInvestment] = useState<RealInvestment | null>(null)
@@ -65,7 +77,7 @@ export function RealInvestmentTracker({
     const matchesSearch = investment.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
       investment.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === "all" || investment.type === filterType
-    const matchesRecommendation = filterRecommendation === "all" || investment.recommendation === filterRecommendation
+    const matchesRecommendation = filterRecommendation === "all" || (investment.recommendation ?? "Hold") === filterRecommendation
 
     return matchesSearch && matchesType && matchesRecommendation
   })
@@ -251,6 +263,9 @@ export function RealInvestmentTracker({
       {/* Investment Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredInvestments.map((investment) => {
+          const goalName = investment.goalId
+            ? goals.find((g) => g.id === investment.goalId)?.name
+            : null
           const isDebt = ['bond', 'debt', 'fixed income', 'fd', 'ppf'].includes(investment.type?.toLowerCase() || '') ||
             investment.symbol.toLowerCase().includes('fd-') ||
             investment.symbol.toLowerCase().includes('ppf')
@@ -278,13 +293,19 @@ export function RealInvestmentTracker({
                         {investment.symbol}
                       </h3>
                       <p className="text-sm text-muted-foreground">{investment.name}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant="outline" className={`text-xs ${getRecommendationColor(investment.recommendation)}`}>
-                          {investment.recommendation}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <Badge variant="outline" className={`text-xs ${getRecommendationColor(investment.recommendation ?? "Hold")}`}>
+                          {investment.recommendation ?? "Hold"}
                         </Badge>
                         <Badge variant="outline" className={`text-xs ${getRiskColor(investment.riskLevel)}`}>
                           {investment.riskLevel} Risk
                         </Badge>
+                        {goalName && (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Target className="h-3 w-3" />
+                            {goalName}
+                          </Badge>
+                        )}
                       </div>
                       {investment.rationale && (
                         <div className="mt-3 text-[11px] text-muted-foreground line-clamp-2 italic bg-muted/30 p-2 rounded border-l-2 border-primary/40">
@@ -300,9 +321,31 @@ export function RealInvestmentTracker({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View Details</DropdownMenuItem>
-                      <DropdownMenuItem>Edit Position</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onSellInvestment?.(investment)}>
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          setSelectedInvestment(investment)
+                          onInvestmentClick?.(investment)
+                        }}
+                      >
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          onEditPosition?.(investment)
+                        }}
+                      >
+                        Edit Position
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          onAssignGoal?.(investment)
+                        }}
+                      >
+                        Assign to goal
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => onSellInvestment?.(investment)}
+                      >
                         Sell Position
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -367,16 +410,25 @@ export function RealInvestmentTracker({
                         </div>
                       </div>
                     )}
-                    {!isDebt && investment.pe !== "N/A" && (
+                    {!isDebt && investment.volume !== undefined && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">P/E Ratio</span>
-                        <span className="font-medium">{investment.pe}</span>
+                        <span className="text-muted-foreground">Volume</span>
+                        <span className="font-medium">
+                          {investment.volume > 1000000
+                            ? `${(investment.volume / 1000000).toFixed(1)}M`
+                            : investment.volume > 1000
+                              ? `${(investment.volume / 1000).toFixed(1)}K`
+                              : investment.volume.toLocaleString()
+                          }
+                        </span>
                       </div>
                     )}
-                    {!isDebt && investment.dividend !== "N/A" && (
+                    {!isDebt && investment.week52High !== undefined && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Dividend Yield</span>
-                        <span className="font-medium">{investment.dividend}%</span>
+                        <span className="text-muted-foreground">52W Range</span>
+                        <span className="font-medium whitespace-nowrap">
+                          {formatINR(investment.week52Low || 0)} - {formatINR(investment.week52High || 0)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -397,8 +449,8 @@ export function RealInvestmentTracker({
                 <CardTitle className="text-2xl">{selectedInvestment.symbol}</CardTitle>
                 <p className="text-muted-foreground">{selectedInvestment.name}</p>
                 <div className="flex items-center space-x-2 mt-2">
-                  <Badge variant="outline" className={`text-sm ${getRecommendationColor(selectedInvestment.recommendation)}`}>
-                    {selectedInvestment.recommendation}
+                  <Badge variant="outline" className={`text-sm ${getRecommendationColor(selectedInvestment.recommendation ?? "Hold")}`}>
+                    {selectedInvestment.recommendation ?? "Hold"}
                   </Badge>
                   <Badge variant="outline" className={`text-sm ${getRiskColor(selectedInvestment.riskLevel)}`}>
                     {selectedInvestment.riskLevel} Risk
@@ -474,14 +526,12 @@ export function RealInvestmentTracker({
               <div className="space-y-4">
                 <h4 className="font-semibold text-sm text-primary uppercase tracking-wider">Investment Analysis</h4>
                 <div className="space-y-3">
-                  {selectedInvestment.recommendation && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Analyst Recommendation</span>
-                      <Badge variant="outline" className={getRecommendationColor(selectedInvestment.recommendation)}>
-                        {selectedInvestment.recommendation}
-                      </Badge>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Analyst Recommendation</span>
+                    <Badge variant="outline" className={getRecommendationColor(selectedInvestment.recommendation ?? "Hold")}>
+                      {selectedInvestment.recommendation ?? "Hold"}
+                    </Badge>
+                  </div>
                   {selectedInvestment.riskLevel && (selectedInvestment.riskLevel as string) !== "Unknown" && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Risk Level</span>
@@ -490,16 +540,25 @@ export function RealInvestmentTracker({
                       </Badge>
                     </div>
                   )}
-                  {selectedInvestment.pe && selectedInvestment.pe !== "N/A" && selectedInvestment.pe !== 0 && (
+                  {!selectedInvestment.type?.toLowerCase().includes('fd') && !selectedInvestment.type?.toLowerCase().includes('ppf') && selectedInvestment.volume !== undefined && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">P/E Ratio</span>
-                      <span className="font-medium">{selectedInvestment.pe}</span>
+                      <span className="text-muted-foreground">Volume</span>
+                      <span className="font-medium">
+                        {selectedInvestment.volume > 1000000
+                          ? `${(selectedInvestment.volume / 1000000).toFixed(1)}M`
+                          : selectedInvestment.volume > 1000
+                            ? `${(selectedInvestment.volume / 1000).toFixed(1)}K`
+                            : selectedInvestment.volume.toLocaleString()
+                        }
+                      </span>
                     </div>
                   )}
-                  {selectedInvestment.dividend && selectedInvestment.dividend !== "N/A" && selectedInvestment.dividend !== 0 && (
+                  {!selectedInvestment.type?.toLowerCase().includes('fd') && !selectedInvestment.type?.toLowerCase().includes('ppf') && selectedInvestment.week52High !== undefined && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Dividend Yield</span>
-                      <span className="font-medium">{selectedInvestment.dividend}%</span>
+                      <span className="text-muted-foreground">52-Week Range</span>
+                      <span className="font-medium whitespace-nowrap">
+                        {formatINR(selectedInvestment.week52Low || 0)} - {formatINR(selectedInvestment.week52High || 0)}
+                      </span>
                     </div>
                   )}
                 </div>

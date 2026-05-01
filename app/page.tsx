@@ -1,18 +1,23 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Bot, CreditCard, FileText, PieChart, Shield, Trophy, Wallet, LucideCrown, Handshake } from "lucide-react"
 import Image from "next/image"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export default function Home() {
-  const router = useRouter()
 
   return (
     <main className="relative min-h-screen overflow-hidden">
       {/* Ambient themed gradient background */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-[var(--color-primary)]/15 via-transparent to-[var(--color-accent)]/20" />
+      
+      {/* Floating Theme Toggle */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
 
       {/* Hero */}
       <section className="container mx-auto px-4 py-16 md:py-24">
@@ -36,8 +41,12 @@ export default function Home() {
               experience.
             </p>
             <div className="flex items-center gap-3">
-              <Button onClick={() => router.push("/signup")}>Get Started</Button>
-              <Button variant="outline" onClick={() => router.push("/login")}>I already have an account</Button>
+              <Link href="/signup">
+                <Button>Get Started</Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="outline">I already have an account</Button>
+              </Link>
             </div>
           </div>
 
@@ -95,12 +104,12 @@ export default function Home() {
               intelligence.
             </p>
             <div className="mt-4 flex gap-3">
-              <Button onClick={() => router.push("/signup")}>
-                Start your journey
-              </Button>
-              <Button variant="outline" onClick={() => router.push("/login")}>
-                Sign in
-              </Button>
+              <Link href="/signup">
+                <Button>Start your journey</Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="outline">Sign in</Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

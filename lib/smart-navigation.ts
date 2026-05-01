@@ -146,74 +146,74 @@ export function useCrossFeatureNavigation() {
   // Investment-related navigation
   const fromInvestmentToAdvisor = (investment: any) => {
     const query = `Tell me about ${investment.symbol} stock. Should I buy, hold, or sell?`
-    navigateToAdvisor(query)
+    navigate(`/advisor?q=${encodeURIComponent(query)}`)
   }
 
   const fromInvestmentToGoal = (investment: any) => {
-    navigateToGoal()
+    navigate('/settings')
   }
 
   const fromInvestmentToTransaction = (investment: any) => {
-    navigateToTransaction()
+    navigate('/investments?tab=transactions')
   }
 
   // Goal-related navigation
   const fromGoalToInvestment = (goal: any) => {
     const query = `Help me achieve my ${goal.name} goal of ₹${goal.targetAmount.toLocaleString()}`
-    navigateToAdvisor(query)
+    navigate(`/advisor?q=${encodeURIComponent(query)}`)
   }
 
   const fromGoalToLearning = (goal: any) => {
-    navigateToLearning('flashcards')
+    navigate('/learning')
   }
 
   // Learning-related navigation
   const fromLearningToAdvisor = (topic: string) => {
     const query = `Explain ${topic} in simple terms with examples`
-    navigateToAdvisor(query)
+    navigate(`/advisor?q=${encodeURIComponent(query)}`)
   }
 
   const fromLearningToInvestment = (topic: string) => {
-    navigateToInvestment()
+    navigate('/investments')
   }
 
   // Advisor-related navigation
   const fromAdvisorToInvestment = (recommendation: string) => {
-    navigateToInvestment()
+    navigate('/investments')
   }
 
   const fromAdvisorToLearning = (topic: string) => {
-    navigateToLearning('flashcards')
+    navigate('/learning')
   }
 
   // Document-related navigation
   const fromDocumentToAdvisor = (documentType: string) => {
     const query = `Analyze my ${documentType} and give me financial advice`
-    navigateToAdvisor(query)
+    navigate(`/advisor?q=${encodeURIComponent(query)}`)
   }
 
   const fromDocumentToInvestment = (documentType: string) => {
-    navigateToInvestment()
+    navigate('/investments')
   }
 
   // Loan-related navigation
   const fromLoanToAdvisor = (loanType: string) => {
     const query = `Help me with ${loanType} loan options and strategies`
-    navigateToAdvisor(query)
+    navigate(`/advisor?q=${encodeURIComponent(query)}`)
   }
 
   const fromLoanToInvestment = (loanType: string) => {
-    navigateToInvestment()
+    navigate('/investments')
   }
 
   // Salary-related navigation
   const fromSalaryToAdvisor = (salaryData: any) => {
     const query = `Help me optimize my salary of ₹${salaryData.monthlySalary.toLocaleString()}`
-    navigateToAdvisor(query)
+    navigate(`/advisor?q=${encodeURIComponent(query)}`)
   }
 
   const fromSalaryToInvestment = (salaryData: any) => {
-    navigateToInvestment()
+    navigate('/investments')
   }
 
   return {

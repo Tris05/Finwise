@@ -337,7 +337,7 @@ type UploadResult = {
   entities_model?: Entity[];
 };
 
-export function DocUpload() {
+export function DocUpload({ onResult }: { onResult?: (result: UploadResult) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<UploadResult | null>(null);
@@ -376,6 +376,9 @@ export function DocUpload() {
       if (!resp.ok) throw new Error(await resp.text());
       const data = await resp.json();
       setResult(data);
+      if (onResult) {
+        onResult(data);
+      }
 
       // Save to Firestore
       if (userId) {

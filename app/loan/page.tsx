@@ -66,6 +66,23 @@ export default function LoanPage() {
     return Math.round(Math.min(100, stress))
   }, [currentEMI, monthlyIncome])
 
+  // Calculate interest savings with best bank rate
+  const calculateInterestSavings = () => {
+    const bestBankRate = compare[0]?.rate
+    if (!bestBankRate) return 0
+    
+    const bestRate = typeof bestBankRate === 'string' ? parseFloat(bestBankRate.replace('%', '')) : bestBankRate
+    const rateDiff = loanValues.rate - bestRate
+    if (rateDiff <= 0) return 0
+    
+    // Calculate total interest with current rate vs best rate
+    const currentTotalInterest = (currentEMI * loanValues.tenure) - loanValues.amount
+    const bestEMI = calculateEMI(loanValues.amount, bestRate, loanValues.tenure)
+    const bestTotalInterest = (bestEMI * loanValues.tenure) - loanValues.amount
+    
+    return currentTotalInterest - bestTotalInterest
+  }
+
   // Dynamic bank comparison based on current loan amount and tenure
   const compare = useMemo(() => {
     return BANK_RATES[loanType].map(bank => {
@@ -208,8 +225,8 @@ export default function LoanPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-xs text-muted-foreground uppercase">Interest Saved</div>
-                    <div className="text-xl font-bold text-green-600">₹{Math.round(currentEMI * 0.1).toLocaleString()}*</div>
-                    <div className="text-[10px] text-muted-foreground">*via 0.5% rate reduction</div>
+                    <div className="text-xl font-bold text-green-600">₹{Math.round(calculateInterestSavings()).toLocaleString()}*</div>
+                    <div className="text-[10px] text-muted-foreground">*vs. current rate with best bank</div>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-xs text-muted-foreground uppercase">Affordability</div>
