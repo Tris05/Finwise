@@ -149,7 +149,7 @@ export default function InvestmentsPage() {
       setMarketAssets([])
       return
     }
-    
+
     setIsMarketDataLoading(true)
     try {
       const res = await fetch('/api/market-data', {
@@ -397,7 +397,7 @@ export default function InvestmentsPage() {
   useEffect(() => {
     // Preload data immediately for instant chart display
     preloadHistoricalData()
-    
+
     // Start real data fetching
     void fetchIndicators()
     const interval = setInterval(() => {
@@ -445,7 +445,7 @@ export default function InvestmentsPage() {
       const point: Record<string, any> = {
         t: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }
-      
+
       validResponses.forEach((item) => {
         point[`${item.key}DayMove`] = Number(item.dayChangePercent.toFixed(2))
       })
@@ -461,7 +461,7 @@ export default function InvestmentsPage() {
     const now = new Date()
     const marketOpenTime = new Date(now)
     marketOpenTime.setHours(9, 15, 0, 0) // Indian market opens at 9:15 AM
-    
+
     // Generate historical data points for Live Market Pulse (last 30 points, 1 minute intervals)
     const liveHistoricalData = []
     for (let i = 29; i >= 0; i--) {
@@ -469,7 +469,7 @@ export default function InvestmentsPage() {
       const point: Record<string, any> = {
         t: time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       }
-      
+
       // Generate realistic mock data for each indicator
       MARKET_INDICATORS.forEach((indicator) => {
         const baseChange = Math.random() * 2 - 1 // Random between -1 and 1
@@ -478,30 +478,30 @@ export default function InvestmentsPage() {
         point[`${indicator.key}Move`] = Number(change.toFixed(2))
         point[`${indicator.key}DayMove`] = Number(change.toFixed(2))
       })
-      
+
       liveHistoricalData.push(point)
     }
     setLiveChartData(liveHistoricalData)
-    
+
     // Generate historical data for Momentum Streams with hour markers
     const momentumHistoricalData = []
     const marketStartTime = new Date(now)
     marketStartTime.setHours(9, 15, 0, 0)
-    
+
     // Generate data points including hour markers
     const hourMarkers = ['10:15', '11:15', '12:15', '1:15', '2:15', '3:15']
     const currentTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    
+
     // Add data points from market open to current time
     let dataPointTime = new Date(marketStartTime)
     let pointIndex = 0
-    
+
     while (dataPointTime <= now && pointIndex < 50) {
       const timeStr = dataPointTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       const point: Record<string, any> = {
         t: timeStr,
       }
-      
+
       // Generate realistic cumulative growth data
       const hoursFromOpen = (dataPointTime.getTime() - marketStartTime.getTime()) / (1000 * 60 * 60)
       MARKET_INDICATORS.forEach((indicator) => {
@@ -510,27 +510,27 @@ export default function InvestmentsPage() {
         const change = baseGrowth * volatility * Math.min(hoursFromOpen / 6, 1)
         point[`${indicator.key}DayMove`] = Number(change.toFixed(2))
       })
-      
+
       momentumHistoricalData.push(point)
-      
+
       // Add extra points at hour markers for clarity
       if (hourMarkers.includes(timeStr)) {
         const markerPoint = { ...point }
         momentumHistoricalData.push(markerPoint)
       }
-      
+
       dataPointTime = new Date(dataPointTime.getTime() + 5 * 60000) // 5 minute intervals
       pointIndex++
     }
     setMomentumChartData(momentumHistoricalData)
-    
+
     // Initialize market open data with mock values
     const mockMarketOpen = MARKET_INDICATORS.reduce((acc, indicator) => {
       acc[indicator.key] = {
         price: indicator.key === 'nifty' ? 19500 + Math.random() * 1000 :
-               indicator.key === 'sensex' ? 65000 + Math.random() * 2000 :
-               indicator.key === 'gold' ? 62000 + Math.random() * 1000 :
-               45000 + Math.random() * 5000, // BTC
+          indicator.key === 'sensex' ? 65000 + Math.random() * 2000 :
+            indicator.key === 'gold' ? 62000 + Math.random() * 1000 :
+              45000 + Math.random() * 5000, // BTC
         dayChangePercent: Math.random() * 2 - 1,
         currency: indicator.key === 'btc' ? 'USD' : 'INR'
       }
@@ -1518,6 +1518,12 @@ export default function InvestmentsPage() {
               Portfolio
             </TabsTrigger>
             <TabsTrigger
+              value="ai"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
+            >
+              AI Recommendations
+            </TabsTrigger>
+            <TabsTrigger
               value="market"
               className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
             >
@@ -1529,12 +1535,7 @@ export default function InvestmentsPage() {
             >
               Goals
             </TabsTrigger>
-            <TabsTrigger
-              value="analysis"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-            >
-              Analysis
-            </TabsTrigger>
+
           </TabsList>
 
           <TabsContent value="portfolio" className="space-y-6 mt-6">
@@ -1579,7 +1580,7 @@ export default function InvestmentsPage() {
             <InvestmentGoals />
           </TabsContent>
 
-          <TabsContent value="analysis" className="space-y-8 mt-6">
+          <TabsContent value="ai" className="space-y-8 mt-6">
             <div className="space-y-8">
               {/* Main AI Insights */}
               <InvestmentInsights recommendation={latestRecommendation} />
@@ -1667,11 +1668,11 @@ export default function InvestmentsPage() {
         initialAsset={
           selectedAsset
             ? {
-                symbol: selectedAsset.symbol,
-                category: selectedAsset.category,
-                currentPrice: Number(selectedAsset.currentPrice) || undefined,
-                currency: selectedAsset.currency || "USD",
-              }
+              symbol: selectedAsset.symbol,
+              category: selectedAsset.category,
+              currentPrice: Number(selectedAsset.currentPrice) || undefined,
+              currency: selectedAsset.currency || "USD",
+            }
             : null
         }
       />
@@ -1684,13 +1685,13 @@ export default function InvestmentsPage() {
         investment={
           holdingForEdit
             ? {
-                id: holdingForEdit.id,
-                symbol: holdingForEdit.symbol,
-                name: holdingForEdit.name,
-                quantity: Number(holdingForEdit.quantity) || 0,
-                investedAmount: Number(holdingForEdit.investedAmount) || 0,
-                notes: holdingForEdit.notes,
-              }
+              id: holdingForEdit.id,
+              symbol: holdingForEdit.symbol,
+              name: holdingForEdit.name,
+              quantity: Number(holdingForEdit.quantity) || 0,
+              investedAmount: Number(holdingForEdit.investedAmount) || 0,
+              notes: holdingForEdit.notes,
+            }
             : null
         }
         onSave={handleSaveEditHolding}
@@ -1758,7 +1759,7 @@ export default function InvestmentsPage() {
         transaction={editingTransaction}
         onSave={handleEditTransactionSave}
       />
-      <AssetDetailsModal 
+      <AssetDetailsModal
         isOpen={assetDetailsOpen}
         onClose={() => setAssetDetailsOpen(false)}
         asset={assetForDetails}

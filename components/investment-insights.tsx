@@ -193,41 +193,7 @@ export function InvestmentInsights({ recommendation }: InvestmentInsightsProps) 
                 </Card>
             </div>
 
-            {/* Actionable Strategy */}
-            {output.actionable_advice && (
-                <Card className="border-none shadow-lg bg-gradient-to-r from-primary/5 to-primary/10 overflow-hidden relative">
-                    <div className="absolute top-0 left-0 w-64 h-64 bg-primary/5 rounded-full -ml-32 -mt-32 blur-3xl"></div>
-                    <CardHeader>
-                        <CardTitle className="text-xl flex items-center font-bold">
-                            <Brain className="w-6 h-6 mr-2 text-primary" />
-                            AI Realignment Strategy
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
-                        <div className="space-y-4">
-                            <h4 className="font-black text-xs uppercase tracking-widest text-primary">Allocation Summary</h4>
-                            <p className="text-sm text-foreground/80 leading-relaxed font-medium">
-                                {output.actionable_advice.allocation_summary}
-                            </p>
-                        </div>
-                        {output.actionable_advice.immediate_actions?.length > 0 && (
-                            <div className="space-y-4">
-                                <h4 className="font-black text-xs uppercase tracking-widest text-primary">Immediate Rebalancing Steps</h4>
-                                <div className="grid grid-cols-1 gap-3">
-                                    {output.actionable_advice.immediate_actions.map((action: string, i: number) => (
-                                        <div key={i} className="flex items-center p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-white dark:border-slate-800 text-sm font-semibold shadow-sm hover:shadow-md transition-shadow">
-                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-4 flex-shrink-0">
-                                                <Target className="w-4 h-4 text-primary" />
-                                            </div>
-                                            {action}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            )}
+
         </div>
     )
 }
