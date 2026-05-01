@@ -16,10 +16,12 @@ import { useFinancialGoals, FinancialGoal, GoalType } from "@/hooks/useFinancial
 import { auth, db } from "@/lib/firebase"
 import { doc, setDoc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 type RiskProfile = "Conservative" | "Moderate" | "Aggressive"
 
 export default function SettingsPage() {
+  const router = useRouter()
   const { annualIncome, name, email, phone, city, riskProfile, settings, loading: profileLoading } = useUserProfile()
   const { goals, addGoal: addGoalDb, deleteGoal: deleteGoalDb, loading: goalsLoading } = useFinancialGoals()
   const { toast } = useToast()
@@ -356,7 +358,9 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="pt-2">
-                  <Button className="w-full">Retake Assessment</Button>
+                  <Button className="w-full" onClick={() => router.push('/portfolio-optimizer')}>
+                    Retake Assessment
+                  </Button>
                 </div>
               </CardContent>
             </Card>

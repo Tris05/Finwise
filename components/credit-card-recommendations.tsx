@@ -130,7 +130,7 @@ export function CreditCardRecommendations() {
   const [filteredCards, setFilteredCards] = useState<CreditCard[]>([])
   const [selectedCards, setSelectedCards] = useState<string[]>([])
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    monthlyIncome: annualIncome ? annualIncome / 12 : 50000,
+    monthlyIncome: annualIncome ? Math.round((annualIncome / 12) * 100) / 100 : 50000,
     monthlySpending: 30000,
     cibilScore: 750,
     spendingCategories: {
@@ -154,7 +154,7 @@ export function CreditCardRecommendations() {
     if (annualIncome) {
       setUserProfile(prev => ({
         ...prev,
-        monthlyIncome: annualIncome / 12
+        monthlyIncome: Math.round((annualIncome / 12) * 100) / 100
       }))
     }
   }, [annualIncome])
