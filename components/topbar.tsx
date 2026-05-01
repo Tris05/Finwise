@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { formatINR } from "@/lib/utils"
 import { useState } from "react"
 import { UserMenu } from "@/components/user-menu"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useSmartNavigation } from "@/lib/smart-navigation"
 import { useInvestments } from "@/hooks/useInvestments"
 import { useGameProgress } from "@/hooks/useGameProgress"
@@ -101,6 +102,7 @@ export function Topbar() {
           </div>
 
           <Bell className="h-5 w-5 cursor-pointer hover:text-primary transition-colors" aria-hidden="true" />
+          <ThemeToggle />
           <UserMenu />
         </div>
       </div>

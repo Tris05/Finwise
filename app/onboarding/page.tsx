@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { FinancialProfileForm } from "@/components/FinancialProfileForm"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -13,6 +14,10 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 py-12">
+      {/* Floating Theme Toggle */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <div className="max-w-4xl mx-auto px-4">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-extrabold bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] bg-clip-text text-transparent">

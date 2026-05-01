@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { GoogleAuthButton } from "@/components/google-auth-button"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(false)
@@ -73,6 +74,10 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen grid place-items-center bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 p-6">
+      {/* Floating Theme Toggle */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
           <CardTitle className="text-center bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] bg-clip-text text-transparent">

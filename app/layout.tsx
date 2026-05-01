@@ -6,6 +6,7 @@ import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/components/providers/auth-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
+import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 const poppins = Poppins({
@@ -32,16 +33,23 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${poppins.variable} ${inter.variable} antialiased`}>
+    <html lang="en" className={`${poppins.variable} ${inter.variable} antialiased`} suppressHydrationWarning>
       <body className={`font-sans ${inter.variable}`}>
         <Suspense fallback={null}>
-          <QueryProvider>
-            <AuthProvider>
-              {children}
-              <Toaster />
-              <Analytics />
-            </AuthProvider>
-          </QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <QueryProvider>
+              <AuthProvider>
+                {children}
+                <Toaster />
+                <Analytics />
+              </AuthProvider>
+            </QueryProvider>
+          </ThemeProvider>
         </Suspense>
       </body>
     </html>

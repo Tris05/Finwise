@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Bot, CreditCard, FileText, PieChart, Shield, Trophy, Wallet, LucideCrown, Handshake } from "lucide-react"
 import Image from "next/image"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export default function Home() {
 
@@ -12,6 +13,11 @@ export default function Home() {
     <main className="relative min-h-screen overflow-hidden">
       {/* Ambient themed gradient background */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-[var(--color-primary)]/15 via-transparent to-[var(--color-accent)]/20" />
+      
+      {/* Floating Theme Toggle */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
 
       {/* Hero */}
       <section className="container mx-auto px-4 py-16 md:py-24">
