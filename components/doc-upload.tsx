@@ -320,7 +320,7 @@
 // }
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -328,7 +328,7 @@ import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
-type Entity = { page: number; bbox: number[]; risky?: boolean };
+type Entity = { page: number; bbox: number[]; risky?: boolean; risk_level?: string; risk_category?: string; risk_points?: number };
 type PageImage = { page: number; image: string };
 type UploadResult = {
   risk_score: number;
@@ -343,18 +343,92 @@ export function DocUpload({ onResult }: { onResult?: (result: UploadResult) => v
   const [result, setResult] = useState<UploadResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUserId(user ? user.uid : null);
     });
-    return () => unsubscribe();
+    
+    return () => {
+      unsubscribe();
+      if (uploadTimeoutRef.current) {
+        clearTimeout(uploadTimeoutRef.current);
+      }
+    };
   }, []);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
+  // Retry logic with exponential backoff
+  const saveToFirestoreWithRetry = useCallback(async (data: UploadResult, file: File, userId: string, maxRetries: number = 3): Promise<void> => {
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        setIsSaving(true);
+        
+        // Add small delay for first attempt to prevent rapid successive writes
+        if (attempt === 0) {
+          await delay(500);
+        }
+        
+        await addDoc(collection(db, "users", userId, "documents"), {
+          name: file.name,
+          type: file.type,
+          analysis: {
+            risk_score: data.risk_score,
+            risk_reasons: data.risk_reasons,
+            // Reduce the size of analysis data to prevent large writes
+            entities_count: data.entities_model?.length || 0,
+            pages_count: data.page_images?.length || 0
+          },
+          uploadedAt: serverTimestamp()
+        });
+        
+        console.log("Document analysis saved to Firestore successfully");
+        return;
+        
+      } catch (error: any) {
+        console.error(`Firestore save attempt ${attempt + 1} failed:`, error);
+        
+        // Don't retry on certain error types
+        if (error.code === 'permission-denied' || 
+            error.code === 'not-found' || 
+            error.code === 'already-exists') {
+          throw error;
+        }
+        
+        // Retry on rate limiting and temporary errors
+        if (error.code === 'resource-exhausted' || 
+            error.code === 'unavailable' ||
+            error.code === 'deadline-exceeded') {
+          
+          if (attempt < maxRetries) {
+            const backoffDelay = Math.min(1000 * Math.pow(2, attempt), 10000); // Max 10 seconds
+            console.log(`Retrying in ${backoffDelay}ms...`);
+            await delay(backoffDelay);
+            continue;
+          }
+        }
+        
+        // If we've exhausted retries or it's a non-retryable error
+        if (attempt === maxRetries) {
+          throw new Error(`Failed to save to Firestore after ${maxRetries + 1} attempts: ${error.message}`);
+        }
+      }
+    }
+  }, []);
+
   async function handleUpload() {
     if (!file) return alert("Please choose a file first.");
+    
+    // Clear any existing timeout to prevent rapid successive uploads
+    if (uploadTimeoutRef.current) {
+      clearTimeout(uploadTimeoutRef.current);
+    }
+    
     setLoading(true);
     setResult(null);
     setProgress(0);
@@ -380,18 +454,15 @@ export function DocUpload({ onResult }: { onResult?: (result: UploadResult) => v
         onResult(data);
       }
 
-      // Save to Firestore
+      // Save to Firestore with retry logic
       if (userId) {
         try {
-          await addDoc(collection(db, "users", userId, "documents"), {
-            name: file.name,
-            type: file.type,
-            analysis: data,
-            uploadedAt: serverTimestamp()
-          });
-          console.log("Document analysis saved to Firestore");
-        } catch (fsErr) {
+          await saveToFirestoreWithRetry(data, file, userId);
+        } catch (fsErr: any) {
           console.error("Error saving to Firestore:", fsErr);
+          // Don't fail the entire upload if Firestore save fails
+          // Just show a warning to the user
+          alert(`Warning: Document analysis completed but failed to save to database: ${fsErr.message}`);
         }
       }
     } catch (err: any) {
@@ -399,6 +470,7 @@ export function DocUpload({ onResult }: { onResult?: (result: UploadResult) => v
       alert("Upload failed: " + err.message);
     } finally {
       setLoading(false);
+      setIsSaving(false);
     }
   }
 
@@ -452,10 +524,10 @@ export function DocUpload({ onResult }: { onResult?: (result: UploadResult) => v
             </label>
             <Button
               onClick={handleUpload}
-              disabled={!file || loading}
+              disabled={!file || loading || isSaving}
               className="h-12 px-6 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white font-medium"
             >
-              {loading ? "Analyzing..." : "Analyze"}
+              {loading ? "Analyzing..." : isSaving ? "Saving..." : "Analyze"}
             </Button>
           </div>
         </div>
@@ -502,14 +574,37 @@ export function DocUpload({ onResult }: { onResult?: (result: UploadResult) => v
             <CardHeader className="pb-2">
               <CardTitle>Analyzed Document</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {(result.page_images || []).map((page) => (
-                <PageWithOverlay
-                  key={page.page}
-                  page={page}
-                  entities={result.entities_model || []}
-                />
-              ))}
+            <CardContent className="space-y-4">
+              {/* Color Legend */}
+              <div className="flex flex-wrap gap-4 text-sm p-3 bg-muted/30 rounded-md">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-red-500 bg-red-500/20 rounded"></div>
+                  <span>High Risk</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-orange-500 bg-orange-500/20 rounded"></div>
+                  <span>Medium Risk</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-yellow-500 bg-yellow-500/20 rounded"></div>
+                  <span>Low Risk</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-green-500 bg-green-500/20 rounded"></div>
+                  <span>No Risk</span>
+                </div>
+              </div>
+              
+              {/* Document Pages */}
+              <div className="space-y-6">
+                {(result.page_images || []).map((page) => (
+                  <PageWithOverlay
+                    key={page.page}
+                    page={page}
+                    entities={result.entities_model || []}
+                  />
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -579,8 +674,40 @@ function drawBoxes(canvas: HTMLCanvasElement, ents: Entity[]) {
     const [x1, y1, x2, y2] = e.bbox;
     const w = x2 - x1;
     const h = y2 - y1;
-    ctx.strokeStyle = e.risky ? "rgba(255,0,0,0.9)" : "rgba(0,200,0,0.7)";
-    ctx.fillStyle = e.risky ? "rgba(255,0,0,0.15)" : "rgba(0,200,0,0.10)";
+    
+    let strokeColor, fillColor;
+    
+    if (!e.risky) {
+      // Non-risky entities - green
+      strokeColor = "rgba(0,200,0,0.7)";
+      fillColor = "rgba(0,200,0,0.10)";
+    } else {
+      // Risky entities - color based on risk level
+      switch (e.risk_level) {
+        case "high":
+          // Red for high risk
+          strokeColor = "rgba(255,0,0,0.9)";
+          fillColor = "rgba(255,0,0,0.15)";
+          break;
+        case "medium":
+          // Orange for medium risk
+          strokeColor = "rgba(255,165,0,0.9)";
+          fillColor = "rgba(255,165,0,0.15)";
+          break;
+        case "low":
+          // Yellow for low risk
+          strokeColor = "rgba(255,255,0,0.9)";
+          fillColor = "rgba(255,255,0,0.15)";
+          break;
+        default:
+          // Default to red if risk level is unknown but entity is risky
+          strokeColor = "rgba(255,0,0,0.9)";
+          fillColor = "rgba(255,0,0,0.15)";
+      }
+    }
+    
+    ctx.strokeStyle = strokeColor;
+    ctx.fillStyle = fillColor;
     ctx.lineWidth = 3;
     ctx.strokeRect(x1, y1, w, h);
     ctx.fillRect(x1, y1, w, h);

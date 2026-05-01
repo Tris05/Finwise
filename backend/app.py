@@ -62,7 +62,7 @@ def analyze():
     regex_fields = extract_from_text(combined_text)
     regex_fields["full_text"] = combined_text
 
-    score, reasons = score_financial_fields(regex_fields)
+    score, reasons, risk_details = score_financial_fields(regex_fields)
     
 
     page_images = []
@@ -77,15 +77,20 @@ def analyze():
             "height": page_img.height
         })
 
-    risky_texts = {'overdue', 'late payment', 'default', 'delinquent', 'warning'}
-    if score > 0:
-        for k in ['total_due', 'min_due', 'credit_limit']:
-            if k in regex_fields:
-                risky_texts.add(str(regex_fields[k]).lower())
-
+    # Assign risk levels to entities based on detected risky clauses
     for e in all_entities:
         text = str(e.get("text", "")).lower()
-        e["risky"] = any(rt in text for rt in risky_texts)
+        e["risk_level"] = "low"  # default
+        e["risky"] = False
+        
+        # Check if this entity contains any risky clauses
+        for risk_detail in risk_details:
+            if risk_detail["clause"] in text:
+                e["risk_level"] = risk_detail["risk_level"]
+                e["risky"] = True
+                e["risk_category"] = risk_detail["category"]
+                e["risk_points"] = risk_detail["points"]
+                break  # Use the highest risk level found
 
     out = {
         "ocr_text": combined_text,
@@ -93,6 +98,7 @@ def analyze():
         "regex_fields": regex_fields,
         "risk_score": score,
         "risk_reasons": reasons,
+        "risk_details": risk_details,
         "page_images": page_images
     }
     return jsonify(out)
