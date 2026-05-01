@@ -464,161 +464,38 @@
   "replyLength": 2021
 }
 ---
-[2026-05-01T16:03:38.216Z] Request received
+[2026-05-01T16:44:59.625Z] Request received
 {
-  "userId": "149fuqnLbCh1f4ykrUghAwROGFx1",
+  "userId": "pmv8vWTovffvbSr4VCiov3mruTZ2",
   "hasPortfolio": true,
-  "promptLength": 37
+  "promptLength": 11
 }
 ---
-[2026-05-01T16:03:38.618Z] Intent API Error
-{
-  "error": {
-    "code": 400,
-    "message": "API key expired. Please renew the API key.",
-    "status": "INVALID_ARGUMENT",
-    "details": [
-      {
-        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-        "reason": "API_KEY_INVALID",
-        "domain": "googleapis.com",
-        "metadata": {
-          "service": "generativelanguage.googleapis.com"
-        }
-      },
-      {
-        "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
-        "locale": "en-US",
-        "message": "API key expired. Please renew the API key."
-      }
-    ]
-  }
-}
+[2026-05-01T16:44:59.627Z] Error: Missing GEMINI_API_KEY
 ---
-[2026-05-01T16:03:38.954Z] Gemini API Final Synthesis Error
+[2026-05-01T16:45:54.494Z] Request received
 {
-  "error": {
-    "code": 400,
-    "message": "API key expired. Please renew the API key.",
-    "status": "INVALID_ARGUMENT",
-    "details": [
-      {
-        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-        "reason": "API_KEY_INVALID",
-        "domain": "googleapis.com",
-        "metadata": {
-          "service": "generativelanguage.googleapis.com"
-        }
-      },
-      {
-        "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
-        "locale": "en-US",
-        "message": "API key expired. Please renew the API key."
-      }
-    ]
-  }
-}
----
-[2026-05-01T16:20:17.132Z] Request received
-{
-  "userId": "149fuqnLbCh1f4ykrUghAwROGFx1",
+  "userId": "pmv8vWTovffvbSr4VCiov3mruTZ2",
   "hasPortfolio": true,
-  "promptLength": 41
+  "promptLength": 2
 }
 ---
-[2026-05-01T16:20:18.039Z] Intent API Error
-{
-  "error": {
-    "code": 400,
-    "message": "API key expired. Please renew the API key.",
-    "status": "INVALID_ARGUMENT",
-    "details": [
-      {
-        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-        "reason": "API_KEY_INVALID",
-        "domain": "googleapis.com",
-        "metadata": {
-          "service": "generativelanguage.googleapis.com"
-        }
-      },
-      {
-        "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
-        "locale": "en-US",
-        "message": "API key expired. Please renew the API key."
-      }
-    ]
-  }
-}
+[2026-05-01T16:45:54.495Z] Error: Missing GEMINI_API_KEY
 ---
-[2026-05-01T16:20:18.145Z] Gemini API Final Synthesis Error
+[2026-05-01T16:53:12.597Z] Request received
 {
-  "error": {
-    "code": 400,
-    "message": "API key expired. Please renew the API key.",
-    "status": "INVALID_ARGUMENT",
-    "details": [
-      {
-        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-        "reason": "API_KEY_INVALID",
-        "domain": "googleapis.com",
-        "metadata": {
-          "service": "generativelanguage.googleapis.com"
-        }
-      },
-      {
-        "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
-        "locale": "en-US",
-        "message": "API key expired. Please renew the API key."
-      }
-    ]
-  }
-}
----
-[2026-05-01T17:44:40.711Z] Request received
-{
-  "userId": "149fuqnLbCh1f4ykrUghAwROGFx1",
+  "userId": "pmv8vWTovffvbSr4VCiov3mruTZ2",
   "hasPortfolio": true,
-  "promptLength": 36
+  "promptLength": 11
 }
 ---
-[2026-05-01T17:44:47.876Z] Intent detected
-{
-  "is_scenario": true,
-  "scenario_type": "investment_addition",
-  "modification": {
-    "type": "add",
-    "category": "equity",
-    "amount": 1
-  },
-  "horizon_days": 365
-}
----
-[2026-05-01T17:44:47.879Z] Executing scenario engine...
----
-[2026-05-01T17:44:49.416Z] Engine output parse error
-{
-  "error": "Unexpected token '}', \"}\" is not valid JSON",
-  "stdout": "Warning: serviceAccountKey.json not found. Scenario engine will use mock data.\r\n{\r\n  \"error\": \"No portfolio found for this user. Please add investments first.\"\r\n}\r\n"
-}
----
-[2026-05-01T17:44:56.541Z] Success
-{
-  "replyLength": 1828
-}
----
-[2026-05-01T18:06:20.175Z] Request received
-{
-  "hasPortfolio": true,
-  "promptLength": 69
-}
----
-[2026-05-01T18:06:22.661Z] Intent detected
+[2026-05-01T16:53:14.315Z] Intent detected
 {
   "is_scenario": false
 }
 ---
-[2026-05-01T18:06:30.273Z] Success
+[2026-05-01T16:53:21.302Z] Success
 {
-  "replyLength": 2148
+  "replyLength": 1889
 }
 ---
