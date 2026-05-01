@@ -59,11 +59,6 @@ import {
 import { onAuthStateChanged } from "firebase/auth"
 import { useEffect } from "react"
 
-// Sample data - in a real app, this would come from your backend
-
-// Initial empty portfolio
-const initialInvestments: any[] = []
-
 // Calculate real portfolio data from investments
 const calculatePortfolioData = (investments: any[]) => {
   const totalValue = investments.reduce((sum, inv) => sum + (Number(inv.currentValue) || 0), 0)
@@ -99,179 +94,6 @@ const calculatePortfolioAllocation = (investments: any[]) => {
   return Object.values(allocation)
 }
 
-const sampleTransactions = [
-  {
-    id: "1",
-    date: "2024-01-15",
-    type: "Buy" as const,
-    asset: "RELIANCE.NS",
-    quantity: 10,
-    price: 2450,
-    amount: 24500,
-    status: "Completed" as const,
-    category: "Equity" as const
-  },
-  {
-    id: "2",
-    date: "2024-01-14",
-    type: "Buy" as const,
-    asset: "HDFCBANK.NS",
-    quantity: 5,
-    price: 1650,
-    amount: 8250,
-    status: "Completed" as const,
-    category: "Equity" as const
-  },
-  {
-    id: "3",
-    date: "2024-01-13",
-    type: "Dividend" as const,
-    asset: "TCS.NS",
-    quantity: 20,
-    price: 0,
-    amount: 1200,
-    status: "Completed" as const,
-    category: "Equity" as const
-  },
-  {
-    id: "4",
-    date: "2024-01-12",
-    type: "Buy" as const,
-    asset: "Gold ETF",
-    quantity: 5,
-    price: 6200,
-    amount: 31000,
-    status: "Completed" as const,
-    category: "Commodity" as const
-  },
-  {
-    id: "5",
-    date: "2024-01-11",
-    type: "Buy" as const,
-    asset: "Bitcoin",
-    quantity: 0.1,
-    price: 4500000,
-    amount: 450000,
-    status: "Completed" as const,
-    category: "Crypto" as const
-  }
-]
-
-const marketAssets = [
-  {
-    symbol: "RELIANCE",
-    name: "Reliance Industries",
-    price: 2450.50,
-    change: 25.30,
-    changePercent: 1.04,
-    volume: 1500000,
-    marketCap: 1650000000000,
-    category: "Equity" as const,
-    isWatched: true,
-    isOwned: true
-  },
-  {
-    symbol: "TCS",
-    name: "Tata Consultancy Services",
-    price: 3850.75,
-    change: -15.25,
-    changePercent: -0.39,
-    volume: 800000,
-    marketCap: 1400000000000,
-    category: "Equity" as const,
-    isWatched: true,
-    isOwned: false
-  },
-  {
-    symbol: "HDFC",
-    name: "HDFC Bank",
-    price: 1650.20,
-    change: 8.50,
-    changePercent: 0.52,
-    volume: 1200000,
-    marketCap: 1200000000000,
-    category: "Equity" as const,
-    isWatched: false,
-    isOwned: true
-  },
-  {
-    symbol: "GOLD",
-    name: "Gold (24K)",
-    price: 6234,
-    change: -45.67,
-    changePercent: -0.73,
-    volume: 50000,
-    marketCap: 0,
-    category: "Commodity" as const,
-    isWatched: true,
-    isOwned: true
-  },
-  {
-    symbol: "BTC",
-    name: "Bitcoin",
-    price: 4500000,
-    change: 125000,
-    changePercent: 2.86,
-    volume: 1000,
-    marketCap: 8500000000000,
-    category: "Crypto" as const,
-    isWatched: true,
-    isOwned: true
-  }
-]
-
-const investmentGoals = [
-  {
-    id: "1",
-    name: "Retirement Fund",
-    targetAmount: 10000000,
-    currentAmount: 2500000,
-    targetDate: "2045-12-31",
-    category: "Retirement" as const,
-    priority: "High" as const,
-    status: "On Track" as const,
-    monthlyContribution: 25000,
-    expectedReturn: 12
-  },
-  {
-    id: "2",
-    name: "House Purchase",
-    targetAmount: 5000000,
-    currentAmount: 1200000,
-    targetDate: "2027-06-30",
-    category: "House" as const,
-    priority: "High" as const,
-    status: "Behind" as const,
-    monthlyContribution: 15000,
-    expectedReturn: 10
-  },
-  {
-    id: "3",
-    name: "Child Education",
-    targetAmount: 2000000,
-    currentAmount: 800000,
-    targetDate: "2030-06-30",
-    category: "Education" as const,
-    priority: "Medium" as const,
-    status: "On Track" as const,
-    monthlyContribution: 10000,
-    expectedReturn: 11
-  }
-]
-
-const performanceData = [
-  { month: "Jan", value: 1100000, benchmark: 1050000 },
-  { month: "Feb", value: 1120000, benchmark: 1070000 },
-  { month: "Mar", value: 1150000, benchmark: 1090000 },
-  { month: "Apr", value: 1180000, benchmark: 1110000 },
-  { month: "May", value: 1200000, benchmark: 1130000 },
-  { month: "Jun", value: 1220000, benchmark: 1150000 },
-  { month: "Jul", value: 1235000, benchmark: 1170000 },
-  { month: "Aug", value: 1240000, benchmark: 1180000 },
-  { month: "Sep", value: 1245000, benchmark: 1190000 },
-  { month: "Oct", value: 1250000, benchmark: 1200000 }
-]
-
 export default function InvestmentsPage() {
   const { toast } = useToast()
 
@@ -295,7 +117,7 @@ export default function InvestmentsPage() {
   const [assignGoalPick, setAssignGoalPick] = useState<string>("none")
 
   // Data States
-  const [investments, setInvestments] = useState<any[]>(initialInvestments)
+  const [investments, setInvestments] = useState<any[]>([])
   const [latestRecommendation, setLatestRecommendation] = useState<any>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [selectedGoal, setSelectedGoal] = useState<any>(null)
@@ -303,59 +125,53 @@ export default function InvestmentsPage() {
   const [selectedAsset, setSelectedAsset] = useState<any>(null)
   const [transactions, setTransactions] = useState<any[]>([])
   const [goals, setGoals] = useState<any[]>([])
-  const [marketAssetsState, setMarketAssets] = useState<any[]>(marketAssets)
+  const [marketAssetsState, setMarketAssets] = useState<any[]>([])
+  const [historyData, setHistoryData] = useState<any[]>([])
 
-  // Fetch real market data for the default marketAssets
-  useEffect(() => {
-    const fetchMarketAssetsData = async () => {
-      try {
-        const res = await fetch('/api/market-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'get_portfolio',
-            portfolio: marketAssets.map(a => ({
-              symbol: a.symbol,
-              type: a.category,
-              quantity: 1,
-              investedAmount: 1
-            }))
-          })
-        })
-        const json = await res.json()
-        if (json.success && json.data) {
-          const updatedAssets = marketAssets.map(asset => {
-            const fetched = json.data.find((d: any) => d.symbol === asset.symbol)
-            if (fetched) {
-              return {
-                ...asset,
-                price: fetched.currentPrice || asset.price,
-                change: fetched.dayChange || asset.change,
-                changePercent: fetched.dayChangePercent || asset.changePercent,
-                marketCap: fetched.marketCap || asset.marketCap,
-                volume: fetched.volume || asset.volume
-              }
-            }
-            return asset
-          })
-          setMarketAssets(prev => {
-            // Keep the isWatched/isOwned state from prev, but update prices
-            return updatedAssets.map(newAsset => {
-              const old = prev.find(p => p.symbol === newAsset.symbol)
-              if (old) {
-                return { ...newAsset, isWatched: old.isWatched, isOwned: old.isOwned }
-              }
-              return newAsset
-            })
-          })
-        }
-      } catch (error) {
-        console.error("Failed to fetch market assets data:", error)
-      }
+  // Fetch market data for a given list of symbols
+  const fetchMarketAssetsData = async (symbols: string[]) => {
+    if (!symbols || symbols.length === 0) {
+      setMarketAssets([])
+      return
     }
     
-    fetchMarketAssetsData()
-  }, [])
+    setIsMarketDataLoading(true)
+    try {
+      const res = await fetch('/api/market-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get_portfolio',
+          portfolio: symbols.map(s => ({
+            symbol: s,
+            type: 'stock',
+            quantity: 1,
+            investedAmount: 1
+          }))
+        })
+      })
+      const json = await res.json()
+      if (json.success && json.data) {
+        setMarketAssets(json.data.map((d: any) => ({
+          symbol: d.symbol,
+          name: d.name,
+          price: d.currentPrice,
+          currency: d.currency || "USD",
+          change: d.dayChange,
+          changePercent: d.dayChangePercent,
+          volume: d.volume,
+          marketCap: d.marketCap,
+          category: d.sector || 'Equity',
+          isWatched: true,
+          isOwned: false // Computed dynamically in component if needed
+        })))
+      }
+    } catch (error) {
+      console.error("Failed to fetch market assets data:", error)
+    } finally {
+      setIsMarketDataLoading(false)
+    }
+  }
 
   // Auth & Sync
   useEffect(() => {
@@ -418,10 +234,15 @@ export default function InvestmentsPage() {
         const watchlistRef = collection(db, "users", user.uid, "watchlist")
         unsubs.push(onSnapshot(watchlistRef, (snapshot) => {
           const watchedSymbols = snapshot.docs.map(doc => doc.id)
-          setMarketAssets(prev => prev.map(asset => ({
-            ...asset,
-            isWatched: watchedSymbols.includes(asset.symbol)
-          })))
+          fetchMarketAssetsData(watchedSymbols)
+        }))
+
+        // Subscribe to Portfolio History
+        const historyRef = collection(db, "users", user.uid, "portfolio_history")
+        const qHistoryAll = query(historyRef, orderBy("date", "asc"))
+        unsubs.push(onSnapshot(qHistoryAll, (snapshot) => {
+          const hData = snapshot.docs.map(doc => doc.data())
+          setHistoryData(hData)
         }))
 
         // Trigger Portfolio Snapshot
@@ -485,26 +306,11 @@ export default function InvestmentsPage() {
     }
   }
 
-  // Simulate real-time market data updates
-  const simulateMarketUpdate = () => {
-    setIsMarketDataLoading(true)
-    setTimeout(() => {
-      setMarketAssets(prev => prev.map(asset => {
-        const randomChange = (Math.random() - 0.5) * 0.02 // ±1% change
-        const newPrice = asset.price * (1 + randomChange)
-        const change = newPrice - asset.price
-        const changePercent = (change / asset.price) * 100
-
-
-        return {
-          ...asset,
-          price: newPrice,
-          change: change,
-          changePercent: changePercent
-        }
-      }))
-      setIsMarketDataLoading(false)
-    }, 1000)
+  // Refresh market data properly instead of faking it
+  const refreshMarketDataHandler = async () => {
+    if (!userId) return
+    const symbols = marketAssetsState.map(a => a.symbol)
+    await fetchMarketAssetsData(symbols)
   }
 
   const handleAssetClick = (_asset: any) => {
@@ -920,6 +726,7 @@ export default function InvestmentsPage() {
       dayChange: asset.change,
       dayChangePercent: asset.changePercent,
       color: "#3B82F6",
+      currency: asset.currency || "USD",
       sector: asset.category,
       marketCap: asset.marketCap.toString(),
       pe: 0,
@@ -1168,22 +975,31 @@ export default function InvestmentsPage() {
     }, 1500)
   }
 
-  const handleAddToWatchlist = (stock: any) => {
-    // Add to watchlist state
-    setMarketAssets(prev =>
-      prev.map(asset =>
-        asset.symbol === stock.symbol
-          ? { ...asset, isWatched: true }
-          : asset
-      )
-    )
+  const handleAddToWatchlist = async (stock: any) => {
+    if (!userId) {
+      toast({ title: "Authentication Required", description: "Please sign in to add to your watchlist.", variant: "destructive" })
+      return
+    }
 
-
-    // Show success toast
-    toast({
-      title: "Added to Watchlist",
-      description: `${stock.symbol} has been added to your watchlist`,
-    })
+    try {
+      const { setDoc } = await import("firebase/firestore")
+      const docRef = doc(db, "users", userId, "watchlist", stock.symbol)
+      await setDoc(docRef, {
+        symbol: stock.symbol,
+        added_at: serverTimestamp()
+      })
+      toast({
+        title: "Added to Watchlist",
+        description: `${stock.symbol} has been added to your watchlist`,
+      })
+    } catch (error) {
+      console.error("Error adding to watchlist:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add to watchlist.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleAddToPortfolio = (stock: any) => {
@@ -1203,6 +1019,7 @@ export default function InvestmentsPage() {
       dayChange: stock.dayChange,
       dayChangePercent: stock.dayChangePercent,
       color: "#3B82F6",
+      currency: stock.currency || "USD",
       sector: stock.sector,
       marketCap: stock.marketCap.toString(),
       pe: stock.pe || 0,
@@ -1291,7 +1108,7 @@ export default function InvestmentsPage() {
           </CardHeader>
           <CardContent className="h-96">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={performanceData}>
+              <AreaChart data={historyData.length > 0 ? historyData.map(h => ({ ...h, month: h.date })) : [{ month: new Date().toISOString().split('T')[0], value: portfolioData.totalValue, invested: portfolioData.totalValue - portfolioData.totalGain }]}>
                 <XAxis
                   dataKey="month"
                   axisLine={false}
@@ -1322,12 +1139,12 @@ export default function InvestmentsPage() {
                 />
                 <Area
                   type="monotone"
-                  dataKey="benchmark"
+                  dataKey="invested"
                   stroke="#10B981"
                   fill="#10B981"
                   fillOpacity={0.1}
                   strokeWidth={2}
-                  name="Benchmark"
+                  name="Invested Amount"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -1352,30 +1169,12 @@ export default function InvestmentsPage() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="portfolio" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
+          <TabsList className="grid w-full grid-cols-4 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
             <TabsTrigger
               value="portfolio"
               className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
             >
               Portfolio
-            </TabsTrigger>
-            <TabsTrigger
-              value="search"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-            >
-              Search Stocks
-            </TabsTrigger>
-            <TabsTrigger
-              value="recommendations"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-            >
-              AI Recommendations
-            </TabsTrigger>
-            <TabsTrigger
-              value="transactions"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 py-2"
-            >
-              Transactions
             </TabsTrigger>
             <TabsTrigger
               value="market"
@@ -1407,43 +1206,31 @@ export default function InvestmentsPage() {
               onEditPosition={handleOpenEditHolding}
               onAssignGoal={handleOpenAssignGoal}
             />
+            <div className="mt-8">
+              <InvestmentTransactions
+                transactions={transactions}
+                onAddTransaction={handleAddTransaction}
+                onEditTransaction={handleEditTransaction}
+                onDeleteTransaction={handleDeleteTransaction}
+              />
+            </div>
           </TabsContent>
 
-          <TabsContent value="search" className="space-y-6 mt-6">
+          <TabsContent value="market" className="space-y-6 mt-6">
             <StockSearch
               onAddToWatchlist={handleAddToWatchlist}
               onAddToPortfolio={handleAddToPortfolio}
             />
-          </TabsContent>
-
-          <TabsContent value="recommendations" className="space-y-6 mt-6">
-            <InvestmentRecommendations
-              recommendation={latestRecommendation}
-              onAddInvestment={handleAIRecommendationAdd}
-              isLoading={isLoading || isMarketDataFetching}
-              onRunAgain={() => setIsOptimizerOpen(true)}
-              existingPortfolio={realTimeInvestments}
-            />
-          </TabsContent>
-
-          <TabsContent value="transactions" className="space-y-6 mt-6">
-            <InvestmentTransactions
-              transactions={transactions}
-              onAddTransaction={handleAddTransaction}
-              onEditTransaction={handleEditTransaction}
-              onDeleteTransaction={handleDeleteTransaction}
-            />
-          </TabsContent>
-
-          <TabsContent value="market" className="space-y-6 mt-6">
-            <MarketWatchlist
-              assets={marketAssetsState}
-              onToggleWatch={handleToggleWatch}
-              onBuyAsset={handleBuyAsset}
-              onViewDetails={handleViewDetails}
-              onRefresh={simulateMarketUpdate}
-              isLoading={isMarketDataLoading}
-            />
+            <div className="mt-8">
+              <MarketWatchlist
+                assets={marketAssetsState}
+                onToggleWatch={handleToggleWatch}
+                onBuyAsset={handleBuyAsset}
+                onViewDetails={handleViewDetails}
+                onRefresh={refreshMarketDataHandler}
+                isLoading={isMarketDataLoading}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="goals" className="space-y-6 mt-6">
@@ -1454,6 +1241,15 @@ export default function InvestmentsPage() {
             <div className="space-y-8">
               {/* Main AI Insights */}
               <InvestmentInsights recommendation={latestRecommendation} />
+
+              {/* AI Recommendations */}
+              <InvestmentRecommendations
+                recommendation={latestRecommendation}
+                onAddInvestment={handleAIRecommendationAdd}
+                isLoading={isLoading || isMarketDataFetching}
+                onRunAgain={() => setIsOptimizerOpen(true)}
+                existingPortfolio={realTimeInvestments}
+              />
 
               {/* Additional Guidance */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1520,9 +1316,22 @@ export default function InvestmentsPage() {
       <RebalanceModal open={rebalanceOpen} onOpenChange={setRebalanceOpen} />
       <AddTransactionModal
         open={addTransactionOpen}
-        onOpenChange={setAddTransactionOpen}
+        onOpenChange={(open) => {
+          setAddTransactionOpen(open)
+          if (!open) setSelectedAsset(null)
+        }}
         onAddTransaction={handleAddTransactionSubmit}
         goals={goals.map((g) => ({ id: g.id, name: g.name }))}
+        initialAsset={
+          selectedAsset
+            ? {
+                symbol: selectedAsset.symbol,
+                category: selectedAsset.category,
+                currentPrice: Number(selectedAsset.currentPrice) || undefined,
+                currency: selectedAsset.currency || "USD",
+              }
+            : null
+        }
       />
       <EditHoldingModal
         open={editHoldingOpen}

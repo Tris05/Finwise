@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Plus, Minus } from "lucide-react"
 import { format } from "date-fns"
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 export type GoalOption = { id: string; name: string }
 
@@ -19,9 +19,15 @@ interface AddTransactionModalProps {
   onOpenChange: (open: boolean) => void
   onAddTransaction: (transaction: any) => void
   goals?: GoalOption[]
+  initialAsset?: {
+    symbol?: string
+    category?: string
+    currentPrice?: number
+    currency?: string
+  } | null
 }
 
-export function AddTransactionModal({ open, onOpenChange, onAddTransaction, goals = [] }: AddTransactionModalProps) {
+export function AddTransactionModal({ open, onOpenChange, onAddTransaction, goals = [], initialAsset = null }: AddTransactionModalProps) {
   const [formData, setFormData] = useState({
     asset: "",
     type: "Buy",
@@ -35,6 +41,100 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction, goal
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isFetchingPrice, setIsFetchingPrice] = useState(false)
+  const [priceError, setPriceError] = useState<string | null>(null)
+  const [liveCurrency, setLiveCurrency] = useState<string>("INR")
+  const isAssetLocked = Boolean(initialAsset?.symbol)
+
+  const supportsLivePrice = useMemo(
+    () => ["Equity", "Crypto", "Commodity"].includes(formData.category),
+    [formData.category]
+  )
+
+  const recalculateAmount = (quantityRaw: string, priceRaw: string) => {
+    const quantity = parseFloat(quantityRaw)
+    const price = parseFloat(priceRaw)
+    if (!Number.isNaN(quantity) && quantity > 0 && !Number.isNaN(price) && price > 0) {
+      setFormData((prev) => ({ ...prev, amount: (quantity * price).toString() }))
+    } else {
+      setFormData((prev) => ({ ...prev, amount: "" }))
+    }
+  }
+
+  const fetchLivePrice = async (asset: string, category: string) => {
+    const symbol = asset.trim().toUpperCase()
+    if (!symbol || !["Equity", "Crypto", "Commodity"].includes(category)) {
+      return
+    }
+
+    setIsFetchingPrice(true)
+    setPriceError(null)
+    try {
+      const response = await fetch("/api/market-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "get_stock",
+          symbol,
+          type: category.toLowerCase(),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Could not fetch live price (${response.status})`)
+      }
+
+      const result = await response.json()
+      if (!result.success || !result.data?.currentPrice) {
+        throw new Error(result.error || "No live price found")
+      }
+
+      const livePrice = String(result.data.currentPrice)
+      setLiveCurrency(result.data.currency || "USD")
+      setFormData((prev) => {
+        const next = { ...prev, price: livePrice }
+        const quantity = parseFloat(prev.quantity)
+        if (!Number.isNaN(quantity) && quantity > 0) {
+          next.amount = String(quantity * Number(livePrice))
+        }
+        return next
+      })
+    } catch (error) {
+      console.error("Error fetching live price:", error)
+      setPriceError("Live price unavailable. Try a valid symbol.")
+      setFormData((prev) => ({ ...prev, price: "", amount: "" }))
+    } finally {
+      setIsFetchingPrice(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!open) return
+    if (!initialAsset?.symbol) return
+
+    setLiveCurrency(initialAsset.currency || "INR")
+    setFormData((prev) => ({
+      ...prev,
+      asset: initialAsset.symbol || prev.asset,
+      category: initialAsset.category || prev.category,
+      price: initialAsset.currentPrice ? String(initialAsset.currentPrice) : prev.price,
+    }))
+  }, [open, initialAsset])
+
+  useEffect(() => {
+    if (!open) return
+    if (!supportsLivePrice) {
+      setPriceError(null)
+      return
+    }
+    if (!formData.asset.trim()) return
+
+    const timeout = setTimeout(() => {
+      void fetchLivePrice(formData.asset, formData.category)
+    }, 300)
+
+    return () => clearTimeout(timeout)
+  }, [open, formData.asset, formData.category, supportsLivePrice])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -68,6 +168,7 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction, goal
         quantity: parseFloat(formData.quantity),
         price: parseFloat(formData.price),
         amount: parseFloat(formData.amount),
+        currency: liveCurrency,
         status: "Completed",
         category: formData.category,
         notes: formData.notes,
@@ -90,14 +191,8 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction, goal
         goalId: "none",
       })
       setErrors({})
-    }
-  }
-
-  const calculateAmount = () => {
-    const quantity = parseFloat(formData.quantity)
-    const price = parseFloat(formData.price)
-    if (quantity && price) {
-      setFormData(prev => ({ ...prev, amount: (quantity * price).toString() }))
+      setPriceError(null)
+      setLiveCurrency("INR")
     }
   }
 
@@ -120,6 +215,7 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction, goal
                 placeholder="e.g., RELIANCE, BTC, GOLD"
                 value={formData.asset}
                 onChange={(e) => setFormData(prev => ({ ...prev, asset: e.target.value }))}
+                disabled={isAssetLocked}
                 className={errors.asset ? "border-red-500" : ""}
               />
               {errors.asset && <p className="text-sm text-red-500">{errors.asset}</p>}
@@ -150,35 +246,43 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction, goal
                 type="number"
                 placeholder="150"
                 value={formData.quantity}
-                onChange={(e) => setFormData(prev => ({ ...prev, quantity: e.target.value }))}
-                onBlur={calculateAmount}
+                onChange={(e) => {
+                  const quantity = e.target.value
+                  setFormData(prev => ({ ...prev, quantity }))
+                  recalculateAmount(quantity, formData.price)
+                }}
                 className={errors.quantity ? "border-red-500" : ""}
               />
               {errors.quantity && <p className="text-sm text-red-500">{errors.quantity}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="price">Price per Unit *</Label>
+              <Label htmlFor="price">Price per Unit * ({liveCurrency})</Label>
               <Input
                 id="price"
                 type="number"
-                placeholder="2450.50"
+                placeholder={supportsLivePrice ? "Fetched from live market data" : "2450.50"}
                 value={formData.price}
-                onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                onBlur={calculateAmount}
+                readOnly
                 className={errors.price ? "border-red-500" : ""}
               />
+              {supportsLivePrice && (
+                <p className="text-xs text-muted-foreground">
+                  {isFetchingPrice ? "Fetching live price..." : "Live market price is used automatically."}
+                </p>
+              )}
+              {priceError && <p className="text-xs text-red-500">{priceError}</p>}
               {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Total Amount *</Label>
+              <Label htmlFor="amount">Total Amount * ({liveCurrency})</Label>
               <Input
                 id="amount"
                 type="number"
-                placeholder="367575"
+                placeholder="Auto-calculated"
                 value={formData.amount}
-                onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                readOnly
                 className={errors.amount ? "border-red-500" : ""}
               />
               {errors.amount && <p className="text-sm text-red-500">{errors.amount}</p>}
@@ -188,7 +292,7 @@ export function AddTransactionModal({ open, onOpenChange, onAddTransaction, goal
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+              <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))} disabled={isAssetLocked}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

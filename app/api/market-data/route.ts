@@ -166,17 +166,28 @@ async function fetchStockData(rawSymbol: string) {
 
     const result = data.chart.result[0]
     const meta = result.meta
-    const quotes = result.indicators.quote[0]
-    const timestamps = result.timestamp
+    const quotes = result.indicators?.quote?.[0] || {}
+    const timestamps = result.timestamp || []
 
-    // Get the latest data
-    if (!timestamps || timestamps.length === 0) {
-      throw new Error('No price history available')
+    let currentPrice = meta.regularMarketPrice
+    let openPrice = currentPrice
+    let highPrice = meta.regularMarketDayHigh || currentPrice
+    let lowPrice = meta.regularMarketDayLow || currentPrice
+    let volume = meta.regularMarketVolume || 0
+
+    // Get the latest data from timestamps if available
+    if (timestamps.length > 0 && quotes.close && quotes.close.length > 0) {
+      const latestIndex = timestamps.length - 1
+      if (quotes.close[latestIndex] != null) currentPrice = quotes.close[latestIndex]
+      if (quotes.open?.[latestIndex] != null) openPrice = quotes.open[latestIndex]
+      if (quotes.high?.[latestIndex] != null) highPrice = quotes.high[latestIndex]
+      if (quotes.low?.[latestIndex] != null) lowPrice = quotes.low[latestIndex]
+      if (quotes.volume?.[latestIndex] != null) volume = quotes.volume[latestIndex] || volume
+    } else if (currentPrice == null) {
+      throw new Error('No price history or market price available')
     }
 
-    const latestIndex = timestamps.length - 1
-    const currentPrice = quotes.close[latestIndex]
-    const previousClose = meta.previousClose || currentPrice
+    const previousClose = meta.previousClose || meta.chartPreviousClose || currentPrice
     const dayChange = currentPrice - previousClose
     const dayChangePercent = previousClose !== 0 ? (dayChange / previousClose) * 100 : 0
 
@@ -187,10 +198,10 @@ async function fetchStockData(rawSymbol: string) {
       dayChange: Math.round(dayChange * 100) / 100,
       dayChangePercent: Math.round(dayChangePercent * 100) / 100,
       previousClose: Math.round(previousClose * 100) / 100,
-      open: quotes.open[latestIndex] ? Math.round(quotes.open[latestIndex] * 100) / 100 : currentPrice,
-      high: quotes.high[latestIndex] ? Math.round(quotes.high[latestIndex] * 100) / 100 : currentPrice,
-      low: quotes.low[latestIndex] ? Math.round(quotes.low[latestIndex] * 100) / 100 : currentPrice,
-      volume: meta.regularMarketVolume || quotes.volume[latestIndex] || 0,
+      open: Math.round(openPrice * 100) / 100,
+      high: Math.round(highPrice * 100) / 100,
+      low: Math.round(lowPrice * 100) / 100,
+      volume: volume,
       currency: meta.currency || 'USD',
       exchange: meta.exchangeName || 'Unknown',
       marketCap: meta.marketCap || 0,
@@ -214,33 +225,46 @@ async function fetchStockData(rawSymbol: string) {
 }
 
 async function searchStocks(query: string, limit: number = 10) {
-  const results = []
+  const normalizedQuery = query.trim()
+  if (!normalizedQuery) return []
 
-  // Common symbol variations to try
-  const variations = [
-    query.toUpperCase(),
-    `${query.toUpperCase()}.NS`,  // NSE
-    `${query.toUpperCase()}.BO`,  // BSE
-    `${query.toUpperCase()}.L`,   // LSE
-    `${query.toUpperCase()}.T`,   // TSE
-    `${query.toUpperCase()}.HK`,  // HKEX
-    `${query.toUpperCase()}.AX`,  // ASX
-  ]
-
-  // Try each variation
-  for (const symbol of variations.slice(0, limit)) {
-    try {
-      const data = await fetchStockData(symbol)
-      if (data) {
-        results.push(data)
+  try {
+    // Prefer Yahoo's search endpoint so company-name queries work reliably.
+    const searchUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(normalizedQuery)}`
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
-    } catch (error) {
-      // Continue to next variation
-      continue
-    }
-  }
+    })
 
-  return results
+    let candidateSymbols: string[] = []
+
+    if (response.ok) {
+      const payload = await response.json()
+      const quotes = Array.isArray(payload?.quotes) ? payload.quotes : []
+
+      candidateSymbols = quotes
+        .filter((q: any) => q?.symbol && q?.quoteType !== 'INDEX')
+        .map((q: any) => String(q.symbol).toUpperCase())
+    }
+
+    // Fallback for cases where Yahoo search returns no quotes.
+    if (candidateSymbols.length === 0) {
+      candidateSymbols = [
+        normalizedQuery.toUpperCase(),
+        `${normalizedQuery.toUpperCase()}.NS`,
+        `${normalizedQuery.toUpperCase()}.BO`
+      ]
+    }
+
+    const uniqueSymbols = [...new Set(candidateSymbols)].slice(0, Math.max(1, Math.min(limit, 10)))
+    const results = await Promise.all(uniqueSymbols.map((symbol) => fetchStockData(symbol)))
+
+    return results.filter(Boolean)
+  } catch (error) {
+    console.error(`Error searching stocks for query "${normalizedQuery}":`, error)
+    return []
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -381,6 +405,7 @@ export async function POST(request: NextRequest) {
           updatedPortfolio.push({
             ...investment,
             currentPrice: data.currentPrice,
+            currency: data.currency || 'USD',
             dayChange: data.dayChange,
             dayChangePercent: data.dayChangePercent,
             marketCap: data.marketCap,

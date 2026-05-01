@@ -13,6 +13,7 @@ interface MarketAsset {
   symbol: string
   name: string
   price: number
+  currency?: string
   change: number
   changePercent: number
   volume: number
@@ -114,8 +115,11 @@ export function MarketWatchlist({
   }, [])
 
   const filteredAssets = assets.filter(asset => {
-    const matchesSearch = asset.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const safeSymbol = (asset.symbol || "").toLowerCase()
+    const safeName = (asset.name || "").toLowerCase()
+    const normalizedSearch = searchTerm.toLowerCase()
+    const matchesSearch = safeSymbol.includes(normalizedSearch) ||
+                         safeName.includes(normalizedSearch)
     const matchesCategory = filterCategory === "all" || asset.category === filterCategory
     const matchesWatched = !showWatchedOnly || asset.isWatched
     
@@ -138,6 +142,15 @@ export function MarketWatchlist({
     if (volume >= 1e6) return `${(volume / 1e6).toFixed(1)}M`
     if (volume >= 1e3) return `${(volume / 1e3).toFixed(1)}K`
     return volume.toString()
+  }
+
+  const formatCurrencyValue = (value: number, currency?: string) => {
+    if (!Number.isFinite(value)) return "N/A"
+    if (currency === "INR") return formatINR(value)
+    if (currency === "USD") {
+      return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }
+    return `${currency || "USD"} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   return (
@@ -230,7 +243,7 @@ export function MarketWatchlist({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search assets..."
+                placeholder="Filter watchlist..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -271,16 +284,16 @@ export function MarketWatchlist({
                   return (
                     <TableRow key={asset.symbol}>
                       <TableCell className="font-medium">{asset.symbol}</TableCell>
-                      <TableCell>{asset.name}</TableCell>
-                      <TableCell className="font-medium">{formatINR(asset.price)}</TableCell>
+                      <TableCell>{asset.name || asset.symbol}</TableCell>
+                      <TableCell className="font-medium">{formatCurrencyValue(asset.price, asset.currency)}</TableCell>
                       <TableCell>
                         <div className={`flex items-center ${isGain ? 'text-green-600' : 'text-red-600'}`}>
                           {isGain ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-                          <span>{formatINR(Math.abs(asset.change))} ({asset.changePercent.toFixed(2)}%)</span>
+                          <span>{formatCurrencyValue(Math.abs(asset.change), asset.currency)} ({asset.changePercent.toFixed(2)}%)</span>
                         </div>
                       </TableCell>
                       <TableCell>{formatVolume(asset.volume)}</TableCell>
-                      <TableCell>{formatINR(asset.marketCap)}</TableCell>
+                      <TableCell>{formatCurrencyValue(asset.marketCap, asset.currency)}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={getCategoryColor(asset.category)}>
                           {asset.category}
