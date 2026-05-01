@@ -31,23 +31,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const noFlashThemeScript = `
-    (function() {
-      try {
-        var saved = localStorage.getItem('finwise-theme');
-        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var theme = (saved === 'light' || saved === 'dark') ? saved : (prefersDark ? 'dark' : 'light');
-        if (theme === 'dark') document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
-      } catch (e) {}
-    })();
-  `
-
   return (
-    <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${inter.variable} antialiased`}>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: noFlashThemeScript }} />
-      </head>
+    <html lang="en" className={`${poppins.variable} ${inter.variable} antialiased`}>
       <body className={`font-sans ${inter.variable}`}>
         <Suspense fallback={null}>
           <QueryProvider>

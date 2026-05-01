@@ -1,7 +1,7 @@
 "use client"
 
 import { Input } from "@/components/ui/input"
-import { Bell, Search, TrendingUp, TrendingDown, Moon, Sun } from "lucide-react"
+import { Bell, Search, TrendingUp, TrendingDown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatINR } from "@/lib/utils"
@@ -10,13 +10,10 @@ import { UserMenu } from "@/components/user-menu"
 import { useSmartNavigation } from "@/lib/smart-navigation"
 import { useInvestments } from "@/hooks/useInvestments"
 import { useGameProgress } from "@/hooks/useGameProgress"
-import { Button } from "@/components/ui/button"
-import { useTheme } from "@/hooks/use-theme"
 
 export function Topbar() {
   const [searchQuery, setSearchQuery] = useState("")
   const { navigate } = useSmartNavigation()
-  const { theme, mounted, toggleTheme } = useTheme()
 
   // Live portfolio data from Firestore + market prices
   const {
@@ -103,15 +100,6 @@ export function Topbar() {
             )}
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {mounted && theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
           <Bell className="h-5 w-5 cursor-pointer hover:text-primary transition-colors" aria-hidden="true" />
           <UserMenu />
         </div>
