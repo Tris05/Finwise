@@ -7,7 +7,7 @@ from PIL import Image
 from io import BytesIO
 
 # Local modules (copy the other .py files into same folder)
-from backend.ocr import pdf_to_images, image_ocr_words
+from ocr import pdf_to_images, image_ocr_words
 from layout_model import LayoutModel
 from extractor import extract_from_text
 from scorer import score_financial_fields
