@@ -431,3 +431,36 @@
   "replyLength": 2107
 }
 ---
+[2026-05-01T06:16:04.861Z] Request received
+{
+  "hasPortfolio": true,
+  "promptLength": 69
+}
+---
+[2026-05-01T06:16:07.563Z] Intent detected
+{
+  "is_scenario": false
+}
+---
+[2026-05-01T06:16:14.004Z] Request received
+{
+  "userId": "jgU4UmPg4vhuW0HMHis5Kv8hyF03",
+  "hasPortfolio": true,
+  "promptLength": 69
+}
+---
+[2026-05-01T06:16:14.358Z] Success
+{
+  "replyLength": 2079
+}
+---
+[2026-05-01T06:16:17.231Z] Intent detected
+{
+  "is_scenario": false
+}
+---
+[2026-05-01T06:16:24.231Z] Success
+{
+  "replyLength": 2021
+}
+---

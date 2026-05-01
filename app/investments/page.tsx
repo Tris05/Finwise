@@ -59,6 +59,15 @@ import {
 import { onAuthStateChanged } from "firebase/auth"
 import { useEffect } from "react"
 
+const LIVE_REFRESH_MS = 5000
+const MAX_LIVE_POINTS = 120
+const MARKET_INDICATORS = [
+  { key: "nifty", label: "Nifty 50", symbol: "^NSEI", color: "#3B82F6" },
+  { key: "sensex", label: "Sensex", symbol: "^BSESN", color: "#10B981" },
+  { key: "gold", label: "Gold", symbol: "GC=F", color: "#F59E0B" },
+  { key: "btc", label: "Bitcoin", symbol: "BTC-USD", color: "#8B5CF6" },
+] as const
+
 // Calculate real portfolio data from investments
 const calculatePortfolioData = (investments: any[]) => {
   const totalValue = investments.reduce((sum, inv) => sum + (Number(inv.currentValue) || 0), 0)
@@ -127,6 +136,9 @@ export default function InvestmentsPage() {
   const [goals, setGoals] = useState<any[]>([])
   const [marketAssetsState, setMarketAssets] = useState<any[]>([])
   const [historyData, setHistoryData] = useState<any[]>([])
+  const [liveChartData, setLiveChartData] = useState<any[]>([])
+  const [indicatorBaselines, setIndicatorBaselines] = useState<Record<string, number>>({})
+  const [latestIndicators, setLatestIndicators] = useState<Record<string, { price: number; dayChangePercent: number; currency: string }>>({})
 
   // Fetch market data for a given list of symbols
   const fetchMarketAssetsData = async (symbols: string[]) => {
@@ -311,6 +323,87 @@ export default function InvestmentsPage() {
     if (!userId) return
     const symbols = marketAssetsState.map(a => a.symbol)
     await fetchMarketAssetsData(symbols)
+  }
+
+  const fetchIndicators = async () => {
+    try {
+      const responses = await Promise.all(
+        MARKET_INDICATORS.map(async (indicator) => {
+          const response = await fetch('/api/market-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'get_stock',
+              symbol: indicator.symbol
+            })
+          })
+          const result = await response.json()
+          if (result.success && result.data?.currentPrice) {
+            return {
+              key: indicator.key,
+              price: Number(result.data.currentPrice),
+              dayChangePercent: Number(result.data.dayChangePercent || 0),
+              currency: String(result.data.currency || "USD")
+            }
+          }
+          return null
+        })
+      )
+
+      const validResponses = responses.filter(Boolean) as { key: string; price: number; dayChangePercent: number; currency: string }[]
+      if (validResponses.length === 0) return
+
+      const latestMap = validResponses.reduce((acc, item) => {
+        acc[item.key] = { price: item.price, dayChangePercent: item.dayChangePercent, currency: item.currency }
+        return acc
+      }, {} as Record<string, { price: number; dayChangePercent: number; currency: string }>)
+      setLatestIndicators(latestMap)
+
+      setIndicatorBaselines((prev) => {
+        const next = { ...prev }
+        validResponses.forEach((item) => {
+          if (!next[item.key] && item.price > 0) {
+            next[item.key] = item.price
+          }
+        })
+
+        const point: Record<string, any> = {
+          t: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+        }
+        MARKET_INDICATORS.forEach((indicator) => {
+          point[`${indicator.key}Price`] = null
+          point[`${indicator.key}Move`] = null
+          point[`${indicator.key}DayMove`] = null
+        })
+        validResponses.forEach((item) => {
+          const baseline = next[item.key] || item.price || 1
+          const movePct = ((item.price - baseline) / baseline) * 100
+          point[`${item.key}Price`] = Number(item.price.toFixed(2))
+          point[`${item.key}Move`] = Number(movePct.toFixed(2))
+          point[`${item.key}DayMove`] = Number(item.dayChangePercent.toFixed(2))
+        })
+
+        setLiveChartData((prevPoints) => [...prevPoints, point].slice(-MAX_LIVE_POINTS))
+        return next
+      })
+    } catch (error) {
+      console.error("Failed to fetch market indicators:", error)
+    }
+  }
+
+  useEffect(() => {
+    void fetchIndicators()
+    const interval = setInterval(() => {
+      void fetchIndicators()
+    }, LIVE_REFRESH_MS)
+    return () => clearInterval(interval)
+  }, [])
+
+  const formatIndicatorPrice = (price: number | undefined, currency: string | undefined) => {
+    if (price == null || !Number.isFinite(price)) return "—"
+    if (currency === "INR") return formatINR(price)
+    if (currency === "USD") return `$${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+    return `${currency || "USD"} ${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
   }
 
   const handleAssetClick = (_asset: any) => {
@@ -1098,19 +1191,57 @@ export default function InvestmentsPage() {
           isLoading={isLoading || isMarketDataFetching}
         />
 
-        {/* Performance Chart */}
+        {/* Live Indicator Trend Chart */}
         <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
           <CardHeader className="pb-4">
             <div>
-              <CardTitle className="text-xl font-semibold">Portfolio Performance</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Your portfolio vs benchmark over time</p>
+              <CardTitle className="text-xl font-semibold">Live Market Pulse</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Continuously streaming indicator movement with smooth curves (refreshes every {LIVE_REFRESH_MS / 1000}s)</p>
             </div>
           </CardHeader>
           <CardContent className="h-96">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {MARKET_INDICATORS.map((indicator) => {
+                const current = latestIndicators[indicator.key]
+                const isUp = (current?.dayChangePercent ?? 0) >= 0
+                return (
+                  <div key={indicator.key} className="rounded-lg border bg-background/70 backdrop-blur px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">{indicator.label}</span>
+                      <span className={`h-2 w-2 rounded-full ${isUp ? "bg-emerald-500" : "bg-rose-500"} animate-pulse`} />
+                    </div>
+                    <div className="text-sm font-semibold mt-1">
+                      {formatIndicatorPrice(current?.price, current?.currency)}
+                    </div>
+                    <div className={`text-xs mt-0.5 ${isUp ? "text-emerald-600" : "text-rose-600"}`}>
+                      {isUp ? "+" : ""}{(current?.dayChangePercent ?? 0).toFixed(2)}%
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={historyData.length > 0 ? historyData.map(h => ({ ...h, month: h.date })) : [{ month: new Date().toISOString().split('T')[0], value: portfolioData.totalValue, invested: portfolioData.totalValue - portfolioData.totalGain }]}>
+              <LineChart data={liveChartData}>
+                <defs>
+                  <linearGradient id="niftyGlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="sensexGlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="goldGlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="btcGlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <XAxis
-                  dataKey="month"
+                  dataKey="t"
                   axisLine={false}
                   tickLine={false}
                   className="text-xs text-muted-foreground"
@@ -1121,6 +1252,7 @@ export default function InvestmentsPage() {
                   className="text-xs text-muted-foreground"
                 />
                 <Tooltip
+                  formatter={(value: any, name: any) => [`${Number(value).toFixed(2)}%`, name]}
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
@@ -1128,42 +1260,93 @@ export default function InvestmentsPage() {
                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                   }}
                 />
-                <Area
+                <Line
                   type="monotone"
-                  dataKey="value"
+                  dataKey="niftyMove"
                   stroke="#3B82F6"
-                  fill="#3B82F6"
-                  fillOpacity={0.1}
-                  strokeWidth={2}
-                  name="Your Portfolio"
+                  strokeWidth={3}
+                  dot={false}
+                  activeDot={{ r: 5 }}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  name="Nifty 50 %"
                 />
-                <Area
+                <Line
                   type="monotone"
-                  dataKey="invested"
+                  dataKey="sensexMove"
                   stroke="#10B981"
-                  fill="#10B981"
-                  fillOpacity={0.1}
-                  strokeWidth={2}
-                  name="Invested Amount"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  name="Sensex %"
                 />
-              </AreaChart>
+                <Line
+                  type="monotone"
+                  dataKey="goldMove"
+                  stroke="#F59E0B"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  name="Gold %"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="btcMove"
+                  stroke="#8B5CF6"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  name="Bitcoin %"
+                />
+              </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Portfolio Allocation Chart */}
+        {/* Live Momentum Streams */}
         <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20">
           <CardHeader className="pb-4">
             <div>
-              <CardTitle className="text-xl font-semibold">Portfolio Allocation</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Click on any slice to view investments in that category</p>
+              <CardTitle className="text-xl font-semibold">Live Momentum Streams</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Smoothed day-change curves so you can track momentum shifts in real time</p>
             </div>
           </CardHeader>
-          <CardContent>
-            <PortfolioPie
-              data={portfolioAllocation as any[]}
-              onSliceClick={handlePieSliceClick}
-            />
+          <CardContent className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={liveChartData}>
+                <defs>
+                  <linearGradient id="niftyArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.03} />
+                  </linearGradient>
+                  <linearGradient id="sensexArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="goldArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="btcArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="t" axisLine={false} tickLine={false} className="text-xs text-muted-foreground" />
+                <YAxis axisLine={false} tickLine={false} className="text-xs text-muted-foreground" />
+                <Tooltip formatter={(value: any, name: any) => [`${Number(value).toFixed(2)}%`, name]} />
+                <Area type="monotone" dataKey="niftyDayMove" stroke="#3B82F6" fill="url(#niftyArea)" strokeWidth={2} />
+                <Area type="monotone" dataKey="sensexDayMove" stroke="#10B981" fill="url(#sensexArea)" strokeWidth={2} />
+                <Area type="monotone" dataKey="goldDayMove" stroke="#F59E0B" fill="url(#goldArea)" strokeWidth={2} />
+                <Area type="monotone" dataKey="btcDayMove" stroke="#8B5CF6" fill="url(#btcArea)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
