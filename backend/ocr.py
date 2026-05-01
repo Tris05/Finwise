@@ -14,7 +14,7 @@ def pdf_to_images(pdf_path: str, dpi: int = 300, poppler_path: str = None) -> Li
     Convert a PDF to a list of PIL Images (one per page).
     poppler_path: Windows users should pass the path to poppler's bin folder if not on PATH.
     """
-    images = convert_from_path(pdf_path, dpi=dpi, poppler_path=poppler_path)
+    images = convert_from_path(pdf_path, dpi=dpi, poppler_path=r"C:\Users\tanis\Downloads\Release-25.12.0-0\poppler-25.12.0\Library\bin")
     return images
 
 def image_ocr_words(image: Image.Image, page: int = 0) -> Tuple[str, List[Dict]]:

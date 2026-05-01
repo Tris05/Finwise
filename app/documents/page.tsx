@@ -16,6 +16,8 @@ export default function DocumentsPage() {
   const [deductions, setDeductions] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
 
+  const [latestResult, setLatestResult] = useState<any>(null);
+
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
@@ -89,7 +91,7 @@ export default function DocumentsPage() {
     <AppShell>
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2">
-          <DocUpload />
+          <DocUpload onResult={(res) => setLatestResult(res)} />
         </div>
         <div className="space-y-4">
           <Card>
@@ -117,30 +119,18 @@ export default function DocumentsPage() {
               <CardTitle>Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="text-sm">
-                <div className="font-medium mb-1 text-red-600">Detected Risks</div>
-                {risks.length === 0 ? (
-                  <div className="text-xs text-muted-foreground italic pl-5">No risks detected</div>
-                ) : (
+              {latestResult && (
+                <div className="text-sm p-3 bg-muted/50 rounded-md border mb-3">
+                  <div className={`font-semibold mb-1 ${latestResult.risk_score >= 50 ? 'text-red-600' : 'text-primary'}`}>
+                    Current Document Risk Score: {latestResult.risk_score}
+                  </div>
                   <ul className="text-sm list-disc pl-5">
-                    {risks.map((r, i) => (
+                    {(latestResult.risk_reasons || []).map((r: string, i: number) => (
                       <li key={i}>{r}</li>
                     ))}
                   </ul>
-                )}
-              </div>
-              <div className="text-sm">
-                <div className="font-medium mb-1 text-green-600">Tax Deductions Found</div>
-                {deductions.length === 0 ? (
-                  <div className="text-xs text-muted-foreground italic pl-5">No deductions found</div>
-                ) : (
-                  <ul className="text-sm list-disc pl-5">
-                    {deductions.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

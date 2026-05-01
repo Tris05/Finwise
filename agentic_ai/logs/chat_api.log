@@ -464,3 +464,38 @@
   "replyLength": 2021
 }
 ---
+[2026-05-01T16:44:59.625Z] Request received
+{
+  "userId": "pmv8vWTovffvbSr4VCiov3mruTZ2",
+  "hasPortfolio": true,
+  "promptLength": 11
+}
+---
+[2026-05-01T16:44:59.627Z] Error: Missing GEMINI_API_KEY
+---
+[2026-05-01T16:45:54.494Z] Request received
+{
+  "userId": "pmv8vWTovffvbSr4VCiov3mruTZ2",
+  "hasPortfolio": true,
+  "promptLength": 2
+}
+---
+[2026-05-01T16:45:54.495Z] Error: Missing GEMINI_API_KEY
+---
+[2026-05-01T16:53:12.597Z] Request received
+{
+  "userId": "pmv8vWTovffvbSr4VCiov3mruTZ2",
+  "hasPortfolio": true,
+  "promptLength": 11
+}
+---
+[2026-05-01T16:53:14.315Z] Intent detected
+{
+  "is_scenario": false
+}
+---
+[2026-05-01T16:53:21.302Z] Success
+{
+  "replyLength": 1889
+}
+---

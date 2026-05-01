@@ -7,7 +7,7 @@ from PIL import Image
 from io import BytesIO
 
 # Local modules (copy the other .py files into same folder)
-from ocr import pdf_to_images, image_ocr_words
+from backend.ocr import pdf_to_images, image_ocr_words
 from layout_model import LayoutModel
 from extractor import extract_from_text
 from scorer import score_financial_fields
@@ -77,7 +77,12 @@ def analyze():
             "height": page_img.height
         })
 
-    risky_texts = {str(v).lower() for v in regex_fields.values() if isinstance(v, (str, int, float))}
+    risky_texts = {'overdue', 'late payment', 'default', 'delinquent', 'warning'}
+    if score > 0:
+        for k in ['total_due', 'min_due', 'credit_limit']:
+            if k in regex_fields:
+                risky_texts.add(str(regex_fields[k]).lower())
+
     for e in all_entities:
         text = str(e.get("text", "")).lower()
         e["risky"] = any(rt in text for rt in risky_texts)
