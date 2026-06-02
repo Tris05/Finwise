@@ -126,21 +126,46 @@ export async function POST(req: Request) {
     // --- STEP 2: Execute Scenario Engine ---
     if (intent.is_scenario && userId) {
         logToFile("Executing scenario engine...")
-        const enginePath = path.join(process.cwd(), "agentic_ai", "agents", "advisor_scenario_engine.py")
-        const result = spawnSync("python", [enginePath, userId, JSON.stringify(intent)], { encoding: 'utf-8' })
-
-        if (result.status === 0) {
-            try {
-                const lines = result.stdout.trim().split('\n')
-                const lastLine = lines[lines.length - 1]
-                const data = JSON.parse(lastLine)
-                scenarioResults = `\n\n**Data-Driven Scenario Simulation Results:**\n${JSON.stringify(data, null, 2)}`
-                logToFile("Scenario results generated")
-            } catch (e: any) {
-                logToFile("Engine output parse error", { error: e.message, stdout: result.stdout })
+        
+        // Try calling Flask backend API first (best for Vercel/Production deployment)
+        const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+        let success = false;
+        try {
+            const apiRes = await fetch(`${API_BASE}/simulate_scenario`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: userId, intent }),
+            });
+            if (apiRes.ok) {
+                const data = await apiRes.json();
+                scenarioResults = `\n\n**Data-Driven Scenario Simulation Results:**\n${JSON.stringify(data, null, 2)}`;
+                logToFile("Scenario results generated via Python API backend");
+                success = true;
+            } else {
+                const errText = await apiRes.text().catch(() => "");
+                throw new Error(`API returned status ${apiRes.status}: ${errText}`);
             }
-        } else {
-            logToFile("Scenario engine error", { stderr: result.stderr, status: result.status })
+        } catch (apiErr: any) {
+            logToFile("Python API backend simulation failed, falling back to local spawnSync:", apiErr.message);
+        }
+
+        if (!success) {
+            // Fallback to local python child process spawn (for local development)
+            const enginePath = path.join(process.cwd(), "agentic_ai", "agents", "advisor_scenario_engine.py")
+            const result = spawnSync("python", [enginePath, userId, JSON.stringify(intent)], { encoding: 'utf-8' })
+            if (result.status === 0) {
+                try {
+                    const lines = result.stdout.trim().split('\n')
+                    const lastLine = lines[lines.length - 1]
+                    const data = JSON.parse(lastLine)
+                    scenarioResults = `\n\n**Data-Driven Scenario Simulation Results:**\n${JSON.stringify(data, null, 2)}`
+                    logToFile("Scenario results generated via local spawnSync fallback")
+                } catch (e: any) {
+                    logToFile("Engine output parse error during spawnSync fallback", { error: e.message, stdout: result.stdout })
+                }
+            } else {
+                logToFile("Scenario engine error during spawnSync fallback", { stderr: result.stderr, status: result.status })
+            }
         }
     }
 

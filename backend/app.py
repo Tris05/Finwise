@@ -44,6 +44,13 @@ except ImportError as e:
     print(f"Warning: Could not import OrchestrationAgent from {agents_dir}: {e}")
     OrchestrationAgent = None
 
+# Try to load AdvisorScenarioEngine
+try:
+    from advisor_scenario_engine import AdvisorScenarioEngine
+except ImportError as e:
+    print(f"Warning: Could not import AdvisorScenarioEngine from {agents_dir}: {e}")
+    AdvisorScenarioEngine = None
+
 try:
     from google.cloud.firestore_v1.base_query import FieldFilter
 except ImportError:
@@ -389,6 +396,28 @@ def start_listener():
 @app.route("/")
 def index():
     return jsonify({"ok": True, "message": "FinWise backend running with integrated Firebase listener"})
+
+@app.route("/simulate_scenario", methods=["POST", "OPTIONS"])
+def simulate_scenario():
+    if request.method == "OPTIONS":
+        return "", 200
+        
+    if AdvisorScenarioEngine is None:
+        return jsonify({"error": "AdvisorScenarioEngine not loaded on backend."}), 500
+        
+    data = request.json or {}
+    user_id = data.get("user_id")
+    intent = data.get("intent")
+    
+    if not user_id or not intent:
+        return jsonify({"error": "Missing user_id or intent in request body"}), 400
+        
+    try:
+        engine = AdvisorScenarioEngine()
+        result = engine.execute_scenario(user_id, intent)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/analyze", methods=["POST", "OPTIONS"])
 def analyze():
