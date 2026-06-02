@@ -37,24 +37,6 @@ python app.py
 ```
 The Python Flask server will start on `http://localhost:8000`.
 
----
-
-## 📦 Environment Variables Configuration
-To run the project in production or local environments, copy `env.template` to `.env` in the root folder and configure the following variables:
-
-| Variable | Description | Example / Recommended Value |
-| :--- | :--- | :--- |
-| `GEMINI_API_KEY` | Gemini API key for Chatbot and summaries | *Your Google AI Studio Key* |
-| `NEXT_PUBLIC_API_BASE` | Address of the Python Flask backend server | `http://localhost:8000` (Local) / `https://your-backend.railway.app` (Prod) |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API Key | *Your Firebase Config Key* |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase Authentication Domain | `finwise-7dade.firebaseapp.com` |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase Project ID | `finwise-7dade` |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase Cloud Storage Bucket | `finwise-7dade.firebasestorage.app` |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase Messaging Sender ID | `997042770279` |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase Web App ID | `1:997042770279:web:58f31a789bc43ca3051fc2` |
-| `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | Firebase Google Analytics ID | `G-Q0JYPPRLXQ` |
-
----
 
 ## 🖥️ Page-by-Page Features
 
