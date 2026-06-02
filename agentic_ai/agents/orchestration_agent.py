@@ -130,11 +130,13 @@ class OrchestrationAgent:
                 }
             
             # Initialize workflow metadata
+            total_assets = state["financial_details"]["total_assets"]
             workflow_metadata = {
                 "start_time": datetime.now().isoformat(),
                 "workflow_version": "1.0",
-                "total_investment": state["financial_details"]["total_assets"],
-                "risk_profile": self._categorize_risk_profile(state["user_profile"]["risk_score"])
+                "total_investment": total_assets,
+                "risk_profile": self._categorize_risk_profile(state["user_profile"]["risk_score"]),
+                "new_user": total_assets == 0  # Flag for new users
             }
             
             return {
@@ -177,6 +179,11 @@ class OrchestrationAgent:
     def _conservative_fallback(self, state: PortfolioState) -> Dict[str, float]:
         """Generate conservative fallback allocation when optimization fails"""
         risk_score = state["user_profile"]["risk_score"]
+        total_assets = state["financial_details"]["total_assets"]
+        
+        # For new users with zero assets, provide recommended allocation percentages
+        if total_assets == 0:
+            self.logger.info("New user with zero assets - providing recommended allocation percentages")
         
         # Conservative allocations based on risk score
         if risk_score <= 0.4:  # Low risk
@@ -271,8 +278,13 @@ class OrchestrationAgent:
         if not financial_details:
             errors.append("Financial details are required")
         else:
-            if "total_assets" not in financial_details or financial_details["total_assets"] <= 0:
-                errors.append("Valid total_assets amount is required")
+            if "total_assets" not in financial_details or financial_details["total_assets"] < 0:
+                errors.append("Valid total_assets amount is required (cannot be negative)")
+            
+            # For new users with zero assets, provide a helpful message
+            if financial_details.get("total_assets", 0) == 0:
+                # This is valid for new users, but we should note it
+                pass  # Allow zero assets for new users
         
         return errors
     
@@ -289,14 +301,16 @@ class OrchestrationAgent:
         """Generate a summary of the workflow execution"""
         total_investment = state["financial_details"]["total_assets"]
         macro_allocation = state.get("macro_allocation", {})
+        workflow_metadata = state.get("workflow_metadata", {})
         
         summary = {
             "total_investment": total_investment,
-            "risk_profile": state["workflow_metadata"]["risk_profile"],
+            "risk_profile": workflow_metadata["risk_profile"],
             "allocation_summary": {},
             "key_recommendations": [],
             "workflow_success": True,
-            "iterations_required": state.get("iteration_count", 0)
+            "iterations_required": state.get("iteration_count", 0),
+            "new_user": workflow_metadata.get("new_user", False)
         }
         
         # Summarize allocation
@@ -308,6 +322,15 @@ class OrchestrationAgent:
                     "amount": amount
                 }
         
+        # Add special recommendations for new users
+        if total_investment == 0:
+            summary["key_recommendations"] = [
+                "Start with systematic investment plans (SIPs) as low as INR 500 per month",
+                "Build emergency fund first (6 months of expenses)",
+                "Consider tax-saving options like PPF and ELSS",
+                "Focus on diversified mutual funds for beginners"
+            ]
+        
         # Extract key recommendations
         if "final_advice" in state and state["final_advice"]:
             advice = state["final_advice"]
@@ -318,19 +341,40 @@ class OrchestrationAgent:
     
     def _generate_fallback_advice(self, state: PortfolioState) -> Dict[str, Any]:
         """Generate minimal fallback advice when workflow fails"""
-        return {
-            "allocation_summary": "Portfolio allocation could not be completed due to technical issues.",
-            "specific_recommendations": "Please consult with a financial advisor for personalized recommendations.",
-            "risk_assessment": "Risk assessment could not be completed.",
-            "action_items": [
-                "Consult with a qualified financial advisor",
-                "Review your investment goals and risk tolerance",
-                "Consider starting with conservative investments like PPF or FDs"
-            ],
-            "important_considerations": "This system encountered technical difficulties. Please seek professional financial advice.",
-            "total_investment": state.get("financial_details", {}).get("total_assets", 0),
-            "risk_profile": "Unknown"
-        }
+        total_assets = state.get("financial_details", {}).get("total_assets", 0)
+        
+        if total_assets == 0:
+            # Special advice for new users
+            return {
+                "allocation_summary": "Recommended allocation percentages for your risk profile. Start with small amounts.",
+                "specific_recommendations": "Start with SIPs as low as INR 500/month and build gradually.",
+                "risk_assessment": "Risk assessment completed based on your profile.",
+                "action_items": [
+                    "Open a demat and trading account",
+                    "Start emergency fund in bank FD",
+                    "Begin SIP in diversified equity mutual fund",
+                    "Consider PPF for tax-saving (minimum INR 500/year)"
+                ],
+                "important_considerations": "Start small and increase investments gradually as you gain confidence.",
+                "total_investment": 0,
+                "risk_profile": self._categorize_risk_profile(state.get("user_profile", {}).get("risk_score", 0.5)),
+                "new_user_guidance": True
+            }
+        else:
+            # Standard fallback advice for existing investors
+            return {
+                "allocation_summary": "Portfolio allocation could not be completed due to technical issues.",
+                "specific_recommendations": "Please consult with a financial advisor for personalized recommendations.",
+                "risk_assessment": "Risk assessment could not be completed.",
+                "action_items": [
+                    "Consult with a qualified financial advisor",
+                    "Review your investment goals and risk tolerance",
+                    "Consider starting with conservative investments like PPF or FDs"
+                ],
+                "important_considerations": "This system encountered technical difficulties. Please seek professional financial advice.",
+                "total_investment": total_assets,
+                "risk_profile": "Unknown"
+            }
     
     def data_collection_node(self, state: PortfolioState) -> PortfolioState:
         """Execute data collection through Data Agent"""
@@ -637,7 +681,7 @@ class OrchestrationAgent:
                 macro_allocation[asset_class] = {
                     "percentage": percentage,
                     "amount": amount,
-                    "rationale": self._get_allocation_rationale(asset_class, percentage)
+                    "rationale": self._get_allocation_rationale(asset_class, percentage, total_investment == 0)
                 }
         
         # Get micro allocation (asset recommendations)
@@ -681,15 +725,26 @@ class OrchestrationAgent:
         
         return portfolio_recommendation
     
-    def _get_allocation_rationale(self, asset_class: str, percentage: float) -> str:
+    def _get_allocation_rationale(self, asset_class: str, percentage: float, is_new_user: bool = False) -> str:
         """Get rationale for asset class allocation"""
-        rationales = {
-            "stocks": f"Growth potential with {percentage:.0%} equity exposure aligned with risk profile",
-            "mutual_funds": f"Professional management and diversification with {percentage:.0%} allocation",
-            "crypto": f"Small {percentage:.0%} allocation for high growth potential and portfolio diversification",
-            "gold": f"Inflation hedge and currency risk protection with {percentage:.0%} allocation",
-            "fd_ppf": f"Capital protection and tax benefits through {percentage:.0%} fixed income allocation"
-        }
+        if is_new_user:
+            # Special rationales for new users
+            rationales = {
+                "stocks": f"Recommended {percentage:.0%} equity exposure for long-term growth. Start with SIPs.",
+                "mutual_funds": f"Professional management with {percentage:.0%} allocation. Begin with diversified funds.",
+                "crypto": f"Consider {percentage:.0%} allocation only after building core portfolio (high risk).",
+                "gold": f"Inflation hedge with {percentage:.0%} allocation. Consider gold ETFs or sovereign gold bonds.",
+                "fd_ppf": f"Capital protection and tax benefits with {percentage:.0%} allocation. PPF offers 8%+ tax-free returns."
+            }
+        else:
+            # Standard rationales for existing investors
+            rationales = {
+                "stocks": f"Growth potential with {percentage:.0%} equity exposure aligned with risk profile",
+                "mutual_funds": f"Professional management and diversification with {percentage:.0%} allocation",
+                "crypto": f"Small {percentage:.0%} allocation for high growth potential and portfolio diversification",
+                "gold": f"Inflation hedge and currency risk protection with {percentage:.0%} allocation",
+                "fd_ppf": f"Capital protection and tax benefits through {percentage:.0%} fixed income allocation"
+            }
         return rationales.get(asset_class, f"{percentage:.0%} allocation based on portfolio optimization")
 
 
