@@ -4,8 +4,8 @@ export async function POST(req: Request) {
   try {
     const { userProfile, spendingPatterns, preferences } = await req.json()
     
-    // Try to get API key from environment, fallback to direct key
-    const apiKey = process.env.GEMINI_API_KEY || "AIzaSyAQZyjL6eaqbbjQbS60dSxDo9tOXd2k4S0"
+    // Get API key from environment
+    const apiKey = process.env.GEMINI_API_KEY
 
     console.log("=== CREDIT CARD RECOMMENDATIONS API DEBUG ===")
     console.log("API Key exists:", !!apiKey)

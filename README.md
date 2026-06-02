@@ -1,71 +1,125 @@
 # FinWise — AI Financial Coaching Platform (Indian Context)
 
-Production-like Next.js (App Router) + Tailwind + shadcn/ui frontend with mock APIs, localized for Indian financial context. Implements dashboard, investments (rebalance + credit cards), advisor chat, documents, salary optimizer, loan/EMI, learning (gamification), security, and settings.
+FinWise is a comprehensive, production-ready AI-driven financial advisor and planner tailored specifically for the Indian financial context (INR, NSE/BSE markets, Section 80C tax rules, and local bank comparisons). It leverages Next.js on the frontend and a Python Flask backend executing agentic AI workflows, Monte Carlo simulations, and LayoutLM document intelligence.
 
-## 🇮🇳 Indianization Features
+---
 
-### Indian Financial Context
-- **Banks**: HDFC, ICICI, Kotak, Axis, SBI, IDFC First, Mahindra Finance
-- **Markets**: NSE, BSE, Sensex, Nifty50
-- **Companies**: Reliance, Infosys, TCS, Mahindra, HDFC, Bajaj
-- **Currency**: All values in INR (₹) instead of USD ($)
-- **Investment Options**: PPF, ELSS, Nifty 50, Gold ETFs, Indian mutual funds
+## 🚀 Commands to Run
 
-### Loan Types & Bank Comparison
-- **Home Loans**: SBI (8.4%), HDFC (8.7%), ICICI (8.9%), Axis (9.1%), Kotak (9.3%)
-- **Car Loans**: HDFC (9.2%), ICICI (9.5%), SBI (9.7%), Axis (10.1%), Kotak (10.3%)
-- **Education Loans**: SBI (7.5%), HDFC (8.2%), ICICI (8.5%), Axis (8.8%), Kotak (9.1%)
+### 1. Prerequisites
+- **Node.js** (v18.x or later)
+- **Python** (v3.10 or later)
+- **Poppler** (for PDF parsing and OCR, optional but recommended)
 
-### Document Analysis (Mock)
-- **Risk Score**: 70% (Moderate-High Risk)
-- **Key Factors**: Credit utilization, savings ratio, EMI obligations
-- **Suggestions**: Reduce utilization, increase savings, invest in PPF/Debt funds
-- **Indian Banks**: HDFC, SBI, Axis FD recommendations
+### 2. Frontend Setup (Next.js)
+```bash
+# Navigate to the project root directory
+cd Finwise
 
-### AI Advisor Responses
-- **Indian Context**: RBI regulations, Section 80C, tax benefits
-- **Follow-up Prompts**: Contextual suggestions for each response
-- **Demo Prompts**: 12 ready-to-use prompts for presentation
+# Install frontend dependencies
+npm install
 
-## Run and Preview
-- Publish from v0 or open Preview. The Next.js runtime infers deps.
-- Routes:
-  - /dashboard, /investments, /advisor, /documents, /salary, /loan, /learning, /security, /settings
-- Persisted UI: Sidebar + Topbar on all pages.
+# Start the local development server
+npm run dev
+```
+The Next.js site will be available at `http://localhost:3000`.
 
-## Key Behaviors (mocked)
-- Rebalance → POST /api/portfolio/rebalance → modal with proposed weights, risk, confidence, SHAP text, and LLM summary. Accept/Reject toasts.
-- Credit cards → GET /api/credit/recommend → list with "Why recommended?" modal and compare.
-- Chat → POST /api/advisor/chat → typing effect; increments XP via /api/game/progress (mock).
-- Documents → Upload shows progress; POST /api/docs/upload → parsed fields + risk summary.
-- Salary → POST /api/salary/optimize → before/after chart + savings bullets.
-- Loan → POST /api/loan/assess → EMI, affordability/risk, line chart, mitigations with loan type selection.
-- Gamification → GET/POST /api/game/progress tracks XP, badges, streak.
-- Security → GET/POST /api/security/logs with Acknowledge/Report CTAs.
-- Settings → Theme switch (localStorage), 2FA toggle (localStorage only).
+### 3. Backend Setup (Flask Server)
+```bash
+# Navigate to the backend directory
+cd Finwise/backend
 
-## Demo Prompts
-Ready-to-use prompts for presentation:
-1. "Is crypto risky?"
-2. "What is PPF?"
-3. "Which is better — SIP or FD?"
-4. "Convert $500 to INR"
-5. "Show my Kotak credit card balance"
-6. "Analyze my uploaded document (mock risk 70%)"
-7. "Show last 5 transactions"
-8. "How to open ICICI savings account?"
-9. "Which is best short-term investment?"
-10. "Is PPF tax-free?"
-11. "Compare SBI FD vs Axis FD"
-12. "Show me Nifty50 trend"
+# Install python dependencies
+pip install -r requirements.txt
 
-## Where to Change/Mock Responses
-- Data JSON: /data/*.json
-- API routes: /app/api/** returning the JSON above.
-- Demo prompts: /data/demo-prompts.json
+# Start the Flask backend server
+python app.py
+```
+The Python Flask server will start on `http://localhost:8000`.
 
-## Notes
-- UI uses shadcn components and Recharts. Colors use CSS vars (no hard-coded hex).
-- Forms are accessible with labels and ARIA.
-- All financial data localized to Indian context with realistic bank names and rates.
-- Replace mocks with real endpoints preserving response shapes for minimal refactor.
+---
+
+## 📦 Environment Variables Configuration
+To run the project in production or local environments, copy `env.template` to `.env` in the root folder and configure the following variables:
+
+| Variable | Description | Example / Recommended Value |
+| :--- | :--- | :--- |
+| `GEMINI_API_KEY` | Gemini API key for Chatbot and summaries | *Your Google AI Studio Key* |
+| `NEXT_PUBLIC_API_BASE` | Address of the Python Flask backend server | `http://localhost:8000` (Local) / `https://your-backend.railway.app` (Prod) |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API Key | *Your Firebase Config Key* |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase Authentication Domain | `finwise-7dade.firebaseapp.com` |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase Project ID | `finwise-7dade` |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase Cloud Storage Bucket | `finwise-7dade.firebasestorage.app` |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase Messaging Sender ID | `997042770279` |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase Web App ID | `1:997042770279:web:58f31a789bc43ca3051fc2` |
+| `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | Firebase Google Analytics ID | `G-Q0JYPPRLXQ` |
+
+---
+
+## 🖥️ Page-by-Page Features
+
+### 📊 Dashboard (`/dashboard`)
+- **Portfolio Analytics**: Aggregates and displays current net worth, investments breakdown, and savings rates in INR.
+- **Market Tickers**: Live charts and tickers tracking major Indian indices like Nifty 50 and Sensex.
+- **Recent Activity**: Displays recent transaction history and pending financial tasks.
+
+### 💬 AI Advisor Chat (`/advisor`)
+- **Conversational Coach**: Interactive chat panel with typing micro-animations and markdown support.
+- **What-If Scenario Simulation**: Uses LLM intent detection. If the user asks a "What-If" question (e.g. *"What if I invest ₹10,000 in crypto?"*), it automatically queries the **Monte Carlo Simulation Engine** using historical volatility parameters to project worst-case drawdowns and expected gains.
+- **Demo Prompts**: 12 pre-loaded prompt chips for quick product demonstrations.
+
+### 📈 Investments & Credit Cards (`/investments`)
+- **Holdings Breakdown**: Visually depicts holdings using interactive Recharts pie/bar charts.
+- **Smart Rebalancer**: Executes a portfolio optimization check, returning recommended target weights, SHAP value feature explanations, and LLM advice.
+- **Credit Card Optimizer**: Recommends the best 3 Indian credit cards (e.g. HDFC Diners, SBI SimplyCLICK, Axis Flipkart) based on the user's monthly spending breakdown (dining, shopping, travel).
+
+### 📄 Document Analysis (`/documents`)
+- **OCR Analysis**: Processes uploaded financial PDFs or images (e.g. bank statements, salary slips).
+- **Interactive Overlay Canvas**: Automatically overlays bounding boxes on the document images using a LayoutLM model, color-coding high-risk, medium-risk, and low-risk clauses.
+- **Complete PII Redaction**: Automatically redacts sensitive fields (PAN, Aadhaar, email, phone, bank account numbers) locally before sending text to the LLM.
+- **AI Jargon Summarizer**: Translates complex clauses into simple summaries, explaining importance, risks, and next steps.
+
+### 💸 Salary Optimizer (`/salary`)
+- **Take-Home Calculator**: Estimates net income based on old vs new tax regimes.
+- **Growth Tracker**: Simulates future salary growth compound projection.
+- **Savings Allocation**: Suggests automated savings plans based on Indian tax deductions (Section 80C).
+
+### 🏦 Loan & EMI Planner (`/loan`)
+- **EMI Simulator**: Dynamically calculates EMI values, total interest paid, and shows an interactive amortization chart.
+- **Interest Comparison**: Lists and compares current home/car/education loan rates across major Indian banks (SBI, HDFC, ICICI, Axis, Kotak).
+- **Affordability Assessor**: Checks debt-to-income ratio, warning users if a loan is too risky and recommending mitigations.
+
+### 🎓 Gamified Learning (`/learning`)
+- **Knowledge Modules**: Tracks progress through financial literacy paths (budgeting, tax planning, asset classes).
+- **Quizzes & Flashcards**: Reinforces concepts with interactive quizzes and flashcards.
+- **Engagement Mechanics**: Earn XP, collect achievements/badges, and maintain daily learning streaks.
+
+### 🔒 Security Logs (`/security`)
+- **Access Logs**: Monitors account logins with location, status, and IP addresses.
+- **2FA Toggle**: Quick configurations for enabling/disabling multi-factor authentication.
+- **Suspicious Activity CTAs**: Acknowledge logins or immediately report suspicious accesses.
+
+---
+
+## ☁️ Vercel Deployment Guide
+
+FinWise is designed to be deployed as a multi-service structure:
+1. **Frontend (Next.js)** is hosted on **Vercel**.
+2. **Backend (Python Flask Server)** is hosted on a service that supports persistent runtimes and Python packages (e.g., **Railway**, **Render**, **AWS EC2**, or **Google Cloud Run**).
+
+### Deploying the Next.js Frontend to Vercel
+1. Push the code repository to GitHub/GitLab/Bitbucket.
+2. Link the repository to your Vercel Dashboard.
+3. In the project **Environment Variables** settings, configure the following keys:
+   - `GEMINI_API_KEY`
+   - `NEXT_PUBLIC_API_BASE` (Point this to your deployed Flask backend URL, e.g., `https://finwise-backend.up.railway.app`)
+   - Firebase public keys (e.g., `NEXT_PUBLIC_FIREBASE_API_KEY`, etc.)
+4. Click **Deploy**. Vercel will automatically package the App Router routes and deploy them globally.
+
+### Deploying the Python Flask Backend
+1. Ensure the Flask server environment has Python 3.10+ and Poppler binary installed (for rendering PDFs).
+2. Configure environment variables on the backend hosting provider:
+   - `GEMINI_API_KEY`
+   - `ALLOWED_ORIGINS` (Point this to your Next.js Vercel URL, e.g., `https://finwise.vercel.app`)
+3. Create a `serviceAccountKey.json` containing your Firebase Admin credentials in the `Finwise/backend` folder or upload it securely.
+4. Deploy the backend service. It will listen on port 8000 or the `$PORT` environment variable specified by the host.
