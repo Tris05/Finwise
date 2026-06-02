@@ -499,3 +499,52 @@
   "replyLength": 1889
 }
 ---
+[2026-05-02T05:03:12.532Z] Request received
+{
+  "userId": "149fuqnLbCh1f4ykrUghAwROGFx1",
+  "hasPortfolio": true,
+  "promptLength": 32
+}
+---
+[2026-05-02T05:03:15.671Z] Intent detected
+{
+  "is_scenario": false
+}
+---
+[2026-05-02T05:03:22.622Z] Success
+{
+  "replyLength": 1947
+}
+---
+[2026-05-02T05:43:58.493Z] Request received
+{
+  "userId": "149fuqnLbCh1f4ykrUghAwROGFx1",
+  "hasPortfolio": true,
+  "promptLength": 272
+}
+---
+[2026-05-02T05:44:20.453Z] Intent detected
+{
+  "is_scenario": true,
+  "scenario_type": "long_term_projection",
+  "modification": {
+    "type": null,
+    "category": null,
+    "amount": null
+  },
+  "horizon_days": 3650
+}
+---
+[2026-05-02T05:44:20.454Z] Executing scenario engine...
+---
+[2026-05-02T05:44:22.396Z] Engine output parse error
+{
+  "error": "Unexpected token '}', \"}\" is not valid JSON",
+  "stdout": "Warning: serviceAccountKey.json not found. Scenario engine will use mock data.\r\n{\r\n  \"error\": \"No portfolio found for this user. Please add investments first.\"\r\n}\r\n"
+}
+---
+[2026-05-02T05:44:31.413Z] Success
+{
+  "replyLength": 971
+}
+---
