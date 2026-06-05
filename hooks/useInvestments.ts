@@ -1,10 +1,9 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useMarketData } from "./use-market-data"
+import { useFinancialData } from "@/components/providers/financial-data-provider"
 
 export interface Investment {
     id: string
@@ -24,17 +23,25 @@ export interface Investment {
 }
 
 export const useInvestments = () => {
+    const context = useFinancialData()
     const { user } = useAuth()
     const [baseInvestments, setBaseInvestments] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+
+    const effectiveBaseInvestments = (context && context.baseInvestments) ? context.baseInvestments : baseInvestments
+    const effectiveLoading = (context && context.profile) ? false : loading
 
     const {
         investments: realTimeInvestments,
         isLoading: marketLoading,
         lastUpdated
-    } = useMarketData(baseInvestments)
+    } = useMarketData(effectiveBaseInvestments)
 
     useEffect(() => {
+        if (context && context.baseInvestments) {
+            return
+        }
+
         if (!user) {
             setLoading(false)
             return
@@ -51,7 +58,7 @@ export const useInvestments = () => {
         })
 
         return () => unsubscribe()
-    }, [user])
+    }, [user, context])
 
     const totalValue = realTimeInvestments.reduce((sum, inv) => sum + (Number(inv.currentValue) || 0), 0)
     const totalInvested = realTimeInvestments.reduce((sum, inv) => sum + (Number(inv.investedAmount) || 0), 0)
@@ -68,7 +75,7 @@ export const useInvestments = () => {
         totalGainPercent,
         dayChange,
         dayChangePercent,
-        loading: loading || marketLoading,
+        loading: effectiveLoading || marketLoading,
         lastUpdated
     }
 }

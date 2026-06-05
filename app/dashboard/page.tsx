@@ -1,6 +1,7 @@
 "use client"
 
 import { AppShell } from "@/components/app-shell"
+import Link from "next/link"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -252,7 +253,7 @@ export default function DashboardPage() {
     {
       label: "Top Asset",
       value: investments.length > 0 ? investments.sort((a, b) => b.currentValue - a.currentValue)[0].name : "No Assets",
-      delta: investments.length > 0 ? `${investments[0].dayChangePercent.toFixed(1)}%` : "0%",
+      delta: (investments.length > 0 && investments[0]?.dayChangePercent !== undefined && investments[0]?.dayChangePercent !== null) ? `${investments[0].dayChangePercent.toFixed(1)}%` : "0%",
       trend: "up",
       icon: Star,
       color: "text-purple-600",
@@ -417,24 +418,26 @@ export default function DashboardPage() {
               className="flex gap-4"
             >
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  size="lg"
-                  className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg"
-                  onClick={() => window.location.href = '/investments'}
-                >
-                  <Activity className="h-5 w-5 mr-2" />
-                  View Portfolio
-                </Button>
+                <Link href="/investments">
+                  <Button
+                    size="lg"
+                    className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg"
+                  >
+                    <Activity className="h-5 w-5 mr-2" />
+                    View Portfolio
+                  </Button>
+                </Link>
               </motion.div>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  size="lg"
-                  className="bg-white/20 backdrop-blur-md border-2 border-white/30 text-white hover:bg-white hover:text-blue-600 font-semibold shadow-lg transition-all duration-300"
-                  onClick={() => window.location.href = '/advisor'}
-                >
-                  <Bot className="h-5 w-5 mr-2" />
-                  Ask AI Advisor
-                </Button>
+                <Link href="/advisor">
+                  <Button
+                    size="lg"
+                    className="bg-white/20 backdrop-blur-md border-2 border-white/30 text-white hover:bg-white hover:text-blue-600 font-semibold shadow-lg transition-all duration-300"
+                  >
+                    <Bot className="h-5 w-5 mr-2" />
+                    Ask AI Advisor
+                  </Button>
+                </Link>
               </motion.div>
             </motion.div>
           </div>
@@ -762,38 +765,39 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
-                whileHover={{ scale: 1.02, y: -4 }}
-                className="group cursor-pointer"
-              >
-                <Card className="h-full overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className={`h-2 ${feature.color}`}></div>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-xl ${feature.color} text-white`}>
-                        <feature.icon className="h-6 w-6" />
+              <Link href={feature.href} key={feature.title} className="block">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
+                  whileHover={{ scale: 1.02, y: -4 }}
+                  className="group cursor-pointer"
+                >
+                  <Card className="h-full overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <div className={`h-2 ${feature.color}`}></div>
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={`p-3 rounded-xl ${feature.color} text-white`}>
+                          <feature.icon className="h-6 w-6" />
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {feature.stats}
+                        </Badge>
                       </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {feature.stats}
-                      </Badge>
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2 group-hover:text-blue-600 transition-colors">
-                      {feature.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {feature.description}
-                    </p>
-                    <div className="flex items-center text-sm text-blue-600 group-hover:text-blue-700">
-                      Explore feature
-                      <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                      <h3 className="text-lg font-semibold mb-2 group-hover:text-blue-600 transition-colors">
+                        {feature.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {feature.description}
+                      </p>
+                      <div className="flex items-center text-sm text-blue-600 group-hover:text-blue-700">
+                        Explore feature
+                        <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Link>
             ))}
           </div>
         </motion.div>

@@ -34,7 +34,7 @@ import {
   PieChart
 } from "lucide-react"
 import { formatINR } from "@/lib/utils"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useUserProfile } from "@/hooks/useUserProfile"
 import { motion, AnimatePresence } from "framer-motion"
 import { CreditCardComparison } from "./credit-card-comparison"
@@ -126,6 +126,12 @@ interface UserProfile {
 
 export function CreditCardRecommendations() {
   const { annualIncome } = useUserProfile()
+  const annualIncomeRef = useRef(annualIncome)
+  
+  useEffect(() => {
+    annualIncomeRef.current = annualIncome
+  }, [annualIncome])
+
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [filteredCards, setFilteredCards] = useState<CreditCard[]>([])
   const [selectedCards, setSelectedCards] = useState<string[]>([])
@@ -179,10 +185,14 @@ export function CreditCardRecommendations() {
         unsubs.push(onSnapshot(profileRef, (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.data() as UserProfile
-            setUserProfile(prev => ({
-              ...prev,
-              ...data
-            }))
+            setUserProfile(prev => {
+              const income = annualIncomeRef.current ? Math.round((annualIncomeRef.current / 12) * 100) / 100 : (data.monthlyIncome || prev.monthlyIncome);
+              return {
+                ...prev,
+                ...data,
+                monthlyIncome: income
+              }
+            })
           }
         }))
 

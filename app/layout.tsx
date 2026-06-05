@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/components/providers/auth-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { ThemeProvider } from "@/components/theme-provider"
+import { FinancialDataProvider } from "@/components/providers/financial-data-provider"
 import "./globals.css"
 
 const poppins = Poppins({
@@ -44,9 +45,11 @@ export default function RootLayout({
           >
             <QueryProvider>
               <AuthProvider>
-                {children}
-                <Toaster />
-                <Analytics />
+                <FinancialDataProvider>
+                  {children}
+                  <Toaster />
+                  <Analytics />
+                </FinancialDataProvider>
               </AuthProvider>
             </QueryProvider>
           </ThemeProvider>
