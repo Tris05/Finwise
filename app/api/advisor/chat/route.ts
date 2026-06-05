@@ -42,6 +42,37 @@ import { NextResponse } from "next/server"
 import { spawnSync } from "child_process"
 import path from "path"
 import fs from "fs"
+import crypto from "crypto"
+import { db } from "@/lib/firebase"
+import { doc, getDoc, setDoc } from "firebase/firestore"
+
+function getCacheKey(prompt: string, portfolioSummary: string) {
+  const data = `${prompt}|${portfolioSummary || ""}`
+  return crypto.createHash("sha256").update(data).digest("hex")
+}
+
+function findDemoResponse(prompt: string): string | null {
+  if (!prompt) return null
+  try {
+    const filePath = path.join(process.cwd(), "data", "demo-prompts.json")
+    if (fs.existsSync(filePath)) {
+      const fileContent = fs.readFileSync(filePath, "utf-8")
+      const prompts = JSON.parse(fileContent)
+      
+      const cleanPrompt = prompt.trim().toLowerCase().replace(/[?.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s+/g, " ")
+      
+      for (const item of prompts) {
+        const cleanItemPrompt = item.prompt.trim().toLowerCase().replace(/[?.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s+/g, " ")
+        if (cleanPrompt === cleanItemPrompt) {
+          return item.answer
+        }
+      }
+    }
+  } catch (err: any) {
+    logToFile("Error reading demo-prompts.json in helper", err.message)
+  }
+  return null
+}
 
 const LOG_FILE = path.join(process.cwd(), "agentic_ai", "logs", "chat_api.log")
 
@@ -53,6 +84,46 @@ function logToFile(message: string, data?: any) {
   } catch (e) {
     console.error("Failed to write to log file:", e)
   }
+}
+
+// Robust fallback Gemini API Caller
+async function callGeminiWithFallback(body: any, apiKey: string) {
+  const models = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
+  let lastError: any = null
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json()
+        } catch (e) {
+          const errorText = await response.text().catch(() => "No response body")
+          errorData = { error: { message: errorText } }
+        }
+        lastError = errorData
+        logToFile(`Gemini API error with model ${model}`, errorData)
+        continue
+      }
+
+      const data = await response.json()
+      logToFile(`Gemini API success with model ${model}`)
+      return { data, success: true }
+    } catch (error: any) {
+      lastError = { error: { message: error.message } }
+      logToFile(`Network or fetch error with model ${model}`, error.message)
+      continue
+    }
+  }
+
+  return { success: false, error: lastError }
 }
 
 export async function POST(req: Request) {
@@ -70,9 +141,36 @@ export async function POST(req: Request) {
     
     logToFile("Request received", { userId, hasPortfolio: !!portfolioSummary, promptLength: prompt?.length })
 
+    // --- STEP -1: Check for Demo Prompts ---
+    const demoReply = findDemoResponse(prompt)
+    if (demoReply) {
+      logToFile("Demo prompt match found, returning dummy answer directly", { prompt })
+      return NextResponse.json({ reply: demoReply })
+    }
+
     if (!apiKey) {
       logToFile("Error: Missing GEMINI_API_KEY")
       return NextResponse.json({ error: "Missing GEMINI_API_KEY environment variable." }, { status: 500 })
+    }
+
+    // --- STEP 0: Check Cache ---
+    const cacheKey = getCacheKey(prompt, portfolioSummary)
+    try {
+      const cacheRef = doc(db, "chat_cache", cacheKey)
+      const cacheSnap = await getDoc(cacheRef)
+      if (cacheSnap.exists()) {
+        const cacheData = cacheSnap.data()
+        const age = Date.now() - (cacheData.cached_at || 0)
+        const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000
+        if (age < TWELVE_HOURS_MS) {
+          logToFile("Cache hit", { cacheKey, ageMs: age })
+          return NextResponse.json({ reply: cacheData.reply })
+        } else {
+          logToFile("Cache expired", { cacheKey, ageMs: age })
+        }
+      }
+    } catch (cacheErr: any) {
+      logToFile("Cache lookup failed", cacheErr.message)
     }
 
     // --- STEP 1: Intent Detection ---
@@ -98,28 +196,18 @@ export async function POST(req: Request) {
       generationConfig: { response_mime_type: "application/json" }
     }
 
-    const intentRes = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + apiKey,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(intentBody),
-      }
-    )
-
+    const intentResult = await callGeminiWithFallback(intentBody, apiKey)
     let intent = { is_scenario: false }
-    if (intentRes.ok) {
-        const intentData = await intentRes.json()
+    if (intentResult.success) {
         try {
-            const rawText = intentData?.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
+            const rawText = intentResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
             intent = JSON.parse(rawText)
             logToFile("Intent detected", intent)
         } catch (e: any) {
-            logToFile("Intent parse error", { error: e.message, raw: intentData?.candidates?.[0]?.content?.parts?.[0]?.text })
+            logToFile("Intent parse error", { error: e.message, raw: intentResult.data?.candidates?.[0]?.content?.parts?.[0]?.text })
         }
     } else {
-        const intentError = await intentRes.json().catch(() => ({}))
-        logToFile("Intent API Error", intentError)
+        logToFile("Intent API Error (Falling back to default chat)", intentResult.error)
     }
 
     let scenarioResults = ""
@@ -195,28 +283,45 @@ export async function POST(req: Request) {
       },
     }
 
-    const res = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + apiKey,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(finalBody),
-      }
-    )
+    const synthResult = await callGeminiWithFallback(finalBody, apiKey)
 
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        logToFile("Gemini API Final Synthesis Error", errorData)
+    if (!synthResult.success) {
+        const errorMsg = synthResult.error?.error?.message || "";
+        let friendlyDetails = "We're experiencing issues connecting to our AI Advisor. Please try again in a few moments.";
+        
+        if (/quota|429|limit/i.test(errorMsg)) {
+            friendlyDetails = "AI Advisor rate limit reached (Quota Exceeded). Please wait a few seconds before trying again.";
+        } else if (/unavailable|503|demand/i.test(errorMsg)) {
+            friendlyDetails = "The AI Advisor is temporarily unavailable due to high demand. Please try again in a moment.";
+        } else if (/key/i.test(errorMsg)) {
+            friendlyDetails = "Configuration error: The AI Advisor API key is missing or invalid.";
+        }
+
+        logToFile("Gemini API Final Synthesis Error", synthResult.error)
         return NextResponse.json({ 
-            error: "Gemini API Error", 
-            details: errorData.error?.message || "Check server logs for details" 
-        }, { status: res.status });
+            error: "AI service error", 
+            details: friendlyDetails 
+        }, { status: 503 });
     }
 
-    const data = await res.json()
+    const data = synthResult.data
     const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response."
     
     logToFile("Success", { replyLength: reply.length })
+
+    // --- STEP 4: Save to Cache ---
+    try {
+      const cacheRef = doc(db, "chat_cache", cacheKey)
+      await setDoc(cacheRef, {
+        prompt,
+        portfolioSummary: portfolioSummary || "",
+        reply,
+        cached_at: Date.now()
+      })
+      logToFile("Cache saved", { cacheKey })
+    } catch (cacheSaveErr: any) {
+      logToFile("Cache save failed", cacheSaveErr.message)
+    }
 
     return NextResponse.json({ reply })
   } catch (error: any) {

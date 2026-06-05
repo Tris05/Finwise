@@ -1,6 +1,7 @@
 "use client"
 
 import { AppShell } from "@/components/app-shell"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -106,6 +107,7 @@ const calculatePortfolioAllocation = (investments: any[]) => {
 
 export default function InvestmentsPage() {
   const { toast } = useToast()
+  const router = useRouter()
 
   // UI States
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false)
@@ -1607,7 +1609,7 @@ export default function InvestmentsPage() {
                         className="p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors"
                         onClick={() => {
                           const query = "Help me increase my equity allocation. What stocks should I consider?"
-                          window.location.href = `/advisor?q=${encodeURIComponent(query)}`
+                          router.push(`/advisor?q=${encodeURIComponent(query)}`)
                         }}
                       >
                         <div className="flex items-start space-x-3">
@@ -1622,7 +1624,7 @@ export default function InvestmentsPage() {
                         className="p-4 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
                         onClick={() => {
                           const query = "Help me add international diversification to my portfolio. What international funds should I consider?"
-                          window.location.href = `/advisor?q=${encodeURIComponent(query)}`
+                          router.push(`/advisor?q=${encodeURIComponent(query)}`)
                         }}
                       >
                         <div className="flex items-start space-x-3">

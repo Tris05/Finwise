@@ -38,9 +38,10 @@ type LoanType = "house" | "car" | "student"
 interface LoanCalculatorProps {
   loanType: LoanType
   onValuesChange?: (values: { amount: number; rate: number; tenure: number }) => void
+  onAssess?: () => void
 }
 
-export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps) {
+export function LoanCalculator({ loanType, onValuesChange, onAssess }: LoanCalculatorProps) {
   const { annualIncome } = useUserProfile()
   
   // Default values based on loan type
@@ -126,6 +127,11 @@ export function LoanCalculator({ loanType, onValuesChange }: LoanCalculatorProps
       if (!res.ok) throw new Error("Failed")
       return res.json()
     },
+    onSuccess: () => {
+      if (onAssess) {
+        onAssess()
+      }
+    }
   })
 
   const predictLoan = useMutation({

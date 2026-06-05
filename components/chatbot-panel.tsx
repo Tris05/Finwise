@@ -51,7 +51,9 @@ export function ChatbotPanel() {
     summary += "Current Holdings:\n"
     
     investments.forEach(inv => {
-      summary += `- ${inv.name} (${inv.symbol}): ${inv.quantity} units @ ₹${inv.currentPrice.toLocaleString()}, Value: ₹${inv.currentValue.toLocaleString()}\n`
+      const price = inv.currentPrice !== undefined && inv.currentPrice !== null ? Number(inv.currentPrice) : 0
+      const value = inv.currentValue !== undefined && inv.currentValue !== null ? Number(inv.currentValue) : 0
+      summary += `- ${inv.name || 'Unnamed Asset'} (${inv.symbol || 'N/A'}): ${inv.quantity || 0} units @ ₹${price.toLocaleString()}, Value: ₹${value.toLocaleString()}\n`
     })
     
     return summary
@@ -115,21 +117,32 @@ export function ChatbotPanel() {
     const userMsg: Msg = { id: crypto.randomUUID(), role: "user", content: query.trim() }
     setMessages((m) => [...m, userMsg])
  
-    const { reply } = await chat.mutateAsync(userMsg.content)
-    let acc = ""
+    try {
+      const { reply } = await chat.mutateAsync(userMsg.content)
+      let acc = ""
  
-    for (const ch of reply) {
-      acc += ch
-      await new Promise((r) => setTimeout(r, 5))
-      setMessages((m) => {
-        const base = m.filter((x) => x.id !== "typing")
-        return [...base, { id: "typing", role: "assistant", content: acc }]
-      })
+      for (const ch of reply) {
+        acc += ch
+        await new Promise((r) => setTimeout(r, 5))
+        setMessages((m) => {
+          const base = m.filter((x) => x.id !== "typing")
+          return [...base, { id: "typing", role: "assistant", content: acc }]
+        })
+      }
+ 
+      setMessages((m) =>
+        m.map((x) => (x.id === "typing" ? { ...x, id: crypto.randomUUID() } : x))
+      )
+    } catch (err: any) {
+      setMessages((m) => [
+        ...m,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: `⚠️ **AI Advisor Connection Issue:** ${err.message || "We encountered a network or quota error. Please try again shortly."}`
+        }
+      ])
     }
- 
-    setMessages((m) =>
-      m.map((x) => (x.id === "typing" ? { ...x, id: crypto.randomUUID() } : x))
-    )
   }
  
   async function send() {

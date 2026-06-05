@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useFinancialData } from '@/components/providers/financial-data-provider';
 
 export type GoalType = "Emergency Fund" | "Home Purchase" | "Car Purchase" | "Education" | "Retirement" | "Vacation" | "Other";
 
@@ -43,11 +44,16 @@ export interface FinancialGoal {
 }
 
 export const useFinancialGoals = () => {
+    const context = useFinancialData();
     const { user } = useAuth();
     const [goals, setGoals] = useState<FinancialGoal[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (context && context.goals) {
+            return;
+        }
+
         if (!user) {
             setGoals([]);
             setLoading(false);
@@ -67,9 +73,13 @@ export const useFinancialGoals = () => {
         });
 
         return () => unsubscribe();
-    }, [user]);
+    }, [user, context]);
 
     const addGoal = async (goal: Omit<FinancialGoal, 'id'>) => {
+        if (context && context.addGoal) {
+            await context.addGoal(goal);
+            return;
+        }
         if (!user) return;
         const goalsRef = collection(db, 'users', user.uid, 'goals');
         await addDoc(goalsRef, {
@@ -79,16 +89,28 @@ export const useFinancialGoals = () => {
     };
 
     const updateGoal = async (id: string, updates: Partial<FinancialGoal>) => {
+        if (context && context.updateGoal) {
+            await context.updateGoal(id, updates);
+            return;
+        }
         if (!user) return;
         const goalRef = doc(db, 'users', user.uid, 'goals', id);
         await updateDoc(goalRef, updates);
     };
 
     const deleteGoal = async (id: string) => {
+        if (context && context.deleteGoal) {
+            await context.deleteGoal(id);
+            return;
+        }
         if (!user) return;
         const goalRef = doc(db, 'users', user.uid, 'goals', id);
         await deleteDoc(goalRef);
     };
+
+    if (context && context.goals) {
+        return { goals: context.goals, loading: false, addGoal, updateGoal, deleteGoal };
+    }
 
     return { goals, loading, addGoal, updateGoal, deleteGoal };
 };

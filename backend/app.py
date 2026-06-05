@@ -179,7 +179,7 @@ Return ONLY a JSON object (no markdown code blocks, no backticks, just raw JSON)
     
     req_body = json.dumps(req_data).encode("utf-8")
     
-    for model_attempt in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]:
+    for model_attempt in ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"]:
         try:
             url_attempt = f"https://generativelanguage.googleapis.com/v1beta/models/{model_attempt}:generateContent?key={api_key}"
             req = urllib.request.Request(

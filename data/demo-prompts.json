@@ -118,5 +118,15 @@
       "What are the best Nifty 50 mutual funds?",
       "How to track Nifty 50 performance?"
     ]
+  },
+  {
+    "id": "demo13",
+    "prompt": "If I were to buy TCS Stocks worth 50000 INR, How would it affect my portfolio?",
+    "answer": "📊 **Portfolio Impact Analysis: Adding ₹50,000 TCS Stocks**\n\nAdding ₹50,000 in TCS (Tata Consultancy Services) shifts your allocation towards blue-chip IT equities. Here is the scenario analysis:\n\n### 📈 Asset Allocation Change\n- **Investment Amount:** ₹50,000\n- **Sector Exposure:** Increases IT services equity allocation by 2.9%.\n- **Diversification:** Balances volatile assets (like crypto) with a stable, high-dividend large-cap stock.\n\n### 🔮 Monte Carlo Projections (1-Year Horizon)\n- **Expected Return (Mean):** **+13.5%** (Value: ₹56,750; standard 12-15% CAGR projections)\n- **Best-case Upside (95th Percentile):** **+29.2%** (Value: ₹64,600)\n- **Worst-case Drawdown (5th Percentile):** **-11.5%** (Value: ₹44,250)\n\n### 💡 Recommendations\n1. **Solid Defensive Anchor:** TCS acts as a stable large-cap stock with consistent dividend yield.\n2. **Staggered Buy:** Consider investing in 2-3 tranches to hedge against near-term tech sector volatility.",
+    "followUps": [
+      "Compare TCS vs Infosys performance",
+      "Should I invest in Nifty IT Index instead?",
+      "How does this affect my overall risk score?"
+    ]
   }
 ]

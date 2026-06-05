@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useUserProfile } from "@/hooks/useUserProfile"
 import { calculateEMI } from "@/lib/loan-calculator"
+import { useLoans } from "@/hooks/useLoans"
 
 // Security configuration
 const SECURITY_CONFIG = {
@@ -48,9 +49,18 @@ const BANK_RATES = {
 
 export default function LoanPage() {
   const { annualIncome } = useUserProfile()
+  const { loanProfile } = useLoans()
   const [loanType, setLoanType] = useState<"house" | "car" | "student">("house")
   const [modelStatus, setModelStatus] = useState<any>(null)
   const [loanValues, setLoanValues] = useState({ amount: 5000000, rate: 8.5, tenure: 240 })
+  const [hasAssessed, setHasAssessed] = useState(false)
+
+  // Auto-set assessed if user has a previously calculated loan profile
+  useEffect(() => {
+    if (loanProfile) {
+      setHasAssessed(true)
+    }
+  }, [loanProfile])
 
   const monthlyIncome = annualIncome ? annualIncome / 12 : 100000 // Default to 1L if not synced
 
@@ -176,6 +186,7 @@ export default function LoanPage() {
         <LoanCalculator
           loanType={loanType}
           onValuesChange={setLoanValues}
+          onAssess={() => setHasAssessed(true)}
         />
 
         <Card>
@@ -183,71 +194,85 @@ export default function LoanPage() {
             <CardTitle>EMI Stress Analysis</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="h-64 relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart data={gaugeData} innerRadius="70%" outerRadius="100%" startAngle={180} endAngle={0}>
-                    <RadialBar
-                      background
-                      dataKey="value"
-                      fill={gaugeData[0].fill}
-                      cornerRadius={10}
-                    />
-                  </RadialBarChart>
-                </ResponsiveContainer>
+            {hasAssessed ? (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="h-64 relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadialBarChart data={gaugeData} innerRadius="70%" outerRadius="100%" startAngle={180} endAngle={0}>
+                      <RadialBar
+                        background
+                        dataKey="value"
+                        fill={gaugeData[0].fill}
+                        cornerRadius={10}
+                      />
+                    </RadialBarChart>
+                  </ResponsiveContainer>
 
-                <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
-                  <div className="text-4xl font-black" style={{ color: gaugeData[0].fill }}>
-                    {emiStress}%
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
+                    <div className="text-4xl font-black" style={{ color: gaugeData[0].fill }}>
+                      {emiStress}%
+                    </div>
+                    <div className="text-sm text-muted-foreground font-semibold">DTI Ratio</div>
+                    <Badge variant="outline" className="mt-2">
+                      {emiStress <= 30 ? "🟢 Excellent" :
+                        emiStress <= 40 ? "🟡 Good" :
+                          emiStress <= 50 ? "🟠 Risky" :
+                            "🔴 High Debt"}
+                    </Badge>
                   </div>
-                  <div className="text-sm text-muted-foreground font-semibold">DTI Ratio</div>
-                  <Badge variant="outline" className="mt-2">
-                    {emiStress <= 30 ? "🟢 Excellent" :
-                      emiStress <= 40 ? "🟡 Good" :
-                        emiStress <= 50 ? "🟠 Risky" :
-                          "🔴 High Debt"}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <h4 className="font-bold flex items-center gap-2">
-                    Financial Impact
-                    {!annualIncome && <Badge variant="outline" className="text-[10px]">Using Default Income</Badge>}
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    This loan takes up <strong>{emiStress}%</strong> of your monthly take-home salary.
-                    {emiStress > 40 ? " This is above the recommended 40% threshold for financial stability." : " This is within a healthy range for your income level."}
-                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-muted rounded-lg">
-                    <div className="text-xs text-muted-foreground uppercase">Interest Saved</div>
-                    <div className="text-xl font-bold text-green-600">₹{Math.round(calculateInterestSavings()).toLocaleString()}*</div>
-                    <div className="text-[10px] text-muted-foreground">*vs. current rate with best bank</div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h4 className="font-bold flex items-center gap-2">
+                      Financial Impact
+                      {!annualIncome && <Badge variant="outline" className="text-[10px]">Using Default Income</Badge>}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      This loan takes up <strong>{emiStress}%</strong> of your monthly take-home salary.
+                      {emiStress > 40 ? " This is above the recommended 40% threshold for financial stability." : " This is within a healthy range for your income level."}
+                    </p>
                   </div>
-                  <div className="p-3 bg-muted rounded-lg">
-                    <div className="text-xs text-muted-foreground uppercase">Affordability</div>
-                    <div className="text-xl font-bold">
-                      {emiStress <= 35 ? "High" : emiStress <= 50 ? "Moderate" : "Low"}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-muted rounded-lg">
+                      <div className="text-xs text-muted-foreground uppercase">Interest Saved</div>
+                      <div className="text-xl font-bold text-green-600">₹{Math.round(calculateInterestSavings()).toLocaleString()}*</div>
+                      <div className="text-[10px] text-muted-foreground">*vs. current rate with best bank</div>
+                    </div>
+                    <div className="p-3 bg-muted rounded-lg">
+                      <div className="text-xs text-muted-foreground uppercase">Affordability</div>
+                      <div className="text-xl font-bold">
+                        {emiStress <= 35 ? "High" : emiStress <= 50 ? "Moderate" : "Low"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Monthly EMI</span>
+                      <span className="font-bold">₹{Math.round(currentEMI).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Monthly Income</span>
+                      <span className="font-bold">₹{Math.round(monthlyIncome).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Monthly EMI</span>
-                    <span className="font-bold">₹{Math.round(currentEMI).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Monthly Income</span>
-                    <span className="font-bold">₹{Math.round(monthlyIncome).toLocaleString()}</span>
-                  </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
+                  <span className="text-2xl text-blue-500">📊</span>
+                </div>
+                <div className="space-y-2 max-w-md">
+                  <h3 className="font-bold text-lg">Stress Analysis Pending</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Please configure your loan details and click **Assess Loan** in the calculator above to generate stress metrics and DTI ratio.
+                  </p>
                 </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 

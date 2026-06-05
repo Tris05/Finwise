@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useFinancialData } from '@/components/providers/financial-data-provider';
 
 export interface UserProfileData {
     annualIncome: number | null;
@@ -34,6 +35,7 @@ export interface UserProfileData {
 }
 
 export const useUserProfile = () => {
+    const context = useFinancialData();
     const { user } = useAuth();
     const [profile, setProfile] = useState<UserProfileData>({
         annualIncome: null,
@@ -59,6 +61,10 @@ export const useUserProfile = () => {
     });
 
     useEffect(() => {
+        if (context && context.profile) {
+            return;
+        }
+
         if (!user) {
             setProfile(prev => ({ ...prev, loading: false }));
             return;
@@ -66,11 +72,6 @@ export const useUserProfile = () => {
 
         const requestsRef = collection(db, 'users', user.uid, 'portfolio_requests');
         const q = query(requestsRef, orderBy('created_at', 'desc'), limit(1));
-
-        // Also listen to the main user document for profile/settings
-        const userDocRef = collection(db, 'users');
-        // Wait, I should use doc() for a specific document
-        // But I'll combine them in the effect for simplicity or add multiple listeners
 
         const unsubscribeRequests = onSnapshot(q, (snapshot) => {
             if (!snapshot.empty) {
@@ -102,6 +103,8 @@ export const useUserProfile = () => {
                     phone: data.profile?.phone || user.phoneNumber || prev.phone,
                     city: data.profile?.city || prev.city,
                     riskProfile: data.profile?.riskProfile || prev.riskProfile,
+                    annualIncome: data.profile?.annual_income || data.profile?.annualIncome || prev.annualIncome,
+                    age: data.profile?.age || prev.age,
                     settings: {
                         ...prev.settings,
                         ...(data.settings || {})
@@ -122,7 +125,11 @@ export const useUserProfile = () => {
             unsubscribeRequests();
             unsubscribeProfile();
         };
-    }, [user]);
+    }, [user, context]);
+
+    if (context && context.profile) {
+        return context.profile;
+    }
 
     return profile;
 };
